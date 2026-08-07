@@ -1,4 +1,4 @@
-// Cloudflare Edge Route: /api/therapists
+// Cloudflare Pages / Edge Route: /api/therapists
 export async function onRequestGet(context) {
     const { env } = context;
     try {

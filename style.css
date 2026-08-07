@@ -1,0 +1,43 @@
+:root {
+  --primary-color: #4A90E2;
+  --bg-color: #F4F7F6;
+  --card-bg: #FFFFFF;
+  --text-main: #333333;
+  --text-muted: #888888;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Helvetica Neue', Arial, sans-serif; }
+
+body { background-color: var(--bg-color); color: var(--text-main); padding-bottom: 70px; }
+
+header { background: var(--primary-color); color: white; text-align: center; padding: 15px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+
+.view-section { display: none; padding: 15px; max-width: 600px; margin: 0 auto; }
+.view-section.active { display: block; animation: fadeIn 0.3s ease; }
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+h2 { font-size: 1.2rem; margin-bottom: 10px; color: var(--primary-color); border-bottom: 2px solid #ddd; padding-bottom: 5px; }
+
+/* 表單卡片 */
+.card-form { background: var(--card-bg); padding: 15px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 20px; display: flex; flex-direction: column; gap: 12px; }
+.card-form input, .card-form select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; font-size: 1rem; }
+.btn-primary { background: var(--primary-color); color: white; border: none; padding: 12px; border-radius: 5px; font-size: 1rem; cursor: pointer; transition: 0.2s; }
+.btn-primary:active { background: #357ABD; }
+
+/* 列表卡片 */
+.list-container { display: flex; flex-direction: column; gap: 10px; }
+.list-card { background: var(--card-bg); padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); position: relative;}
+.list-card h3 { font-size: 1.1rem; margin-bottom: 5px; }
+.list-card p { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 3px; }
+
+/* 操作按鈕 */
+.action-btns { position: absolute; right: 15px; top: 15px; }
+.btn-small { padding: 5px 10px; font-size: 0.8rem; border: none; border-radius: 4px; cursor: pointer; margin-left: 5px; }
+.btn-edit { background: #f0ad4e; color: white; }
+.btn-delete { background: #d9534f; color: white; }
+
+/* 底部導航 */
+.bottom-nav { position: fixed; bottom: 0; width: 100%; background: white; display: flex; justify-content: space-around; padding: 10px 0; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); }
+.bottom-nav button { background: none; border: none; font-size: 0.9rem; color: var(--text-muted); cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.bottom-nav button.active { color: var(--primary-color); font-weight: bold; }

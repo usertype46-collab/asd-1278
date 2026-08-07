@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>足療技師智能媒合系統</title>
+    <!-- 引入 Vue 3 高階框架 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- 引入 Tailwind CSS 進行快速 UI 佈局 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 FontAwesome 圖標庫 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body { 
+            background-color: #f3f4f6; 
+            font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif; 
+            -webkit-tap-highlight-color: transparent;
+        }
+        /* Vue 動畫過渡效果 */
+        .list-enter-active, .list-leave-active { transition: all 0.4s ease; }
+        .list-enter-from, .list-leave-to { opacity: 0; transform: translateY(15px); }
+        /* 隱藏網頁捲軸但保留滾動功能 */
+        ::-webkit-scrollbar { display: none; }
+    </style>
+</head>
+<body>
+    <!-- 模擬手機 App 外框 -->
+    <div id="app" class="max-w-md mx-auto bg-white min-h-screen shadow-2xl relative pb-20 overflow-hidden">
+        
+        <!-- App 頂部 Header -->
+        <header class="bg-teal-600 text-white p-4 sticky top-0 z-20 shadow-md">
+            <div class="flex justify-between items-center">
+                <i class="fas fa-bars text-lg"></i>
+                <h1 class="text-lg font-bold tracking-wider">知足・技師媒合</h1>
+                <i class="fas fa-bell text-lg"></i>
+            </div>
+        </header>
+
+        <main class="p-5">
+            <!-- 區塊 1：客戶需求選擇 (多選) -->
+            <section class="mb-8">
+                <h2 class="text-base font-bold text-gray-800 mb-4 flex items-center">
+                    <i class="fas fa-hand-sparkles text-teal-500 mr-2 text-xl"></i>
+                    您今天想解決什麼問題？
+                </h2>
+                <div class="flex flex-wrap gap-2.5">
+                    <button
+                        v-for="need in needs"
+                        :key="need.id"
+                        @click="toggleNeed(need.id)"
+                        :class="[
+                            'px-4 py-2 rounded-full text-sm font-medium border-2 transition-all duration-200',
+                            selectedNeeds.includes(need.id) 
+                                ? 'bg-teal-50 border-teal-500 text-teal-700 shadow-sm transform scale-105' 
+                                : 'bg-white border-gray-200 text-gray-500 hover:border-teal-200'
+                        ]"
+                    >
+                        {{ need.name }}
+                    </button>
+                </div>
+            </section>
+
+            <!-- 區塊 2：智能推薦技師列表 -->
+            <section>
+                <div class="flex justify-between items-end mb-4">
+                    <h2 class="text-base font-bold text-gray-800 flex items-center">
+                        <i class="fas fa-user-md text-teal-500 mr-2 text-xl"></i>
+                        為您精選的技師
+                    </h2>
+                    <span v-if="selectedNeeds.length > 0" class="text-xs text-gray-400">
+                        找到 {{ matchedTechnicians.length }} 位符合
+                    </span>
+                </div>
+
+                <!-- 空狀態提示 -->
+                <div v-if="selectedNeeds.length === 0" class="text-center py-12 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                    <i class="fas fa-mouse-pointer text-4xl text-gray-300 mb-3 block animate-bounce"></i>
+                    <p class="text-gray-500 text-sm">請先在上方點選您的需求標籤<br>系統將自動為您匹配最適合的師傅</p>
+                </div>
+
+                <!-- 技師卡片列表 -->
+                <div v-else class="space-y-4">
+                    <transition-group name="list">
+                        <div v-for="tech in matchedTechnicians" :key="tech.id" class="border border-gray-100 rounded-2xl p-4 shadow-[0_4px_12px_rgba(0,0,0,0.03)] bg-white relative overflow-hidden">
+                            <!-- 匹配度標籤 -->
+                            <div class="absolute top-0 right-0 bg-red-50 text-red-500 text-xs font-bold px-3 py-1 rounded-bl-lg" v-if="tech.matchScore === selectedNeeds.length">
+                                100% 完美契合
+                            </div>
+
+                            <div class="flex items-start mt-2">
+                                <img :src="tech.avatar" class="w-16 h-16 rounded-full object-cover mr-4 border-2 border-teal-100 p-0.5" alt="技師照片">
+                                <div class="flex-1">
+                                    <div class="flex items-center mb-1">
+                                        <h3 class="text-lg font-bold text-gray-800 mr-2">{{ tech.name }}</h3>
+                                        <span class="text-yellow-500 text-xs bg-yellow-50 px-1.5 py-0.5 rounded flex items-center">
+                                            <i class="fas fa-star mr-1"></i>{{ tech.rating }}
+                                        </span>
+                                    </div>
+                                    <p class="text-sm text-gray-500 mb-3 leading-relaxed">{{ tech.desc }}</p>
+                                    
+                                    <!-- 顯示該技師符合的專長標籤 -->
+                                    <div class="flex flex-wrap gap-1.5 mb-4">
+                                        <span v-for="spec in tech.specialties" :key="spec"
+                                              :class="[
+                                                  'text-xs px-2 py-1 rounded-md', 
+                                                  selectedNeeds.includes(spec) ? 'bg-teal-500 text-white' : 'bg-gray-100 text-gray-400'
+                                              ]">
+                                            {{ getNeedName(spec) }}
+                                        </span>
+                                    </div>
+                                    
+                                    <button class="w-full bg-gray-900 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-teal-600 transition-colors shadow-md">
+                                        立即預約
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </transition-group>
+                    
+                    <div v-if="matchedTechnicians.length === 0" class="text-center py-10 text-gray-500 text-sm">
+                        抱歉，目前沒有技師同時具備您選擇的所有專長。<br>建議減少幾個需求標籤再試試。
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- 底部導航欄 (App風格) -->
+        <nav class="fixed bottom-0 w-full max-w-md bg-white border-t border-gray-100 flex justify-around py-2.5 text-gray-400 text-xs shadow-[0_-5px_20px_rgba(0,0,0,0.05)] z-20 pb-safe">
+            <div class="flex flex-col items-center text-teal-600 cursor-pointer">
+                <i class="fas fa-home text-xl mb-1"></i>首頁
+            </div>
+            <div class="flex flex-col items-center cursor-pointer hover:text-teal-500 transition">
+                <i class="fas fa-calendar-alt text-xl mb-1"></i>預約紀錄
+            </div>
+            <div class="flex flex-col items-center cursor-pointer hover:text-teal-500 transition">
+                <i class="fas fa-user text-xl mb-1"></i>會員中心
+            </div>
+        </nav>
+    </div>
+
+    <!-- 系統核心邏輯 (Vue 3) -->
+    <script>
+        const { createApp, ref, computed } = Vue;
+
+        createApp({
+            setup() {
+                // 1. 定義客戶需求資料庫
+                const needs = ref([
+                    { id: 'n1', name: '深層腳底按摩' },
+                    { id: 'n2', name: '肩頸僵硬舒緩' },
+                    { id: 'n3', name: '專業修腳皮/凍甲' },
+                    { id: 'n4', name: '全身經絡推拿' },
+                    { id: 'n5', name: '芳香精油SPA' },
+                    { id: 'n6', name: '孕婦足部消腫' },
+                    { id: 'n7', name: '運動後拉筋放鬆' }
+                ]);
+
+                // 儲存客戶目前選擇的需求
+                const selectedNeeds = ref([]);
+
+                // 2. 定義技師資料庫 (包含專長陣列對應需求的ID)
+                const technicians = ref([
+                    {
+                        id: 't1', name: '阿明師傅 (8號)', rating: 4.9,
+                        avatar: 'https://i.pravatar.cc/150?img=11',
+                        desc: '超過15年經驗，專治各種頑固痠痛，點位精準力道沉穩。',
+                        specialties: ['n1', 'n2', 'n4', 'n7']
+                    },
+                    {
+                        id: 't2', name: '小雅老師 (3號)', rating: 4.8,
+                        avatar: 'https://i.pravatar.cc/150?img=9',
+                        desc: '手法細膩，精通精油舒壓與孕婦專屬護理，放鬆首選。',
+                        specialties: ['n1', 'n5', 'n6']
+                    },
+                    {
+                        id: 't3', name: '建國師傅 (12號)', rating: 4.7,
+                        avatar: 'https://i.pravatar.cc/150?img=15',
+                        desc: '上海派祖傳修腳技術，無痛處理凍甲與厚繭，還你嬰兒腳。',
+                        specialties: ['n1', 'n3']
+                    },
+                    {
+                        id: 't4', name: '淑芬老師 (5號)', rating: 4.9,
+                        avatar: 'https://i.pravatar.cc/150?img=32',
+                        desc: '綜合型全能技師，經絡推拿與精油放鬆都有極高回客率。',
+                        specialties: ['n2', 'n4', 'n5', 'n7']
+                    }
+                ]);
+
+                // 切換需求標籤的事件
+                const toggleNeed = (id) => {
+                    const index = selectedNeeds.value.indexOf(id);
+                    if (index > -1) {
+                        selectedNeeds.value.splice(index, 1); // 取消選取
+                    } else {
+                        selectedNeeds.value.push(id); // 加入選取
+                    }
+                };
+
+                // ID 轉 名稱 工具函數
+                const getNeedName = (id) => {
+                    const need = needs.value.find(n => n.id === id);
+                    return need ? need.name : '';
+                };
+
+                // 3. 核心媒合演算法 (根據客戶需求即時計算)
+                const matchedTechnicians = computed(() => {
+                    if (selectedNeeds.value.length === 0) return [];
+
+                    // 計算每個技師的「契合分數」
+                    let matched = technicians.value.map(tech => {
+                        let score = 0;
+                        selectedNeeds.value.forEach(needId => {
+                            if (tech.specialties.includes(needId)) {
+                                score += 1;
+                            }
+                        });
+                        return { ...tech, matchScore: score };
+                    });
+
+                    // 過濾出至少符合1項需求的技師，並進行排序
+                    return matched
+                        .filter(tech => tech.matchScore > 0)
+                        .sort((a, b) => {
+                            // 第一排序：符合的需求數量越多越前面
+                            if (b.matchScore !== a.matchScore) {
+                                return b.matchScore - a.matchScore; 
+                            }
+                            // 第二排序：如果符合數量一樣，星級評價高的在前面
+                            return b.rating - a.rating; 
+                        });
+                });
+
+                return {
+                    needs,
+                    selectedNeeds,
+                    toggleNeed,
+                    matchedTechnicians,
+                    getNeedName
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

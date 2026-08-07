@@ -2,244 +2,270 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>足療技師智能媒合系統</title>
-    <!-- 引入 Vue 3 高階框架 -->
-    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-    <!-- 引入 Tailwind CSS 進行快速 UI 佈局 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>足療智能預約與技師匹配系統</title>
+    <!-- 引入 Tailwind CSS 進行手機版優化排版 -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- 引入 FontAwesome 圖標庫 -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
     <style>
-        body { 
-            background-color: #f3f4f6; 
-            font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif; 
-            -webkit-tap-highlight-color: transparent;
-        }
-        /* Vue 動畫過渡效果 */
-        .list-enter-active, .list-leave-active { transition: all 0.4s ease; }
-        .list-enter-from, .list-leave-to { opacity: 0; transform: translateY(15px); }
-        /* 隱藏網頁捲軸但保留滾動功能 */
-        ::-webkit-scrollbar { display: none; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
     </style>
 </head>
-<body>
-    <!-- 模擬手機 App 外框 -->
-    <div id="app" class="max-w-md mx-auto bg-white min-h-screen shadow-2xl relative pb-20 overflow-hidden">
-        
-        <!-- App 頂部 Header -->
-        <header class="bg-teal-600 text-white p-4 sticky top-0 z-20 shadow-md">
-            <div class="flex justify-between items-center">
-                <i class="fas fa-bars text-lg"></i>
-                <h1 class="text-lg font-bold tracking-wider">知足・技師媒合</h1>
-                <i class="fas fa-bell text-lg"></i>
+<body class="bg-gray-50 font-sans text-gray-800">
+
+    <!-- 頂部導航列 -->
+    <nav class="bg-teal-600 text-white p-4 shadow-md sticky top-0 z-50">
+        <h1 class="text-xl font-bold mb-3 text-center">足療匹配系統</h1>
+        <div class="flex justify-between space-x-1 text-sm overflow-x-auto pb-2">
+            <button onclick="switchTab('dashboard')" class="px-3 py-1 bg-teal-700 rounded hover:bg-teal-500 whitespace-nowrap">📊 統計</button>
+            <button onclick="switchTab('techs')" class="px-3 py-1 bg-teal-700 rounded hover:bg-teal-500 whitespace-nowrap">💆 技師</button>
+            <button onclick="switchTab('customers')" class="px-3 py-1 bg-teal-700 rounded hover:bg-teal-500 whitespace-nowrap">👥 客戶</button>
+            <button onclick="switchTab('appointments')" class="px-3 py-1 bg-teal-700 rounded hover:bg-teal-500 whitespace-nowrap">📅 預約</button>
+        </div>
+    </nav>
+
+    <div class="p-4 max-w-md mx-auto">
+        <!-- 1. 統計面板 -->
+        <div id="dashboard" class="tab-content active">
+            <h2 class="text-xl font-bold mb-4 border-b-2 border-teal-500 pb-2">客戶造訪頻率統計</h2>
+            <div id="statsList" class="space-y-3">
+                <p class="text-gray-500">載入中...</p>
             </div>
-        </header>
+        </div>
 
-        <main class="p-5">
-            <!-- 區塊 1：客戶需求選擇 (多選) -->
-            <section class="mb-8">
-                <h2 class="text-base font-bold text-gray-800 mb-4 flex items-center">
-                    <i class="fas fa-hand-sparkles text-teal-500 mr-2 text-xl"></i>
-                    您今天想解決什麼問題？
-                </h2>
-                <div class="flex flex-wrap gap-2.5">
-                    <button
-                        v-for="need in needs"
-                        :key="need.id"
-                        @click="toggleNeed(need.id)"
-                        :class="[
-                            'px-4 py-2 rounded-full text-sm font-medium border-2 transition-all duration-200',
-                            selectedNeeds.includes(need.id) 
-                                ? 'bg-teal-50 border-teal-500 text-teal-700 shadow-sm transform scale-105' 
-                                : 'bg-white border-gray-200 text-gray-500 hover:border-teal-200'
-                        ]"
-                    >
-                        {{ need.name }}
-                    </button>
-                </div>
-            </section>
+        <!-- 2. 技師管理 -->
+        <div id="techs" class="tab-content">
+            <h2 class="text-xl font-bold mb-4 border-b-2 border-teal-500 pb-2">技師管理</h2>
+            <form id="techForm" class="bg-white p-4 rounded shadow mb-4">
+                <input type="text" id="techName" placeholder="技師姓名" class="w-full mb-2 p-2 border rounded" required>
+                <input type="text" id="techSkills" placeholder="專長 (例: 腳底按摩, 修腳皮)" class="w-full mb-2 p-2 border rounded" required>
+                <button type="submit" class="w-full bg-teal-600 text-white p-2 rounded">新增技師</button>
+            </form>
+            <div id="techList" class="space-y-3"></div>
+        </div>
 
-            <!-- 區塊 2：智能推薦技師列表 -->
-            <section>
-                <div class="flex justify-between items-end mb-4">
-                    <h2 class="text-base font-bold text-gray-800 flex items-center">
-                        <i class="fas fa-user-md text-teal-500 mr-2 text-xl"></i>
-                        為您精選的技師
-                    </h2>
-                    <span v-if="selectedNeeds.length > 0" class="text-xs text-gray-400">
-                        找到 {{ matchedTechnicians.length }} 位符合
-                    </span>
-                </div>
+        <!-- 3. 客戶紀錄 -->
+        <div id="customers" class="tab-content">
+            <h2 class="text-xl font-bold mb-4 border-b-2 border-teal-500 pb-2">客戶資訊紀錄</h2>
+            <form id="customerForm" class="bg-white p-4 rounded shadow mb-4">
+                <input type="text" id="custName" placeholder="客戶姓名" class="w-full mb-2 p-2 border rounded" required>
+                <input type="tel" id="custPhone" placeholder="聯絡電話" class="w-full mb-2 p-2 border rounded" required>
+                <textarea id="custNeeds" placeholder="身體狀況/偏好 (例: 力道偏重、怕癢)" class="w-full mb-2 p-2 border rounded" required></textarea>
+                <button type="submit" class="w-full bg-teal-600 text-white p-2 rounded">新增客戶</button>
+            </form>
+            <div id="customerList" class="space-y-3"></div>
+        </div>
 
-                <!-- 空狀態提示 -->
-                <div v-if="selectedNeeds.length === 0" class="text-center py-12 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-                    <i class="fas fa-mouse-pointer text-4xl text-gray-300 mb-3 block animate-bounce"></i>
-                    <p class="text-gray-500 text-sm">請先在上方點選您的需求標籤<br>系統將自動為您匹配最適合的師傅</p>
-                </div>
-
-                <!-- 技師卡片列表 -->
-                <div v-else class="space-y-4">
-                    <transition-group name="list">
-                        <div v-for="tech in matchedTechnicians" :key="tech.id" class="border border-gray-100 rounded-2xl p-4 shadow-[0_4px_12px_rgba(0,0,0,0.03)] bg-white relative overflow-hidden">
-                            <!-- 匹配度標籤 -->
-                            <div class="absolute top-0 right-0 bg-red-50 text-red-500 text-xs font-bold px-3 py-1 rounded-bl-lg" v-if="tech.matchScore === selectedNeeds.length">
-                                100% 完美契合
-                            </div>
-
-                            <div class="flex items-start mt-2">
-                                <img :src="tech.avatar" class="w-16 h-16 rounded-full object-cover mr-4 border-2 border-teal-100 p-0.5" alt="技師照片">
-                                <div class="flex-1">
-                                    <div class="flex items-center mb-1">
-                                        <h3 class="text-lg font-bold text-gray-800 mr-2">{{ tech.name }}</h3>
-                                        <span class="text-yellow-500 text-xs bg-yellow-50 px-1.5 py-0.5 rounded flex items-center">
-                                            <i class="fas fa-star mr-1"></i>{{ tech.rating }}
-                                        </span>
-                                    </div>
-                                    <p class="text-sm text-gray-500 mb-3 leading-relaxed">{{ tech.desc }}</p>
-                                    
-                                    <!-- 顯示該技師符合的專長標籤 -->
-                                    <div class="flex flex-wrap gap-1.5 mb-4">
-                                        <span v-for="spec in tech.specialties" :key="spec"
-                                              :class="[
-                                                  'text-xs px-2 py-1 rounded-md', 
-                                                  selectedNeeds.includes(spec) ? 'bg-teal-500 text-white' : 'bg-gray-100 text-gray-400'
-                                              ]">
-                                            {{ getNeedName(spec) }}
-                                        </span>
-                                    </div>
-                                    
-                                    <button class="w-full bg-gray-900 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-teal-600 transition-colors shadow-md">
-                                        立即預約
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </transition-group>
-                    
-                    <div v-if="matchedTechnicians.length === 0" class="text-center py-10 text-gray-500 text-sm">
-                        抱歉，目前沒有技師同時具備您選擇的所有專長。<br>建議減少幾個需求標籤再試試。
-                    </div>
-                </div>
-            </section>
-        </main>
-
-        <!-- 底部導航欄 (App風格) -->
-        <nav class="fixed bottom-0 w-full max-w-md bg-white border-t border-gray-100 flex justify-around py-2.5 text-gray-400 text-xs shadow-[0_-5px_20px_rgba(0,0,0,0.05)] z-20 pb-safe">
-            <div class="flex flex-col items-center text-teal-600 cursor-pointer">
-                <i class="fas fa-home text-xl mb-1"></i>首頁
-            </div>
-            <div class="flex flex-col items-center cursor-pointer hover:text-teal-500 transition">
-                <i class="fas fa-calendar-alt text-xl mb-1"></i>預約紀錄
-            </div>
-            <div class="flex flex-col items-center cursor-pointer hover:text-teal-500 transition">
-                <i class="fas fa-user text-xl mb-1"></i>會員中心
-            </div>
-        </nav>
+        <!-- 4. 預約系統 -->
+        <div id="appointments" class="tab-content">
+            <h2 class="text-xl font-bold mb-4 border-b-2 border-teal-500 pb-2">預約與匹配</h2>
+            <form id="appointmentForm" class="bg-white p-4 rounded shadow mb-4">
+                <select id="aptCustomer" class="w-full mb-2 p-2 border rounded" required>
+                    <option value="">選擇客戶...</option>
+                </select>
+                <select id="aptTech" class="w-full mb-2 p-2 border rounded" required>
+                    <option value="">選擇技師...</option>
+                </select>
+                <input type="datetime-local" id="aptTime" class="w-full mb-2 p-2 border rounded" required>
+                <button type="submit" class="w-full bg-teal-600 text-white p-2 rounded">新增預約</button>
+            </form>
+            <div id="appointmentList" class="space-y-3"></div>
+        </div>
     </div>
 
-    <!-- 系統核心邏輯 (Vue 3) -->
-    <script>
-        const { createApp, ref, computed } = Vue;
+    <!-- Firebase 模組化導入 (使用 CDN 以利 GitHub Pages 直接運行) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc, query, orderBy } 
+        from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-        createApp({
-            setup() {
-                // 1. 定義客戶需求資料庫
-                const needs = ref([
-                    { id: 'n1', name: '深層腳底按摩' },
-                    { id: 'n2', name: '肩頸僵硬舒緩' },
-                    { id: 'n3', name: '專業修腳皮/凍甲' },
-                    { id: 'n4', name: '全身經絡推拿' },
-                    { id: 'n5', name: '芳香精油SPA' },
-                    { id: 'n6', name: '孕婦足部消腫' },
-                    { id: 'n7', name: '運動後拉筋放鬆' }
-                ]);
+        // 您的 Firebase 設置
+        const firebaseConfig = {
+            apiKey: "AIzaSyC3wmOmhpFG3gaHk9uUHmcjS09sdAAHM9k",
+            authDomain: "smart-matching-system-services.firebaseapp.com",
+            projectId: "smart-matching-system-services",
+            storageBucket: "smart-matching-system-services.firebasestorage.app",
+            messagingSenderId: "699119431060",
+            appId: "1:699119431060:web:0672bf06c3cd7707f8f381",
+            measurementId: "G-RMS75RXKK0"
+        };
 
-                // 儲存客戶目前選擇的需求
-                const selectedNeeds = ref([]);
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
 
-                // 2. 定義技師資料庫 (包含專長陣列對應需求的ID)
-                const technicians = ref([
-                    {
-                        id: 't1', name: '阿明師傅 (8號)', rating: 4.9,
-                        avatar: 'https://i.pravatar.cc/150?img=11',
-                        desc: '超過15年經驗，專治各種頑固痠痛，點位精準力道沉穩。',
-                        specialties: ['n1', 'n2', 'n4', 'n7']
-                    },
-                    {
-                        id: 't2', name: '小雅老師 (3號)', rating: 4.8,
-                        avatar: 'https://i.pravatar.cc/150?img=9',
-                        desc: '手法細膩，精通精油舒壓與孕婦專屬護理，放鬆首選。',
-                        specialties: ['n1', 'n5', 'n6']
-                    },
-                    {
-                        id: 't3', name: '建國師傅 (12號)', rating: 4.7,
-                        avatar: 'https://i.pravatar.cc/150?img=15',
-                        desc: '上海派祖傳修腳技術，無痛處理凍甲與厚繭，還你嬰兒腳。',
-                        specialties: ['n1', 'n3']
-                    },
-                    {
-                        id: 't4', name: '淑芬老師 (5號)', rating: 4.9,
-                        avatar: 'https://i.pravatar.cc/150?img=32',
-                        desc: '綜合型全能技師，經絡推拿與精油放鬆都有極高回客率。',
-                        specialties: ['n2', 'n4', 'n5', 'n7']
-                    }
-                ]);
+        // 狀態儲存
+        let techsData = [];
+        let customersData = [];
+        let appointmentsData = [];
 
-                // 切換需求標籤的事件
-                const toggleNeed = (id) => {
-                    const index = selectedNeeds.value.indexOf(id);
-                    if (index > -1) {
-                        selectedNeeds.value.splice(index, 1); // 取消選取
-                    } else {
-                        selectedNeeds.value.push(id); // 加入選取
-                    }
-                };
+        // UI 渲染函數
+        function renderTechs() {
+            const list = document.getElementById('techList');
+            const aptSelect = document.getElementById('aptTech');
+            list.innerHTML = '';
+            aptSelect.innerHTML = '<option value="">選擇技師...</option>';
 
-                // ID 轉 名稱 工具函數
-                const getNeedName = (id) => {
-                    const need = needs.value.find(n => n.id === id);
-                    return need ? need.name : '';
-                };
+            techsData.forEach(t => {
+                // 技師列表 UI
+                list.innerHTML += `
+                    <div class="bg-white p-3 rounded shadow flex justify-between items-center border-l-4 border-teal-500">
+                        <div>
+                            <p class="font-bold">${t.name}</p>
+                            <p class="text-sm text-gray-600">專長: ${t.skills}</p>
+                        </div>
+                        <div class="space-x-2">
+                            <button onclick="editTech('${t.id}', '${t.name}', '${t.skills}')" class="text-blue-500 text-sm">編輯</button>
+                            <button onclick="deleteDocHandler('technicians', '${t.id}')" class="text-red-500 text-sm">刪除</button>
+                        </div>
+                    </div>`;
+                // 預約選單更新
+                aptSelect.innerHTML += `<option value="${t.id}">${t.name} (${t.skills})</option>`;
+            });
+        }
 
-                // 3. 核心媒合演算法 (根據客戶需求即時計算)
-                const matchedTechnicians = computed(() => {
-                    if (selectedNeeds.value.length === 0) return [];
+        function renderCustomers() {
+            const list = document.getElementById('customerList');
+            const aptSelect = document.getElementById('aptCustomer');
+            list.innerHTML = '';
+            aptSelect.innerHTML = '<option value="">選擇客戶...</option>';
 
-                    // 計算每個技師的「契合分數」
-                    let matched = technicians.value.map(tech => {
-                        let score = 0;
-                        selectedNeeds.value.forEach(needId => {
-                            if (tech.specialties.includes(needId)) {
-                                score += 1;
-                            }
-                        });
-                        return { ...tech, matchScore: score };
-                    });
+            customersData.forEach(c => {
+                list.innerHTML += `
+                    <div class="bg-white p-3 rounded shadow border-l-4 border-indigo-500">
+                        <div class="flex justify-between items-center">
+                            <p class="font-bold text-indigo-700">${c.name} <span class="text-sm font-normal text-gray-500">${c.phone}</span></p>
+                            <button onclick="deleteDocHandler('customers', '${c.id}')" class="text-red-500 text-sm">刪除</button>
+                        </div>
+                        <p class="text-sm text-gray-600 mt-1 bg-gray-100 p-2 rounded">需求: ${c.needs}</p>
+                    </div>`;
+                aptSelect.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+            });
+            renderStats(); // 客戶更新時重新計算統計
+        }
 
-                    // 過濾出至少符合1項需求的技師，並進行排序
-                    return matched
-                        .filter(tech => tech.matchScore > 0)
-                        .sort((a, b) => {
-                            // 第一排序：符合的需求數量越多越前面
-                            if (b.matchScore !== a.matchScore) {
-                                return b.matchScore - a.matchScore; 
-                            }
-                            // 第二排序：如果符合數量一樣，星級評價高的在前面
-                            return b.rating - a.rating; 
-                        });
-                });
+        function renderAppointments() {
+            const list = document.getElementById('appointmentList');
+            list.innerHTML = '';
 
-                return {
-                    needs,
-                    selectedNeeds,
-                    toggleNeed,
-                    matchedTechnicians,
-                    getNeedName
-                }
+            appointmentsData.forEach(a => {
+                const customer = customersData.find(c => c.id === a.customerId)?.name || '未知客戶';
+                const tech = techsData.find(t => t.id === a.techId)?.name || '未知技師';
+                
+                list.innerHTML += `
+                    <div class="bg-white p-3 rounded shadow border-l-4 border-orange-500 flex justify-between items-center">
+                        <div>
+                            <p class="text-sm text-orange-600 font-bold">${new Date(a.time).toLocaleString('zh-TW')}</p>
+                            <p class="font-bold">👤 ${customer} <span class="text-gray-400 mx-1">➜</span> 💆 ${tech}</p>
+                        </div>
+                        <button onclick="deleteDocHandler('appointments', '${a.id}')" class="text-red-500 text-sm">取消</button>
+                    </div>`;
+            });
+            renderStats(); // 預約更新時重新計算統計
+        }
+
+        // 統計客戶造訪頻率
+        function renderStats() {
+            const statsList = document.getElementById('statsList');
+            statsList.innerHTML = '';
+            
+            const visits = {};
+            appointmentsData.forEach(apt => {
+                visits[apt.customerId] = (visits[apt.customerId] || 0) + 1;
+            });
+
+            // 排序並渲染
+            customersData.map(c => ({
+                name: c.name,
+                count: visits[c.id] || 0
+            })).sort((a, b) => b.count - a.count).forEach(stat => {
+                statsList.innerHTML += `
+                    <div class="flex justify-between items-center bg-white p-3 rounded shadow">
+                        <span class="font-bold">${stat.name}</span>
+                        <span class="bg-teal-100 text-teal-800 py-1 px-3 rounded-full text-sm font-bold">造訪 ${stat.count} 次</span>
+                    </div>`;
+            });
+        }
+
+        // ===== 核心 CRUD 操作 =====
+
+        // 新增技師
+        document.getElementById('techForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await addDoc(collection(db, "technicians"), {
+                name: document.getElementById('techName').value,
+                skills: document.getElementById('techSkills').value
+            });
+            e.target.reset();
+        });
+
+        // 新增客戶
+        document.getElementById('customerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await addDoc(collection(db, "customers"), {
+                name: document.getElementById('custName').value,
+                phone: document.getElementById('custPhone').value,
+                needs: document.getElementById('custNeeds').value
+            });
+            e.target.reset();
+        });
+
+        // 新增預約
+        document.getElementById('appointmentForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await addDoc(collection(db, "appointments"), {
+                customerId: document.getElementById('aptCustomer').value,
+                techId: document.getElementById('aptTech').value,
+                time: document.getElementById('aptTime').value
+            });
+            e.target.reset();
+        });
+
+        // 全域函數綁定 (為了讓 HTML onClick 呼叫)
+        window.deleteDocHandler = async (colName, id) => {
+            if(confirm('確定要刪除嗎？')) {
+                await deleteDoc(doc(db, colName, id));
             }
-        }).mount('#app');
+        };
+
+        window.editTech = async (id, oldName, oldSkills) => {
+            const newName = prompt("修改姓名:", oldName);
+            if (!newName) return;
+            const newSkills = prompt("修改專長:", oldSkills);
+            if (!newSkills) return;
+            
+            await updateDoc(doc(db, "technicians", id), {
+                name: newName,
+                skills: newSkills
+            });
+        };
+
+        // ===== 即時監聽 Firebase (Real-time Sync) =====
+        
+        onSnapshot(collection(db, "technicians"), (snapshot) => {
+            techsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            renderTechs();
+        });
+
+        onSnapshot(collection(db, "customers"), (snapshot) => {
+            customersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            renderCustomers();
+        });
+
+        // 預約依時間排序監聽
+        const aptQuery = query(collection(db, "appointments"), orderBy("time", "desc"));
+        onSnapshot(aptQuery, (snapshot) => {
+            appointmentsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            renderAppointments();
+        });
+
+    </script>
+
+    <!-- UI 頁籤切換邏輯 -->
+    <script>
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+        }
     </script>
 </body>
 </html>

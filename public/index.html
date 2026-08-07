@@ -1,1 +1,342 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>足療會館 - 智能需求匹配與技師預約系統</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Alpine.js 響應式框架 -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <!-- Lucide 圖標 -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-slate-50 text-slate-800 pb-20 font-sans" x-data="footApp()">
 
+    <!-- 頂部導覽列 Header -->
+    <header class="bg-indigo-900 text-white p-4 sticky top-0 z-30 shadow-md flex justify-between items-center">
+        <div class="flex items-center space-x-2">
+            <i data-lucide="sparkles" class="w-6 h-6 text-amber-400"></i>
+            <h1 class="text-lg font-bold">御足靈採 - 智能匹配系統</h1>
+        </div>
+        <span class="text-xs bg-indigo-800 px-2.5 py-1 rounded-full border border-indigo-700 text-indigo-200">商用專業版 v2.5</span>
+    </header>
+
+    <!-- 主要內容分頁 Content Sections -->
+    <main class="max-w-md mx-auto p-4 space-y-6">
+
+        <!-- 1. 數據統計與客戶頻率 Dashboard -->
+        <section x-show="activeTab === 'stats'" class="space-y-4">
+            <h2 class="text-lg font-bold flex items-center gap-2"><i data-lucide="bar-chart-3" class="w-5 h-5 text-indigo-600"></i> 營運與客戶分析數據</h2>
+            
+            <div class="grid grid-cols-2 gap-3">
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+                    <p class="text-xs text-slate-500">本月造訪人次</p>
+                    <p class="text-2xl font-black text-indigo-600 mt-1" x-text="stats.totalVisits"></p>
+                    <span class="text-[10px] text-emerald-600 font-medium">↑ 12% 較上月</span>
+                </div>
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+                    <p class="text-xs text-slate-500">高頻熟客率 (≥3次)</p>
+                    <p class="text-2xl font-black text-emerald-600 mt-1" x-text="stats.vipRate + '%'"></p>
+                    <span class="text-[10px] text-slate-400">總客戶 128 人</span>
+                </div>
+            </div>
+
+            <!-- 客戶造訪頻率分佈 -->
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 space-y-3">
+                <h3 class="text-sm font-bold text-slate-700">客戶造訪頻率統計</h3>
+                <template x-for="item in stats.visitFrequency" :key="item.label">
+                    <div class="space-y-1">
+                        <div class="flex justify-between text-xs">
+                            <span class="text-slate-600" x-text="item.label"></span>
+                            <span class="font-semibold text-slate-800" x-text="item.count + ' 人 (' + item.percent + '%)'"></span>
+                        </div>
+                        <div class="w-full bg-slate-100 rounded-full h-2">
+                            <div class="bg-indigo-600 h-2 rounded-full" :style="'width: ' + item.percent + '%'"></div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </section>
+
+        <!-- 2. 需求配對與快速預約 Match & Booking -->
+        <section x-show="activeTab === 'match'" class="space-y-4">
+            <h2 class="text-lg font-bold flex items-center gap-2"><i data-lucide="zap" class="w-5 h-5 text-indigo-600"></i> 客戶需求匹配技師</h2>
+            
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 space-y-4">
+                <!-- 選擇客戶 -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">選擇或輸入客戶</label>
+                    <select x-model="matchForm.clientId" @change="loadClientPreferences()" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        <option value="">-- 新客 / 快速選擇客戶 --</option>
+                        <template x-for="client in clients" :key="client.id">
+                            <option :value="client.id" x-text="client.name + ' (' + client.phone + ')'"></option>
+                        </template>
+                    </select>
+                </div>
+
+                <!-- 力道需求 -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">力道需求偏好</label>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button @click="matchForm.pressure = 'light'" :class="matchForm.pressure === 'light' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'" class="py-2 text-xs rounded-lg font-medium transition">輕柔舒壓</button>
+                        <button @click="matchForm.pressure = 'medium'" :class="matchForm.pressure === 'medium' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'" class="py-2 text-xs rounded-lg font-medium transition">適中標準</button>
+                        <button @click="matchForm.pressure = 'heavy'" :class="matchForm.pressure === 'heavy' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'" class="py-2 text-xs rounded-lg font-medium transition">深層重力</button>
+                    </div>
+                </div>
+
+                <!-- 技能指定需求 (帶搜尋/標籤點選) -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">指定特定技能需求 (可多選)</label>
+                    <div class="flex flex-wrap gap-1.5 mb-2">
+                        <template x-for="skill in allSkills" :key="skill">
+                            <button @click="toggleMatchSkill(skill)" 
+                                    :class="matchForm.selectedSkills.includes(skill) ? 'bg-indigo-100 text-indigo-700 border-indigo-300' : 'bg-slate-50 text-slate-600 border-slate-200'"
+                                    class="text-xs px-2.5 py-1 rounded-full border transition flex items-center gap-1">
+                                <span x-text="skill"></span>
+                                <span x-show="matchForm.selectedSkills.includes(skill)">✓</span>
+                            </button>
+                        </template>
+                    </div>
+                </div>
+
+                <button @click="runMatching()" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold shadow-md hover:bg-indigo-700 transition flex items-center justify-center gap-2">
+                    <i data-lucide="sliders-horizontal" class="w-4 h-4"></i> 開始智能匹配技師
+                </button>
+            </div>
+
+            <!-- 匹配結果列表 -->
+            <div x-show="matchedTherapists.length > 0" class="space-y-3">
+                <h3 class="text-sm font-bold text-slate-700">🎯 最佳匹配技師推薦</h3>
+                <template x-for="therapist in matchedTherapists" :key="therapist.id">
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex justify-between items-center">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="font-bold text-slate-800" x-text="therapist.name"></span>
+                                <span class="text-xs px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 font-semibold" x-text="'匹配度 ' + therapist.matchScore + '%'"></span>
+                            </div>
+                            <div class="flex flex-wrap gap-1 mt-1.5">
+                                <template x-for="s in therapist.skills" :key="s">
+                                    <span class="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded" x-text="s"></span>
+                                </template>
+                            </div>
+                        </div>
+                        <button @click="openBookingModal(therapist)" class="bg-slate-900 text-white text-xs px-3 py-2 rounded-lg font-medium hover:bg-slate-800">立即預約</button>
+                    </div>
+                </template>
+            </div>
+        </section>
+
+        <!-- 3. 技師管理 (CRUD + 搜尋式下拉選擇) Therapist CRUD -->
+        <section x-show="activeTab === 'therapists'" class="space-y-4">
+            <div class="flex justify-between items-center">
+                <h2 class="text-lg font-bold flex items-center gap-2"><i data-lucide="users" class="w-5 h-5 text-indigo-600"></i> 技師團隊管理</h2>
+                <button @click="openTherapistModal()" class="bg-indigo-600 text-white text-xs px-3 py-2 rounded-lg font-bold flex items-center gap-1 shadow">
+                    <i data-lucide="plus" class="w-4 h-4"></i> 新增技師
+                </button>
+            </div>
+
+            <!-- 技師卡片列表 -->
+            <div class="space-y-3">
+                <template x-for="therapist in therapists" :key="therapist.id">
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 space-y-2">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h3 class="font-bold text-slate-800" x-text="therapist.name"></h3>
+                                <p class="text-xs text-slate-400" x-text="'電話: ' + therapist.phone"></p>
+                            </div>
+                            <span :class="therapist.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'"
+                                  class="text-[10px] font-bold px-2 py-0.5 rounded-full" 
+                                  x-text="therapist.status === 'active' ? '可班中' : '服務中 / 休假'"></span>
+                        </div>
+                        <div class="flex flex-wrap gap-1">
+                            <template x-for="skill in therapist.skills" :key="skill">
+                                <span class="text-xs bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-md" x-text="skill"></span>
+                            </template>
+                        </div>
+                        <div class="pt-2 border-t border-slate-100 flex justify-end gap-2 text-xs">
+                            <button @click="editTherapist(therapist)" class="text-indigo-600 font-semibold px-2 py-1">編輯技師</button>
+                            <button @click="deleteTherapist(therapist.id)" class="text-rose-500 font-semibold px-2 py-1">移除</button>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </section>
+
+        <!-- 4. 客戶檔案與造訪紀錄 Client CRM -->
+        <section x-show="activeTab === 'clients'" class="space-y-4">
+            <h2 class="text-lg font-bold flex items-center gap-2"><i data-lucide="contact-2" class="w-5 h-5 text-indigo-600"></i> 客戶 CRM 檔案庫</h2>
+            
+            <div class="space-y-3">
+                <template x-for="client in clients" :key="client.id">
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 space-y-2">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <h3 class="font-bold text-slate-800" x-text="client.name"></h3>
+                                <p class="text-xs text-slate-400" x-text="client.phone"></p>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-full" x-text="'造訪 ' + client.total_visits + ' 次'"></span>
+                            </div>
+                        </div>
+                        <p class="text-xs text-slate-600 bg-slate-50 p-2 rounded-lg" x-text="'備註偏好: ' + (client.notes || '無特別註記')"></p>
+                    </div>
+                </template>
+            </div>
+        </section>
+    </main>
+
+    <!-- 底部導覽 Tab Bar -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-6 py-2 flex justify-between items-center max-w-md mx-auto z-30">
+        <button @click="activeTab = 'match'" :class="activeTab === 'match' ? 'text-indigo-600' : 'text-slate-400'" class="flex flex-col items-center gap-0.5">
+            <i data-lucide="zap" class="w-5 h-5"></i>
+            <span class="text-[10px] font-semibold">需求匹配</span>
+        </button>
+        <button @click="activeTab = 'therapists'" :class="activeTab === 'therapists' ? 'text-indigo-600' : 'text-slate-400'" class="flex flex-col items-center gap-0.5">
+            <i data-lucide="users" class="w-5 h-5"></i>
+            <span class="text-[10px] font-semibold">技師管理</span>
+        </button>
+        <button @click="activeTab = 'clients'" :class="activeTab === 'clients' ? 'text-indigo-600' : 'text-slate-400'" class="flex flex-col items-center gap-0.5">
+            <i data-lucide="contact-2" class="w-5 h-5"></i>
+            <span class="text-[10px] font-semibold">客戶 CRM</span>
+        </button>
+        <button @click="activeTab = 'stats'" :class="activeTab === 'stats' ? 'text-indigo-600' : 'text-slate-400'" class="flex flex-col items-center gap-0.5">
+            <i data-lucide="bar-chart-3" class="w-5 h-5"></i>
+            <span class="text-[10px] font-semibold">營運統計</span>
+        </button>
+    </nav>
+
+    <!-- 彈窗：新增/編輯技師 (包含可搜尋/選擇技能) Modal -->
+    <div x-show="showTherapistModal" class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4" x-cloak>
+        <div class="bg-white rounded-2xl p-5 w-full max-w-sm space-y-4 shadow-xl">
+            <h3 class="font-bold text-lg text-slate-800" x-text="editingTherapist.id ? '編輯技師資訊' : '新增技師'"></h3>
+            
+            <div class="space-y-3">
+                <div>
+                    <label class="text-xs font-semibold text-slate-600">技師姓名 / 編號</label>
+                    <input type="text" x-model="editingTherapist.name" placeholder="例如：陳技師 (#05)" class="w-full border rounded-lg p-2 text-sm mt-1">
+                </div>
+                <div>
+                    <label class="text-xs font-semibold text-slate-600">連絡電話</label>
+                    <input type="text" x-model="editingTherapist.phone" placeholder="09xxxxxxxx" class="w-full border rounded-lg p-2 text-sm mt-1">
+                </div>
+                
+                <!-- 搜尋式下拉/多選技能區段 -->
+                <div x-data="{ skillSearch: '' }">
+                    <label class="text-xs font-semibold text-slate-600">擅長技能標籤 (搜尋下拉選擇)</label>
+                    <input type="text" x-model="skillSearch" placeholder="🔍 搜尋技能 (如: 經絡、拔罐...)" class="w-full border rounded-lg p-2 text-sm mt-1 mb-2">
+                    
+                    <div class="max-h-32 overflow-y-auto border rounded-lg p-2 space-y-1 bg-slate-50">
+                        <template x-for="skill in allSkills.filter(s => s.includes(skillSearch))" :key="skill">
+                            <label class="flex items-center space-x-2 text-xs p-1 hover:bg-white rounded cursor-pointer">
+                                <input type="checkbox" :value="skill" x-model="editingTherapist.skills" class="rounded text-indigo-600">
+                                <span x-text="skill"></span>
+                            </label>
+                        </template>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-2">
+                <button @click="showTherapistModal = false" class="px-4 py-2 bg-slate-100 text-slate-600 rounded-lg text-xs font-semibold">取消</button>
+                <button @click="saveTherapist()" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-xs font-semibold">儲存技師</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alpine.js 應用邏輯與數據綁定 -->
+    <script>
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('footApp', () => ({
+                activeTab: 'match',
+                showTherapistModal: false,
+                allSkills: ['足底反射區', '深層經絡', '肩頸舒壓', '重力道', '輕柔放鬆', '孕婦按摩', '刮痧拔罐', '運動修復', '關節正骨'],
+                
+                stats: {
+                    totalVisits: 184,
+                    vipRate: 38,
+                    visitFrequency: [
+                        { label: '首訪新客', count: 42, percent: 32 },
+                        { label: '回訪 2-4 次', count: 58, percent: 45 },
+                        { label: '忠實老客 (5+ 次)', count: 28, percent: 23 }
+                    ]
+                },
+
+                clients: [
+                    { id: 1, name: '林先生', phone: '0911222333', prefer_pressure: 'heavy', notes: '腰部舊傷，喜歡重力道刮痧', total_visits: 6 },
+                    { id: 2, name: '陳小姐', phone: '0988777666', prefer_pressure: 'light', notes: '怕痛，偏好女性技師輕柔放鬆', total_visits: 2 }
+                ],
+
+                therapists: [
+                    { id: 1, name: '張技師 (#08)', phone: '0912345678', skills: ['深層經絡', '重力道', '肩頸舒壓', '刮痧拔罐'], status: 'active' },
+                    { id: 2, name: '李技師 (#12)', phone: '0922334455', skills: ['足底反射區', '輕柔放鬆', '孕婦按摩'], status: 'active' },
+                    { id: 3, name: '王技師 (#19)', phone: '0933557799', skills: ['運動修復', '重力道', '關節正骨'], status: 'busy' }
+                ],
+
+                matchForm: { clientId: '', pressure: 'medium', selectedSkills: [] },
+                matchedTherapists: [],
+                editingTherapist: { id: null, name: '', phone: '', skills: [] },
+
+                init() {
+                    lucide.createIcons();
+                },
+
+                toggleMatchSkill(skill) {
+                    if (this.matchForm.selectedSkills.includes(skill)) {
+                        this.matchForm.selectedSkills = this.matchForm.selectedSkills.filter(s => s !== skill);
+                    } else {
+                        this.matchForm.selectedSkills.push(skill);
+                    }
+                },
+
+                loadClientPreferences() {
+                    const client = this.clients.find(c => c.id == this.matchForm.clientId);
+                    if (client) {
+                        this.matchForm.pressure = client.prefer_pressure;
+                    }
+                },
+
+                runMatching() {
+                    this.matchedTherapists = this.therapists.map(t => {
+                        let score = 70; // 基礎分
+                        if (this.matchForm.pressure === 'heavy' && t.skills.includes('重力道')) score += 20;
+                        if (this.matchForm.pressure === 'light' && t.skills.includes('輕柔放鬆')) score += 20;
+                        
+                        this.matchForm.selectedSkills.forEach(s => {
+                            if (t.skills.includes(s)) score += 10;
+                        });
+                        return { ...t, matchScore: Math.min(score, 99) };
+                    }).sort((a, b) => b.matchScore - a.matchScore);
+                },
+
+                openTherapistModal() {
+                    this.editingTherapist = { id: null, name: '', phone: '', skills: [] };
+                    this.showTherapistModal = true;
+                },
+
+                editTherapist(therapist) {
+                    this.editingTherapist = JSON.parse(JSON.stringify(therapist));
+                    this.showTherapistModal = true;
+                },
+
+                saveTherapist() {
+                    if (!this.editingTherapist.name) return alert('請輸入技師名稱！');
+                    if (this.editingTherapist.id) {
+                        const idx = this.therapists.findIndex(t => t.id === this.editingTherapist.id);
+                        this.therapists[idx] = { ...this.editingTherapist };
+                    } else {
+                        this.therapists.push({ ...this.editingTherapist, id: Date.now(), status: 'active' });
+                    }
+                    this.showTherapistModal = false;
+                },
+
+                deleteTherapist(id) {
+                    if (confirm('確定移除此技師資訊？')) {
+                        this.therapists = this.therapists.filter(t => t.id !== id);
+                    }
+                }
+            }));
+        });
+    </script>
+</body>
+</html>

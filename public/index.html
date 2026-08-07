@@ -10,6 +10,9 @@
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <!-- Lucide 圖標 -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        [x-cloak] { display: none !important; }
+    </style>
 </head>
 <body class="bg-slate-50 text-slate-800 pb-20 font-sans" x-data="footApp()">
 
@@ -19,13 +22,13 @@
             <i data-lucide="sparkles" class="w-6 h-6 text-amber-400"></i>
             <h1 class="text-lg font-bold">御足靈採 - 智能匹配系統</h1>
         </div>
-        <span class="text-xs bg-indigo-800 px-2.5 py-1 rounded-full border border-indigo-700 text-indigo-200">商用專業版 v2.5</span>
+        <span class="text-xs bg-indigo-800 px-2.5 py-1 rounded-full border border-indigo-700 text-indigo-200">商用專業版 v2.6</span>
     </header>
 
     <!-- 主要內容分頁 Content Sections -->
     <main class="max-w-md mx-auto p-4 space-y-6">
 
-        <!-- 1. 數據統計與客戶頻率 Dashboard -->
+        <!-- 1. 數據統計 Dashboard -->
         <section x-show="activeTab === 'stats'" class="space-y-4">
             <h2 class="text-lg font-bold flex items-center gap-2"><i data-lucide="bar-chart-3" class="w-5 h-5 text-indigo-600"></i> 營運與客戶分析數據</h2>
             
@@ -38,11 +41,10 @@
                 <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
                     <p class="text-xs text-slate-500">高頻熟客率 (≥3次)</p>
                     <p class="text-2xl font-black text-emerald-600 mt-1" x-text="stats.vipRate + '%'"></p>
-                    <span class="text-[10px] text-slate-400">總客戶 128 人</span>
+                    <span class="text-[10px] text-slate-400" x-text="'總客戶 ' + clients.length + ' 人'"></span>
                 </div>
             </div>
 
-            <!-- 客戶造訪頻率分佈 -->
             <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 space-y-3">
                 <h3 class="text-sm font-bold text-slate-700">客戶造訪頻率統計</h3>
                 <template x-for="item in stats.visitFrequency" :key="item.label">
@@ -59,16 +61,19 @@
             </div>
         </section>
 
-        <!-- 2. 需求配對與快速預約 Match & Booking -->
+        <!-- 2. 需求配對 Match & Booking -->
         <section x-show="activeTab === 'match'" class="space-y-4">
             <h2 class="text-lg font-bold flex items-center gap-2"><i data-lucide="zap" class="w-5 h-5 text-indigo-600"></i> 客戶需求匹配技師</h2>
             
             <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 space-y-4">
                 <!-- 選擇客戶 -->
                 <div>
-                    <label class="block text-xs font-semibold text-slate-600 mb-1">選擇或輸入客戶</label>
+                    <div class="flex justify-between items-center mb-1">
+                        <label class="block text-xs font-semibold text-slate-600">選擇既有客戶或預約新客</label>
+                        <button @click="openClientModal()" class="text-xs text-indigo-600 font-bold hover:underline">+ 快速建立新客</button>
+                    </div>
                     <select x-model="matchForm.clientId" @change="loadClientPreferences()" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-                        <option value="">-- 新客 / 快速選擇客戶 --</option>
+                        <option value="">-- 現場新客 / 快速選擇 --</option>
                         <template x-for="client in clients" :key="client.id">
                             <option :value="client.id" x-text="client.name + ' (' + client.phone + ')'"></option>
                         </template>
@@ -85,7 +90,7 @@
                     </div>
                 </div>
 
-                <!-- 技能指定需求 (帶搜尋/標籤點選) -->
+                <!-- 技能指定需求 -->
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1">指定特定技能需求 (可多選)</label>
                     <div class="flex flex-wrap gap-1.5 mb-2">
@@ -121,13 +126,13 @@
                                 </template>
                             </div>
                         </div>
-                        <button @click="openBookingModal(therapist)" class="bg-slate-900 text-white text-xs px-3 py-2 rounded-lg font-medium hover:bg-slate-800">立即預約</button>
+                        <button @click="openBookingModal(therapist)" class="bg-slate-900 text-white text-xs px-3 py-2 rounded-lg font-medium hover:bg-slate-800 transition">立即預約</button>
                     </div>
                 </template>
             </div>
         </section>
 
-        <!-- 3. 技師管理 (CRUD + 搜尋式下拉選擇) Therapist CRUD -->
+        <!-- 3. 技師管理 Therapist CRUD -->
         <section x-show="activeTab === 'therapists'" class="space-y-4">
             <div class="flex justify-between items-center">
                 <h2 class="text-lg font-bold flex items-center gap-2"><i data-lucide="users" class="w-5 h-5 text-indigo-600"></i> 技師團隊管理</h2>
@@ -136,7 +141,6 @@
                 </button>
             </div>
 
-            <!-- 技師卡片列表 -->
             <div class="space-y-3">
                 <template x-for="therapist in therapists" :key="therapist.id">
                     <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 space-y-2">
@@ -163,10 +167,15 @@
             </div>
         </section>
 
-        <!-- 4. 客戶檔案與造訪紀錄 Client CRM -->
+        <!-- 4. 客戶 CRM 檔案庫 Client CRM -->
         <section x-show="activeTab === 'clients'" class="space-y-4">
-            <h2 class="text-lg font-bold flex items-center gap-2"><i data-lucide="contact-2" class="w-5 h-5 text-indigo-600"></i> 客戶 CRM 檔案庫</h2>
-            
+            <div class="flex justify-between items-center">
+                <h2 class="text-lg font-bold flex items-center gap-2"><i data-lucide="contact-2" class="w-5 h-5 text-indigo-600"></i> 客戶 CRM 檔案庫</h2>
+                <button @click="openClientModal()" class="bg-indigo-600 text-white text-xs px-3 py-2 rounded-lg font-bold flex items-center gap-1 shadow">
+                    <i data-lucide="plus" class="w-4 h-4"></i> 新增客戶
+                </button>
+            </div>
+
             <div class="space-y-3">
                 <template x-for="client in clients" :key="client.id">
                     <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 space-y-2">
@@ -176,10 +185,14 @@
                                 <p class="text-xs text-slate-400" x-text="client.phone"></p>
                             </div>
                             <div class="text-right">
-                                <span class="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-full" x-text="'造訪 ' + client.total_visits + ' 次'"></span>
+                                <span class="text-xs font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full" x-text="'造訪 ' + client.total_visits + ' 次'"></span>
                             </div>
                         </div>
-                        <p class="text-xs text-slate-600 bg-slate-50 p-2 rounded-lg" x-text="'備註偏好: ' + (client.notes || '無特別註記')"></p>
+                        <p class="text-xs text-slate-600 bg-slate-50 p-2 rounded-lg" x-text="'偏好/備註: ' + (client.notes || '無特別註記')"></p>
+                        <div class="pt-2 border-t border-slate-100 flex justify-end gap-2 text-xs">
+                            <button @click="openClientModal(client)" class="text-indigo-600 font-semibold px-2 py-1">編輯資料</button>
+                            <button @click="deleteClient(client.id)" class="text-rose-500 font-semibold px-2 py-1">刪除</button>
+                        </div>
                     </div>
                 </template>
             </div>
@@ -206,14 +219,90 @@
         </button>
     </nav>
 
-    <!-- 彈窗：新增/編輯技師 (包含可搜尋/選擇技能) Modal -->
+    <!-- 彈窗 1：預約確認彈窗 Modal -->
+    <div x-show="showBookingModal" class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4" x-cloak>
+        <div class="bg-white rounded-2xl p-5 w-full max-w-sm space-y-4 shadow-xl">
+            <h3 class="font-bold text-lg text-slate-800">📅 確認預約服務</h3>
+            
+            <div class="space-y-3">
+                <div class="bg-indigo-50 p-3 rounded-lg border border-indigo-100">
+                    <p class="text-xs text-indigo-500 font-semibold">指派技師</p>
+                    <p class="font-bold text-indigo-900 text-sm mt-0.5" x-text="bookingForm.therapistName"></p>
+                </div>
+
+                <div>
+                    <label class="text-xs font-semibold text-slate-600">客戶姓名</label>
+                    <input type="text" x-model="bookingForm.clientName" placeholder="請輸入姓名" class="w-full border rounded-lg p-2 text-sm mt-1">
+                </div>
+                <div>
+                    <label class="text-xs font-semibold text-slate-600">連絡電話</label>
+                    <input type="text" x-model="bookingForm.clientPhone" placeholder="09xxxxxxxx" class="w-full border rounded-lg p-2 text-sm mt-1">
+                </div>
+                <div>
+                    <label class="text-xs font-semibold text-slate-600">服務項目</label>
+                    <select x-model="bookingForm.serviceItem" class="w-full border rounded-lg p-2 text-sm mt-1">
+                        <option value="60分鐘足底按摩">60分鐘足底按摩</option>
+                        <option value="90分鐘全身指壓">90分鐘全身指壓</option>
+                        <option value="60分鐘肩頸深層舒壓">60分鐘肩頸深層舒壓</option>
+                        <option value="120分鐘全身+足底套餐">120分鐘全身+足底套餐</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-xs font-semibold text-slate-600">預約時間</label>
+                    <input type="datetime-local" x-model="bookingForm.bookingTime" class="w-full border rounded-lg p-2 text-sm mt-1">
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-2">
+                <button @click="showBookingModal = false" class="px-4 py-2 bg-slate-100 text-slate-600 rounded-lg text-xs font-semibold">取消</button>
+                <button @click="confirmBooking()" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-xs font-semibold">確定提交預約</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 彈窗 2：新增/編輯客戶 Modal -->
+    <div x-show="showClientModal" class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4" x-cloak>
+        <div class="bg-white rounded-2xl p-5 w-full max-w-sm space-y-4 shadow-xl">
+            <h3 class="font-bold text-lg text-slate-800" x-text="editingClient.id ? '編輯客戶資料' : '新增客戶資料'"></h3>
+            
+            <div class="space-y-3">
+                <div>
+                    <label class="text-xs font-semibold text-slate-600">客戶姓名 *</label>
+                    <input type="text" x-model="editingClient.name" placeholder="例如：張先生" class="w-full border rounded-lg p-2 text-sm mt-1">
+                </div>
+                <div>
+                    <label class="text-xs font-semibold text-slate-600">連絡電話 *</label>
+                    <input type="text" x-model="editingClient.phone" placeholder="09xxxxxxxx" class="w-full border rounded-lg p-2 text-sm mt-1">
+                </div>
+                <div>
+                    <label class="text-xs font-semibold text-slate-600">偏好按摩力道</label>
+                    <select x-model="editingClient.prefer_pressure" class="w-full border rounded-lg p-2 text-sm mt-1">
+                        <option value="light">輕柔舒壓</option>
+                        <option value="medium">適中標準</option>
+                        <option value="heavy">深層重力</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-xs font-semibold text-slate-600">備註/特別需求/舊傷部位</label>
+                    <textarea x-model="editingClient.notes" placeholder="例如：腰部舊傷、怕痛、避開腳踝" class="w-full border rounded-lg p-2 text-sm mt-1 h-20"></textarea>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-2">
+                <button @click="showClientModal = false" class="px-4 py-2 bg-slate-100 text-slate-600 rounded-lg text-xs font-semibold">取消</button>
+                <button @click="saveClient()" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-xs font-semibold">儲存客戶</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 彈窗 3：新增/編輯技師 Modal -->
     <div x-show="showTherapistModal" class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4" x-cloak>
         <div class="bg-white rounded-2xl p-5 w-full max-w-sm space-y-4 shadow-xl">
             <h3 class="font-bold text-lg text-slate-800" x-text="editingTherapist.id ? '編輯技師資訊' : '新增技師'"></h3>
             
             <div class="space-y-3">
                 <div>
-                    <label class="text-xs font-semibold text-slate-600">技師姓名 / 編號</label>
+                    <label class="text-xs font-semibold text-slate-600">技師姓名 / 編號 *</label>
                     <input type="text" x-model="editingTherapist.name" placeholder="例如：陳技師 (#05)" class="w-full border rounded-lg p-2 text-sm mt-1">
                 </div>
                 <div>
@@ -221,7 +310,6 @@
                     <input type="text" x-model="editingTherapist.phone" placeholder="09xxxxxxxx" class="w-full border rounded-lg p-2 text-sm mt-1">
                 </div>
                 
-                <!-- 搜尋式下拉/多選技能區段 -->
                 <div x-data="{ skillSearch: '' }">
                     <label class="text-xs font-semibold text-slate-600">擅長技能標籤 (搜尋下拉選擇)</label>
                     <input type="text" x-model="skillSearch" placeholder="🔍 搜尋技能 (如: 經絡、拔罐...)" class="w-full border rounded-lg p-2 text-sm mt-1 mb-2">
@@ -250,6 +338,9 @@
             Alpine.data('footApp', () => ({
                 activeTab: 'match',
                 showTherapistModal: false,
+                showClientModal: false,
+                showBookingModal: false,
+
                 allSkills: ['足底反射區', '深層經絡', '肩頸舒壓', '重力道', '輕柔放鬆', '孕婦按摩', '刮痧拔罐', '運動修復', '關節正骨'],
                 
                 stats: {
@@ -275,7 +366,10 @@
 
                 matchForm: { clientId: '', pressure: 'medium', selectedSkills: [] },
                 matchedTherapists: [],
+                
                 editingTherapist: { id: null, name: '', phone: '', skills: [] },
+                editingClient: { id: null, name: '', phone: '', prefer_pressure: 'medium', notes: '' },
+                bookingForm: { therapistId: null, therapistName: '', clientId: '', clientName: '', clientPhone: '', serviceItem: '60分鐘足底按摩', bookingTime: '' },
 
                 init() {
                     lucide.createIcons();
@@ -292,13 +386,13 @@
                 loadClientPreferences() {
                     const client = this.clients.find(c => c.id == this.matchForm.clientId);
                     if (client) {
-                        this.matchForm.pressure = client.prefer_pressure;
+                        this.matchForm.pressure = client.prefer_pressure || 'medium';
                     }
                 },
 
                 runMatching() {
                     this.matchedTherapists = this.therapists.map(t => {
-                        let score = 70; // 基礎分
+                        let score = 70;
                         if (this.matchForm.pressure === 'heavy' && t.skills.includes('重力道')) score += 20;
                         if (this.matchForm.pressure === 'light' && t.skills.includes('輕柔放鬆')) score += 20;
                         
@@ -309,6 +403,94 @@
                     }).sort((a, b) => b.matchScore - a.matchScore);
                 },
 
+                // 預約彈窗處理
+                openBookingModal(therapist) {
+                    this.bookingForm.therapistId = therapist.id;
+                    this.bookingForm.therapistName = therapist.name;
+
+                    if (this.matchForm.clientId) {
+                        const c = this.clients.find(x => x.id == this.matchForm.clientId);
+                        if (c) {
+                            this.bookingForm.clientId = c.id;
+                            this.bookingForm.clientName = c.name;
+                            this.bookingForm.clientPhone = c.phone;
+                        }
+                    } else {
+                        this.bookingForm.clientId = '';
+                        this.bookingForm.clientName = '';
+                        this.bookingForm.clientPhone = '';
+                    }
+
+                    // 設定預設時間為當前時間加 30 分鐘
+                    const now = new Date();
+                    now.setMinutes(now.getMinutes() + 30 - now.getTimezoneOffset());
+                    this.bookingForm.bookingTime = now.toISOString().slice(0, 16);
+
+                    this.showBookingModal = true;
+                },
+
+                confirmBooking() {
+                    if (!this.bookingForm.clientName || !this.bookingForm.clientPhone) {
+                        alert('請填寫客戶姓名與電話！');
+                        return;
+                    }
+
+                    // 檢查是否為新客戶，若無則自動新增
+                    let client = this.clients.find(c => c.phone === this.bookingForm.clientPhone || (this.bookingForm.clientId && c.id == this.bookingForm.clientId));
+
+                    if (!client) {
+                        client = {
+                            id: Date.now(),
+                            name: this.bookingForm.clientName,
+                            phone: this.bookingForm.clientPhone,
+                            prefer_pressure: this.matchForm.pressure || 'medium',
+                            notes: '線上預約自動建立新客',
+                            total_visits: 1
+                        };
+                        this.clients.push(client);
+                    } else {
+                        client.total_visits = (client.total_visits || 0) + 1;
+                    }
+
+                    this.stats.totalVisits += 1;
+                    alert(`✅ 預約成功！\n技師：${this.bookingForm.therapistName}\n客戶：${this.bookingForm.clientName}\n項目：${this.bookingForm.serviceItem}\n時間：${this.bookingForm.bookingTime}`);
+                    this.showBookingModal = false;
+                },
+
+                // 客戶管理 logic
+                openClientModal(client = null) {
+                    if (client) {
+                        this.editingClient = JSON.parse(JSON.stringify(client));
+                    } else {
+                        this.editingClient = { id: null, name: '', phone: '', prefer_pressure: 'medium', notes: '' };
+                    }
+                    this.showClientModal = true;
+                },
+
+                saveClient() {
+                    if (!this.editingClient.name || !this.editingClient.phone) {
+                        return alert('請填寫完整客戶姓名與電話！');
+                    }
+                    if (this.editingClient.id) {
+                        const idx = this.clients.findIndex(c => c.id === this.editingClient.id);
+                        if (idx !== -1) this.clients[idx] = { ...this.editingClient };
+                    } else {
+                        this.clients.push({
+                            ...this.editingClient,
+                            id: Date.now(),
+                            total_visits: 0
+                        });
+                    }
+                    this.showClientModal = false;
+                },
+
+                deleteClient(id) {
+                    if (confirm('確定刪除此客戶 CRM 檔案？')) {
+                        this.clients = this.clients.filter(c => c.id !== id);
+                    }
+                },
+
+                // 技師管理 logic
                 openTherapistModal() {
                     this.editingTherapist = { id: null, name: '', phone: '', skills: [] };
                     this.showTherapistModal = true;
@@ -323,7 +505,7 @@
                     if (!this.editingTherapist.name) return alert('請輸入技師名稱！');
                     if (this.editingTherapist.id) {
                         const idx = this.therapists.findIndex(t => t.id === this.editingTherapist.id);
-                        this.therapists[idx] = { ...this.editingTherapist };
+                        if (idx !== -1) this.therapists[idx] = { ...this.editingTherapist };
                     } else {
                         this.therapists.push({ ...this.editingTherapist, id: Date.now(), status: 'active' });
                     }

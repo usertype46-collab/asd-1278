@@ -7,10 +7,10 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.5/JsBarcode.all.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body { background-color: #f3f4f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         .card { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); }
-        /* 隱藏捲軸但可滾動 */
         .hide-scroll::-webkit-scrollbar { display: none; }
         .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
@@ -25,7 +25,10 @@
         
         <section class="bg-white rounded-xl card p-5 border-t-4 border-green-500">
             <div class="flex justify-between items-center mb-3">
-                <h2 class="text-md font-bold text-gray-800">🟢 LINE 門市群組捷徑</h2>
+                <h2 class="text-md font-bold text-gray-800 flex items-center gap-2">
+                    🟢 LINE 門市群組捷徑
+                    <span id="gpsStatus" class="text-xs bg-gray-200 text-gray-700 px-2 py-0.5 rounded">📍 定位讀取中...</span>
+                </h2>
                 <button onclick="toggleManageShortcuts()" class="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded hover:bg-gray-300 transition">
                     ⚙️ 管理捷徑
                 </button>
@@ -38,6 +41,10 @@
                 <h3 class="text-sm font-bold text-gray-600 mb-2" id="shortcutFormTitle">新增捷徑</h3>
                 <form id="shortcutForm" onsubmit="saveShortcut(event)" class="mb-4">
                     <input type="hidden" id="editShortcutId">
+                    <select id="shortcutGroup" required class="w-full border border-gray-300 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-green-500 outline-none mb-2">
+                        <option value="愛國群組">愛國群組</option>
+                        <option value="中洲群組">中洲群組</option>
+                    </select>
                     <div class="flex gap-2 mb-2">
                         <input type="text" id="shortcutName" placeholder="門市名稱" required class="flex-1 border border-gray-300 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-green-500 outline-none">
                         <input type="url" id="shortcutUrl" placeholder="LINE 網址 (https://...)" required class="flex-[2] border border-gray-300 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-green-500 outline-none">
@@ -145,38 +152,127 @@
     </main>
 
     <script>
-        /* ================= 1. LINE 群組捷徑 (LocalStorage CRUD) ================= */
-        const defaultShortcuts = [
-            { id: '1', name: '潮州愛國', url: 'https://line.me/R/ti/g/fZrPvcKMBK' },
-            { id: '2', name: '潮州中洲', url: 'https://line.me/R/ti/g/QBVMmunss2' },
-            { id: '3', name: '新園仙吉', url: 'https://line.me/R/ti/g/rqjPNW5fjg' }
-        ];
+        /* ================= 0. 系統與各門市 GPS 座標設定 ================= */
+        
+        // ⚠️ 請填寫準確的 Google Map 經緯度，以確保 50 公尺判定精準
+        const STORE_LOCATIONS = {
+            '愛國群組': [
+                { name: '潮州愛國智取店', lat: 22.553198, lng: 120.540112 },
+                { name: '潮州四維智取店', lat: 22.551234, lng: 120.542234 },
+                { name: '潮州文化智取店', lat: 22.554321, lng: 120.538888 },
+                { name: '潮州延平智取店', lat: 22.548900, lng: 120.544500 },
+                { name: '潮州太平智取店', lat: 22.546789, lng: 120.541111 },
+                { name: '潮州新生智取店', lat: 22.555555, lng: 120.546666 }
+            ],
+            '中洲群組': [
+                { name: '潮州中洲智取店', lat: 22.547198, lng: 120.537112 },
+                { name: '潮州光華智取店', lat: 22.549234, lng: 120.539234 },
+                { name: '潮州大同智取店', lat: 22.552321, lng: 120.536888 },
+                { name: '潮州光春智取店', lat: 22.545900, lng: 120.548500 }
+            ]
+        };
 
-        let shortcuts = JSON.parse(localStorage.getItem('shopee_shortcuts'));
-        if (!shortcuts || shortcuts.length === 0) {
-            shortcuts = defaultShortcuts;
-            saveShortcutsToLocal();
+        // Supabase 初始化
+        const supabaseUrl = 'https://hyvcfxwoewvbpfzvfdnn.supabase.co';
+        const supabaseKey = 'sb_publishable_TR5C2Zc7eOj9uUosUUsX4g_KbBOwey2';
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+        /* ================= 1. LINE 群組捷徑 (Supabase CRUD & GPS) ================= */
+        let shortcuts = [];
+        let editShortcutId = null;
+        let currentVisibleGroup = null; // 當前使用者位在的 50m 範圍群組
+        let userLat = null;
+        let userLng = null;
+
+        // Haversine 公式計算兩點距離 (單位：公尺)
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371e3; 
+            const p1 = lat1 * Math.PI / 180;
+            const p2 = lat2 * Math.PI / 180;
+            const dp = (lat2 - lat1) * Math.PI / 180;
+            const dl = (lon2 - lon1) * Math.PI / 180;
+
+            const a = Math.sin(dp / 2) * Math.sin(dp / 2) +
+                      Math.cos(p1) * Math.cos(p2) *
+                      Math.sin(dl / 2) * Math.sin(dl / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            return R * c; 
         }
 
-        let editShortcutId = null;
+        function updateGpsStatus(status, colorClass) {
+            const el = document.getElementById('gpsStatus');
+            el.innerText = status;
+            el.className = `text-xs px-2 py-0.5 rounded ${colorClass}`;
+        }
 
-        function saveShortcutsToLocal() {
-            localStorage.setItem('shopee_shortcuts', JSON.stringify(shortcuts));
+        function checkLocationVisibility() {
+            if (userLat === null || userLng === null) return;
+            
+            let inAiguo = false;
+            let inZhongzhou = false;
+
+            // 檢查是否在愛國群組門市 50m 內
+            for (let store of STORE_LOCATIONS['愛國群組']) {
+                if (calculateDistance(userLat, userLng, store.lat, store.lng) <= 50) {
+                    inAiguo = true; break;
+                }
+            }
+
+            // 檢查是否在中洲群組門市 50m 內
+            for (let store of STORE_LOCATIONS['中洲群組']) {
+                if (calculateDistance(userLat, userLng, store.lat, store.lng) <= 50) {
+                    inZhongzhou = true; break;
+                }
+            }
+
+            if (inAiguo) {
+                currentVisibleGroup = '愛國群組';
+                updateGpsStatus(`📍 在範圍內 (${currentVisibleGroup})`, 'bg-green-100 text-green-700');
+            } else if (inZhongzhou) {
+                currentVisibleGroup = '中洲群組';
+                updateGpsStatus(`📍 在範圍內 (${currentVisibleGroup})`, 'bg-green-100 text-green-700');
+            } else {
+                currentVisibleGroup = null; 
+                updateGpsStatus('📍 距離過遠 (已隱藏)', 'bg-yellow-100 text-yellow-700');
+            }
+
+            renderShortcuts();
+        }
+
+        async function fetchShortcuts() {
+            const { data, error } = await supabase.from('shopee_shortcuts').select('*').order('created_at', { ascending: true });
+            if (!error && data) {
+                shortcuts = data;
+                renderShortcuts();
+            }
         }
 
         function renderShortcuts() {
-            // 渲染上方按鈕
             const btnContainer = document.getElementById('shortcutButtons');
-            btnContainer.innerHTML = shortcuts.map(s => 
-                `<a href="${s.url}" target="_blank" class="bg-green-500 hover:bg-green-600 text-white text-xs font-bold py-3 px-1 rounded-lg shadow transition flex items-center justify-center break-all">${escapeHtml(s.name)}</a>`
-            ).join('');
+            
+            // 預設隱藏，僅顯示當前符合 GPS 定位的群組
+            if (currentVisibleGroup === null) {
+                btnContainer.innerHTML = '<div class="col-span-3 text-gray-500 text-sm py-2 bg-gray-50 rounded">請靠近門市 50 公尺內以顯示專屬捷徑</div>';
+            } else {
+                const visibleShortcuts = shortcuts.filter(s => s.group_type === currentVisibleGroup);
+                if (visibleShortcuts.length === 0) {
+                    btnContainer.innerHTML = '<div class="col-span-3 text-gray-500 text-sm py-2">該群組尚無建立任何捷徑</div>';
+                } else {
+                    btnContainer.innerHTML = visibleShortcuts.map(s => 
+                        `<a href="${s.url}" target="_blank" class="bg-green-500 hover:bg-green-600 text-white text-xs font-bold py-3 px-1 rounded-lg shadow transition flex items-center justify-center break-all">${escapeHtml(s.name)}</a>`
+                    ).join('');
+                }
+            }
 
-            // 渲染管理列表
+            // 渲染管理列表 (管理後台永遠顯示全部，方便增刪改)
             const listContainer = document.getElementById('manageShortcutList');
             listContainer.innerHTML = shortcuts.map(s => `
                 <div class="flex justify-between items-center bg-gray-50 p-2 rounded border border-gray-200">
                     <div class="overflow-hidden pr-2">
-                        <div class="font-bold text-sm text-gray-800">${escapeHtml(s.name)}</div>
+                        <div class="font-bold text-sm text-gray-800">
+                            <span class="text-xs bg-gray-200 text-gray-600 px-1 rounded mr-1">${escapeHtml(s.group_type)}</span>
+                            ${escapeHtml(s.name)}
+                        </div>
                         <div class="text-xs text-gray-400 truncate">${escapeHtml(s.url)}</div>
                     </div>
                     <div class="flex gap-1 shrink-0">
@@ -193,46 +289,54 @@
             resetShortcutForm();
         }
 
-        function saveShortcut(e) {
+        async function saveShortcut(e) {
             e.preventDefault();
+            const group_type = document.getElementById('shortcutGroup').value;
             const name = document.getElementById('shortcutName').value.trim();
             const url = document.getElementById('shortcutUrl').value.trim();
             if (!name || !url) return;
 
+            document.getElementById('saveShortcutBtn').disabled = true;
+            document.getElementById('saveShortcutBtn').innerText = '儲存中...';
+
             if (editShortcutId) {
-                const idx = shortcuts.findIndex(s => s.id === editShortcutId);
-                if (idx > -1) shortcuts[idx] = { id: editShortcutId, name, url };
+                const { error } = await supabase.from('shopee_shortcuts')
+                    .update({ name, url, group_type })
+                    .eq('id', editShortcutId);
+                if (error) alert('更新失敗！');
             } else {
-                shortcuts.push({ id: Date.now().toString(), name, url });
+                const { error } = await supabase.from('shopee_shortcuts')
+                    .insert([{ name, url, group_type }]);
+                if (error) alert('新增失敗！');
             }
 
-            saveShortcutsToLocal();
             resetShortcutForm();
-            renderShortcuts();
         }
 
         function editShortcut(id) {
             const s = shortcuts.find(x => x.id === id);
             if (!s) return;
             editShortcutId = id;
+            document.getElementById('shortcutGroup').value = s.group_type;
             document.getElementById('shortcutName').value = s.name;
             document.getElementById('shortcutUrl').value = s.url;
             document.getElementById('shortcutFormTitle').innerText = '修改捷徑';
             document.getElementById('saveShortcutBtn').innerText = '更新';
         }
 
-        function deleteShortcut(id) {
+        async function deleteShortcut(id) {
             if (!confirm('確定要刪除此捷徑嗎？')) return;
-            shortcuts = shortcuts.filter(s => s.id !== id);
-            saveShortcutsToLocal();
-            renderShortcuts();
+            const { error } = await supabase.from('shopee_shortcuts').delete().eq('id', id);
+            if (error) alert('刪除失敗！');
         }
 
         function resetShortcutForm() {
             editShortcutId = null;
             document.getElementById('shortcutForm').reset();
             document.getElementById('shortcutFormTitle').innerText = '新增捷徑';
-            document.getElementById('saveShortcutBtn').innerText = '儲存';
+            const btn = document.getElementById('saveShortcutBtn');
+            btn.disabled = false;
+            btn.innerText = '儲存';
         }
 
         function escapeHtml(str) {
@@ -241,13 +345,10 @@
             }[tag] || tag));
         }
 
-
         /* ================= 2. 回報字串產生器邏輯 ================= */
-        // 初始化日期
         const today = new Date();
         document.getElementById('todayDate').innerText = `${today.getMonth() + 1}/${today.getDate()}`;
 
-        // 定義各情境的第二行選項與所需輸入框數量
         const L2_CONFIG = {
             'SCS_FBS_BLACKBOX': [
                 { val: 'strap', text: '束帶×（手動輸入）', inputs: ['數量'] },
@@ -264,7 +365,7 @@
                 { val: 'stay_naked', text: '滯留（手動輸入）裸', inputs: ['裸數'] },
                 { val: 'exception', text: '異退（手動輸入）件', inputs: ['件數'] }
             ],
-            'PACKAGE_REALLOC': [], // 無第二三行
+            'PACKAGE_REALLOC': [], 
             'PDA_SHELVING': [
                 { val: 'none', text: '無', inputs: [] },
                 { val: 'stay_box_naked', text: '滯留（手動輸入）箱（手動輸入）裸', inputs: ['箱數', '裸數'] },
@@ -277,20 +378,19 @@
                 { val: 'stay_box', text: '滯留（手動輸入）箱', inputs: ['箱數'] },
                 { val: 'stay_naked', text: '滯留（手動輸入）裸', inputs: ['裸數'] }
             ],
-            'STOREFRONT_CHECK': [] // 無第二三行
+            'STOREFRONT_CHECK': [] 
         };
 
-        // 定義各情境對應第二行選項時，第三行的選項
         const L3_CONFIG = {
             'SCS_FBS_BLACKBOX': {
                 'strap': [
                     { val: 'strap', text: '束帶×（手動輸入）', inputs: ['數量'] },
                     { val: 'no_strap', text: '無束帶×（手動輸入）', inputs: ['數量'] }
                 ],
-                'no_strap': [] // 點選無束帶絕不出現第三行
+                'no_strap': [] 
             },
             'NDD_FBS_PACKING': {
-                'none': [], // 點選無絕不出現第三行
+                'none': [], 
                 'lack': [
                     { val: 'none', text: '無', inputs: [] },
                     { val: 'found', text: '已刷已找', inputs: [] }
@@ -345,12 +445,10 @@
             const l2Val = document.getElementById('line2Select').value;
             const l2Conf = L2_CONFIG[currentCategory].find(c => c.val === l2Val);
             
-            // 渲染第二行輸入框
             document.getElementById('line2Inputs').innerHTML = l2Conf.inputs.map((ph, i) => 
                 `<input type="number" id="l2_in_${i}" placeholder="${ph}" class="w-14 border border-gray-300 rounded px-1 py-1 text-center text-sm outline-none focus:ring-1 focus:ring-blue-500" min="0">`
             ).join('');
 
-            // 處理第三行邏輯
             const l3Container = document.getElementById('line3Container');
             const l3Options = L3_CONFIG[currentCategory]?.[l2Val];
 
@@ -377,7 +475,6 @@
             }
         }
 
-        // 解析字串轉換
         function formatLineText(val, level) {
             if (val === 'none') return '';
             
@@ -397,8 +494,6 @@
                 case 'stay_box': return `滯留${inputs[0]}箱`;
                 case 'stay_box_naked': return `滯留${inputs[0]}箱${inputs[1]}裸`;
                 case 'exception': return `異退${inputs[0]}件`;
-                
-                // 無輸入框的靜態文字
                 case 'found': return '已刷已找';
                 case 'no_pkg': return '門市已無包裹';
                 case 'damage': return '濕損破損';
@@ -418,7 +513,6 @@
             const dateStr = document.getElementById('todayDate').innerText;
             const store = document.getElementById('locationSelect').value;
             
-            // 第一行：日期+門市
             const lines = [`${dateStr} ${store}`];
 
             const l2Container = document.getElementById('line2Container');
@@ -523,9 +617,42 @@
             document.body.removeChild(a);
         }
 
-        // 頁面載入完成時初始化
+        /* ================= 4. 初始化與訂閱機制 ================= */
         document.addEventListener('DOMContentLoaded', () => {
-            renderShortcuts();
+            
+            // 初始化獲取資料
+            fetchShortcuts();
+
+            // 訂閱 Supabase Realtime 即時更新
+            supabase
+                .channel('public:shopee_shortcuts')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'shopee_shortcuts' }, payload => {
+                    fetchShortcuts(); 
+                })
+                .subscribe();
+
+            // 初始化 GPS 定位監聽
+            if ("geolocation" in navigator) {
+                navigator.geolocation.watchPosition(
+                    (position) => {
+                        userLat = position.coords.latitude;
+                        userLng = position.coords.longitude;
+                        checkLocationVisibility();
+                    },
+                    (error) => {
+                        console.warn(`Geolocation error: ${error.message}`);
+                        let msg = '📍 定位失敗';
+                        if (error.code === 1) msg = '📍 定位被拒(請開權限)';
+                        updateGpsStatus(msg, 'bg-red-100 text-red-700');
+                        currentVisibleGroup = null;
+                        renderShortcuts();
+                    },
+                    { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
+                );
+            } else {
+                updateGpsStatus('📍 裝置不支援定位', 'bg-red-100 text-red-700');
+            }
+
         });
     </script>
 </body>

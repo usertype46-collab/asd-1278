@@ -3,90 +3,62 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>作業輔助工具集 (綜合離線版)</title>
-    <!-- Tailwind CSS -->
+    <title>蝦皮門市作業輔助與回報系統</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- JsBarcode -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.5/JsBarcode.all.min.js"></script>
-    <!-- QRious -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
-    
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f3f4f6; }
+        body { background-color: #f3f4f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         .card { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); }
-        .num-input { width: 70px; padding: 6px; border: 1px solid #d1d5db; border-radius: 6px; text-align: center; }
-        .num-input:focus { outline: none; border-color: #f97316; ring: 1px; }
-        
-        /* 條碼區域樣式保留 */
-        .code-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px; margin-top: 20px; }
-        .code-card { background: white; padding: 20px; border-radius: 10px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; align-items: center; gap: 15px; animation: fadeIn 0.3s ease-in-out;}
-        .code-card canvas { max-width: 100%; height: auto; background: white; padding: 10px; border-radius: 4px; }
-        .text-display { word-break: break-all; color: #666; font-size: 0.95em; text-align: center; width: 100%; font-weight: bold; }
-        .card-actions { display: flex; gap: 10px; width: 100%; }
-        
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        /* 隱藏捲軸但可滾動 */
+        .hide-scroll::-webkit-scrollbar { display: none; }
+        .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
 <body class="pb-10">
 
     <header class="bg-orange-500 text-white text-center py-4 sticky top-0 z-10 shadow-md">
-        <h1 class="text-xl font-bold tracking-wider">🛠️ 作業輔助工具集 (綜合離線版)</h1>
+        <h1 class="text-xl font-bold tracking-wider">📦 蝦皮門市作業輔助系統</h1>
     </header>
 
-    <main class="max-w-2xl mx-auto mt-4 px-4 space-y-6">
+    <main class="max-w-lg mx-auto mt-4 px-4 space-y-6">
         
-        <!-- ================= LINE 群組快捷鍵 ================= -->
         <section class="bg-white rounded-xl card p-5 border-t-4 border-green-500">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-lg font-bold text-gray-800">🟢 LINE 門市群組捷徑</h2>
-                <button onclick="toggleEditMode()" class="text-sm bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-1 rounded transition">⚙️ 管理捷徑</button>
+            <div class="flex justify-between items-center mb-3">
+                <h2 class="text-md font-bold text-gray-800">🟢 LINE 門市群組捷徑</h2>
+                <button onclick="toggleManageShortcuts()" class="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded hover:bg-gray-300 transition">
+                    ⚙️ 管理捷徑
+                </button>
             </div>
             
-            <!-- 捷徑顯示區 -->
-            <div id="shortcutDisplay" class="grid grid-cols-3 sm:grid-cols-4 gap-2 text-center">
-                <!-- 動態生成 -->
-            </div>
-
-            <!-- 捷徑管理區 (預設隱藏) -->
-            <div id="shortcutManager" class="hidden mt-4 pt-4 border-t border-gray-200">
-                <h3 class="text-sm font-semibold text-gray-600 mb-2">管理現有捷徑</h3>
-                <ul id="shortcutList" class="space-y-2 mb-4">
-                    <!-- 動態生成 -->
-                </ul>
-                <div class="bg-gray-50 p-3 rounded-lg border border-gray-200">
-                    <h3 class="text-sm font-semibold text-gray-600 mb-2">新增捷徑</h3>
-                    <div class="flex flex-col sm:flex-row gap-2">
-                        <input type="text" id="newShortcutName" placeholder="門市名稱" class="flex-1 border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-green-500">
-                        <input type="text" id="newShortcutUrl" placeholder="LINE 網址" class="flex-2 border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-green-500">
-                        <button onclick="addShortcut()" class="bg-green-500 hover:bg-green-600 text-white font-bold py-1.5 px-4 rounded text-sm transition">新增</button>
-                    </div>
+            <div id="shortcutButtons" class="grid grid-cols-3 gap-2 text-center">
                 </div>
+
+            <div id="manageShortcutsSection" class="hidden mt-4 pt-4 border-t border-gray-200">
+                <h3 class="text-sm font-bold text-gray-600 mb-2" id="shortcutFormTitle">新增捷徑</h3>
+                <form id="shortcutForm" onsubmit="saveShortcut(event)" class="mb-4">
+                    <input type="hidden" id="editShortcutId">
+                    <div class="flex gap-2 mb-2">
+                        <input type="text" id="shortcutName" placeholder="門市名稱" required class="flex-1 border border-gray-300 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-green-500 outline-none">
+                        <input type="url" id="shortcutUrl" placeholder="LINE 網址 (https://...)" required class="flex-[2] border border-gray-300 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-green-500 outline-none">
+                    </div>
+                    <div class="flex gap-2">
+                        <button type="submit" id="saveShortcutBtn" class="flex-1 bg-green-500 text-white text-sm py-1 rounded hover:bg-green-600 transition">儲存</button>
+                        <button type="button" onclick="resetShortcutForm()" class="flex-1 bg-gray-400 text-white text-sm py-1 rounded hover:bg-gray-500 transition">取消</button>
+                    </div>
+                </form>
+                <div id="manageShortcutList" class="space-y-2 max-h-40 overflow-y-auto hide-scroll">
+                    </div>
             </div>
         </section>
 
-        <!-- ================= 分類回報字串產生器 ================= -->
         <section class="bg-white rounded-xl card p-5 border-t-4 border-blue-500">
-            <h2 class="text-lg font-bold text-gray-800 mb-4">📝 分類回報字串產生器</h2>
+            <h2 class="text-md font-bold text-gray-800 mb-4">📝 狀態回報字串產生器</h2>
             
             <div class="space-y-4">
-                <!-- 類型選擇 -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">回報類型</label>
-                    <select id="mainCategory" onchange="handleCategoryChange()" class="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 font-semibold text-blue-700">
-                        <option value="scs_fbs">SCS,FBS黑箱</option>
-                        <option value="ndd_fbs_leave">NDD,FBS離店打包</option>
-                        <option value="ndd_shelf">NDD上架完成</option>
-                        <option value="parcel_reassign">包裹重新分配</option>
-                        <option value="pda_shelf">PDA上架完成</option>
-                        <option value="stay_box_report">滯留箱數回報</option>
-                        <option value="facade_check">門面檢查</option>
-                    </select>
-                </div>
-
-                <!-- 第一行：日期+門市 -->
-                <div class="flex items-center gap-2 bg-gray-100 p-2 rounded-lg border border-gray-200">
-                    <span id="todayDate" class="font-bold text-gray-700 whitespace-nowrap px-2"></span>
-                    <select id="storeSelect" class="flex-1 border border-gray-300 rounded px-2 py-1 focus:outline-none">
+                <div class="flex items-center gap-2">
+                    <div class="bg-gray-100 text-gray-700 font-bold px-3 py-2 rounded border" id="todayDate"></div>
+                    <select id="locationSelect" class="flex-1 border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
                         <option value="潮州中洲">潮州中洲</option>
                         <option value="潮州光華">潮州光華</option>
                         <option value="潮州大同">潮州大同</option>
@@ -101,289 +73,382 @@
                     </select>
                 </div>
 
-                <!-- 第二行 -->
-                <div id="line2Container" class="flex flex-wrap items-center gap-2 p-2 bg-yellow-50 rounded-lg border border-yellow-200">
-                    <span class="text-sm font-semibold text-gray-600 w-12">第二行</span>
-                    <select id="line2Select" onchange="handleLine2Change()" class="border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none"></select>
-                    <div id="line2Inputs" class="flex items-center gap-1"></div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 mb-1">回報情境</label>
+                    <select id="categorySelect" onchange="onCategoryChange()" class="w-full border border-gray-300 rounded px-3 py-2 bg-blue-50 focus:ring-2 focus:ring-blue-500 outline-none">
+                        <option value="" disabled selected>請選擇回報情境...</option>
+                        <option value="SCS_FBS_BLACKBOX">SCS,FBS黑箱</option>
+                        <option value="NDD_FBS_PACKING">NDD,FBS離店打包</option>
+                        <option value="NDD_SHELVING">NDD上架完成</option>
+                        <option value="PACKAGE_REALLOC">包裹重新分配</option>
+                        <option value="PDA_SHELVING">PDA上架完成</option>
+                        <option value="STAY_BOX_REPORT">滯留箱數回報</option>
+                        <option value="STOREFRONT_CHECK">門面檢查</option>
+                    </select>
                 </div>
 
-                <!-- 第三行 -->
-                <div id="line3Container" class="flex flex-wrap items-center gap-2 p-2 bg-red-50 rounded-lg border border-red-200">
-                    <span class="text-sm font-semibold text-gray-600 w-12">第三行</span>
-                    <select id="line3Select" onchange="handleLine3Change()" class="border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none"></select>
-                    <div id="line3Inputs" class="flex items-center gap-1"></div>
+                <div id="line2Container" class="hidden bg-gray-50 p-3 rounded border">
+                    <label class="block text-xs font-semibold text-gray-500 mb-1">第二行狀態</label>
+                    <div class="flex items-center flex-wrap gap-2">
+                        <select id="line2Select" onchange="onL2Change()" class="border border-gray-300 rounded px-2 py-1 outline-none"></select>
+                        <span id="line2Inputs" class="flex gap-1"></span>
+                    </div>
                 </div>
 
-                <!-- 產出與複製 -->
-                <button onclick="generateString()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg shadow-md transition">
+                <div id="line3Container" class="hidden bg-gray-50 p-3 rounded border">
+                    <label class="block text-xs font-semibold text-gray-500 mb-1">第三行狀態</label>
+                    <div class="flex items-center flex-wrap gap-2">
+                        <select id="line3Select" onchange="onL3Change()" class="border border-gray-300 rounded px-2 py-1 outline-none"></select>
+                        <span id="line3Inputs" class="flex gap-1"></span>
+                    </div>
+                </div>
+
+                <button onclick="generateAndCopyString()" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 rounded-lg shadow transition">
                     產生並複製字串
                 </button>
-                <textarea id="resultOutput" rows="4" readonly placeholder="產生的字串會顯示在這裡..." class="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-50 focus:outline-none"></textarea>
+
+                <textarea id="resultOutput" rows="4" readonly placeholder="產生的結果會顯示在這裡..." class="w-full border border-gray-300 rounded-lg p-3 bg-gray-50 text-gray-800 outline-none resize-none"></textarea>
             </div>
         </section>
 
-        <!-- ================= 條碼與 QR Code 產生器 ================= -->
-        <section class="bg-white rounded-xl card p-5 border-t-4 border-purple-500">
-            <h2 class="text-lg font-bold text-gray-800 mb-4">🔣 條碼 & QR Code 產生器</h2>
-            <div class="flex flex-wrap gap-2">
-                <input type="text" id="inputValue" placeholder="請輸入數值 (例如: SPX30657)..." class="flex-1 min-w-[200px] border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500" />
-                
-                <select id="codeType" onchange="toggleCodeType()" class="border border-gray-300 rounded-lg px-3 py-2 bg-gray-50 focus:outline-none">
-                    <option value="qrcode">QR Code</option>
-                    <option value="barcode">條碼 (Barcode)</option>
-                </select>
-
-                <select id="barcodeFormat" class="hidden border border-gray-300 rounded-lg px-3 py-2 bg-gray-50 focus:outline-none">
-                    <option value="CODE128">CODE128 (支援大小寫英數)</option>
-                    <option value="CODE39">CODE39 (僅支援大寫英數)</option>
-                </select>
-
-                <select id="qrErrorLevel" class="border border-gray-300 rounded-lg px-3 py-2 bg-gray-50 focus:outline-none">
-                    <option value="M">容錯率: 一般 (M)</option>
-                    <option value="H">容錯率: 高 (H)</option>
-                </select>
-
-                <button onclick="generateCode()" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-6 rounded-lg transition">產生</button>
-            </div>
+        <section class="bg-white rounded-xl card p-5 border-t-4 border-purple-500 mb-10">
+            <h2 class="text-md font-bold text-gray-800 mb-4">🔣 條碼 & QR Code 產生器</h2>
             
-            <div id="codeGrid" class="code-grid"></div>
+            <div class="space-y-3">
+                <input type="text" id="inputValue" placeholder="請輸入數值 (例如: SPX30657)..." class="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-purple-500 outline-none">
+                
+                <div class="flex gap-2">
+                    <select id="codeType" onchange="toggleAdvancedOptions()" class="flex-1 border border-gray-300 rounded px-2 py-2 bg-gray-100 outline-none">
+                        <option value="qrcode">QR Code</option>
+                        <option value="barcode">條碼 (Barcode)</option>
+                    </select>
+
+                    <select id="barcodeFormat" style="display: none;" class="flex-1 border border-gray-300 rounded px-2 py-2 bg-gray-100 outline-none">
+                        <option value="CODE128">CODE128 (英數)</option>
+                        <option value="CODE39">CODE39 (大寫)</option>
+                    </select>
+
+                    <select id="qrErrorLevel" class="flex-1 border border-gray-300 rounded px-2 py-2 bg-gray-100 outline-none">
+                        <option value="M">容錯: 一般</option>
+                        <option value="H">容錯: 高</option>
+                    </select>
+                </div>
+
+                <button onclick="generateCode()" class="w-full bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 rounded-lg shadow transition">
+                    產生圖片
+                </button>
+            </div>
+
+            <div id="codeGrid" class="grid grid-cols-1 gap-4 mt-4"></div>
         </section>
+
     </main>
 
     <script>
-        /* ================= LINE 群組捷徑邏輯 (Local Storage) ================= */
-        const DEFAULT_SHORTCUTS = [
-            { id: Date.now().toString(), name: '潮州愛國', url: 'https://line.me/R/ti/g/fZrPvcKMBK' },
-            { id: (Date.now()+1).toString(), name: '潮州中洲', url: 'https://line.me/R/ti/g/QBVMmunss2' },
-            { id: (Date.now()+2).toString(), name: '新園仙吉', url: 'https://line.me/R/ti/g/rqjPNW5fjg' }
+        /* ================= 1. LINE 群組捷徑 (LocalStorage CRUD) ================= */
+        const defaultShortcuts = [
+            { id: '1', name: '潮州愛國', url: 'https://line.me/R/ti/g/fZrPvcKMBK' },
+            { id: '2', name: '潮州中洲', url: 'https://line.me/R/ti/g/QBVMmunss2' },
+            { id: '3', name: '新園仙吉', url: 'https://line.me/R/ti/g/rqjPNW5fjg' }
         ];
 
-        let shortcuts = JSON.parse(localStorage.getItem('lineShortcuts')) || DEFAULT_SHORTCUTS;
+        let shortcuts = JSON.parse(localStorage.getItem('shopee_shortcuts'));
+        if (!shortcuts || shortcuts.length === 0) {
+            shortcuts = defaultShortcuts;
+            saveShortcutsToLocal();
+        }
 
-        function saveShortcuts() {
-            localStorage.setItem('lineShortcuts', JSON.stringify(shortcuts));
-            renderShortcuts();
+        let editShortcutId = null;
+
+        function saveShortcutsToLocal() {
+            localStorage.setItem('shopee_shortcuts', JSON.stringify(shortcuts));
         }
 
         function renderShortcuts() {
-            const displayArea = document.getElementById('shortcutDisplay');
-            const listArea = document.getElementById('shortcutList');
-            
-            // 渲染按鈕
-            displayArea.innerHTML = shortcuts.map(s => 
-                `<a href="${s.url}" target="_blank" class="bg-green-500 hover:bg-green-600 text-white text-xs font-bold py-2 px-1 rounded-lg shadow transition block truncate">${s.name}</a>`
+            // 渲染上方按鈕
+            const btnContainer = document.getElementById('shortcutButtons');
+            btnContainer.innerHTML = shortcuts.map(s => 
+                `<a href="${s.url}" target="_blank" class="bg-green-500 hover:bg-green-600 text-white text-xs font-bold py-3 px-1 rounded-lg shadow transition flex items-center justify-center break-all">${escapeHtml(s.name)}</a>`
             ).join('');
 
             // 渲染管理列表
-            listArea.innerHTML = shortcuts.map(s => `
-                <li class="flex justify-between items-center bg-gray-50 p-2 rounded border border-gray-200">
-                    <div class="truncate flex-1 pr-2">
-                        <span class="font-bold text-sm text-gray-700">${s.name}</span>
-                        <span class="text-xs text-gray-400 block truncate">${s.url}</span>
+            const listContainer = document.getElementById('manageShortcutList');
+            listContainer.innerHTML = shortcuts.map(s => `
+                <div class="flex justify-between items-center bg-gray-50 p-2 rounded border border-gray-200">
+                    <div class="overflow-hidden pr-2">
+                        <div class="font-bold text-sm text-gray-800">${escapeHtml(s.name)}</div>
+                        <div class="text-xs text-gray-400 truncate">${escapeHtml(s.url)}</div>
                     </div>
-                    <button onclick="deleteShortcut('${s.id}')" class="bg-red-500 hover:bg-red-600 text-white text-xs px-2 py-1 rounded">刪除</button>
-                </li>
+                    <div class="flex gap-1 shrink-0">
+                        <button type="button" onclick="editShortcut('${s.id}')" class="bg-blue-100 hover:bg-blue-200 text-blue-600 px-2 py-1 rounded text-xs transition">✏️</button>
+                        <button type="button" onclick="deleteShortcut('${s.id}')" class="bg-red-100 hover:bg-red-200 text-red-600 px-2 py-1 rounded text-xs transition">🗑️</button>
+                    </div>
+                </div>
             `).join('');
         }
 
-        function toggleEditMode() {
-            const manager = document.getElementById('shortcutManager');
-            manager.classList.toggle('hidden');
+        function toggleManageShortcuts() {
+            const section = document.getElementById('manageShortcutsSection');
+            section.classList.toggle('hidden');
+            resetShortcutForm();
         }
 
-        function addShortcut() {
-            const nameInput = document.getElementById('newShortcutName');
-            const urlInput = document.getElementById('newShortcutUrl');
-            if(!nameInput.value || !urlInput.value) return alert('請填寫完整資訊');
-            
-            shortcuts.push({
-                id: Date.now().toString(),
-                name: nameInput.value,
-                url: urlInput.value
-            });
-            nameInput.value = '';
-            urlInput.value = '';
-            saveShortcuts();
+        function saveShortcut(e) {
+            e.preventDefault();
+            const name = document.getElementById('shortcutName').value.trim();
+            const url = document.getElementById('shortcutUrl').value.trim();
+            if (!name || !url) return;
+
+            if (editShortcutId) {
+                const idx = shortcuts.findIndex(s => s.id === editShortcutId);
+                if (idx > -1) shortcuts[idx] = { id: editShortcutId, name, url };
+            } else {
+                shortcuts.push({ id: Date.now().toString(), name, url });
+            }
+
+            saveShortcutsToLocal();
+            resetShortcutForm();
+            renderShortcuts();
+        }
+
+        function editShortcut(id) {
+            const s = shortcuts.find(x => x.id === id);
+            if (!s) return;
+            editShortcutId = id;
+            document.getElementById('shortcutName').value = s.name;
+            document.getElementById('shortcutUrl').value = s.url;
+            document.getElementById('shortcutFormTitle').innerText = '修改捷徑';
+            document.getElementById('saveShortcutBtn').innerText = '更新';
         }
 
         function deleteShortcut(id) {
-            if(!confirm('確定刪除此捷徑？')) return;
+            if (!confirm('確定要刪除此捷徑嗎？')) return;
             shortcuts = shortcuts.filter(s => s.id !== id);
-            saveShortcuts();
+            saveShortcutsToLocal();
+            renderShortcuts();
+        }
+
+        function resetShortcutForm() {
+            editShortcutId = null;
+            document.getElementById('shortcutForm').reset();
+            document.getElementById('shortcutFormTitle').innerText = '新增捷徑';
+            document.getElementById('saveShortcutBtn').innerText = '儲存';
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/[&<>'"]/g, tag => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+            }[tag] || tag));
         }
 
 
-        /* ================= 字串產生器邏輯 ================= */
-        
-        // 設定今天日期
+        /* ================= 2. 回報字串產生器邏輯 ================= */
+        // 初始化日期
         const today = new Date();
-        document.getElementById('todayDate').textContent = `${today.getMonth() + 1}/${today.getDate()}`;
+        document.getElementById('todayDate').innerText = `${today.getMonth() + 1}/${today.getDate()}`;
 
-        const l2Container = document.getElementById('line2Container');
-        const l3Container = document.getElementById('line3Container');
-        const l2Select = document.getElementById('line2Select');
-        const l3Select = document.getElementById('line3Select');
-        const l2Inputs = document.getElementById('line2Inputs');
-        const l3Inputs = document.getElementById('line3Inputs');
-
-        // 資料結構定義
-        const OPTIONS_MAP = {
-            'none': '無',
-            'strap': '束帶',
-            'no_strap': '無束帶',
-            'lack': '缺',
-            'stay_pcs': '滯留件',
-            'stay_naked': '滯留裸',
-            'abnormal_return': '異退件',
-            'stay_box': '滯留箱',
-            'stay_box_naked': '滯留箱裸',
-            
-            // L3 特殊文字
-            'scanned_found': '已刷已找',
-            'store_no_parcel': '門市已無包裹',
-            'wet_damage': '濕損破損',
-            'system_error': '系統無法驗收',
-            'no_label': '無面單',
-            'double_label': '雙面對單',
-            'no_suitable_cabinet': '無合適櫃位',
-            'no_cabinet': '無櫃位'
+        // 定義各情境的第二行選項與所需輸入框數量
+        const L2_CONFIG = {
+            'SCS_FBS_BLACKBOX': [
+                { val: 'strap', text: '束帶×（手動輸入）', inputs: ['數量'] },
+                { val: 'no_strap', text: '無束帶×（手動輸入）', inputs: ['數量'] }
+            ],
+            'NDD_FBS_PACKING': [
+                { val: 'none', text: '無', inputs: [] },
+                { val: 'lack', text: '缺（手動輸入）', inputs: ['數量'] }
+            ],
+            'NDD_SHELVING': [
+                { val: 'none', text: '無', inputs: [] },
+                { val: 'lack', text: '缺（手動輸入）', inputs: ['數量'] },
+                { val: 'stay_pcs', text: '滯留（手動輸入）件', inputs: ['件數'] },
+                { val: 'stay_naked', text: '滯留（手動輸入）裸', inputs: ['裸數'] },
+                { val: 'exception', text: '異退（手動輸入）件', inputs: ['件數'] }
+            ],
+            'PACKAGE_REALLOC': [], // 無第二三行
+            'PDA_SHELVING': [
+                { val: 'none', text: '無', inputs: [] },
+                { val: 'stay_box_naked', text: '滯留（手動輸入）箱（手動輸入）裸', inputs: ['箱數', '裸數'] },
+                { val: 'stay_box', text: '滯留（手動輸入）箱', inputs: ['箱數'] },
+                { val: 'stay_naked', text: '滯留（手動輸入）裸', inputs: ['裸數'] }
+            ],
+            'STAY_BOX_REPORT': [
+                { val: 'none', text: '無', inputs: [] },
+                { val: 'stay_box_naked', text: '滯留（手動輸入）箱（手動輸入）裸', inputs: ['箱數', '裸數'] },
+                { val: 'stay_box', text: '滯留（手動輸入）箱', inputs: ['箱數'] },
+                { val: 'stay_naked', text: '滯留（手動輸入）裸', inputs: ['裸數'] }
+            ],
+            'STOREFRONT_CHECK': [] // 無第二三行
         };
 
-        function populateSelect(selectElement, optionsArray) {
-            selectElement.innerHTML = optionsArray.map(opt => `<option value="${opt}">${OPTIONS_MAP[opt] || opt}</option>`).join('');
-        }
+        // 定義各情境對應第二行選項時，第三行的選項
+        const L3_CONFIG = {
+            'SCS_FBS_BLACKBOX': {
+                'strap': [
+                    { val: 'strap', text: '束帶×（手動輸入）', inputs: ['數量'] },
+                    { val: 'no_strap', text: '無束帶×（手動輸入）', inputs: ['數量'] }
+                ],
+                'no_strap': [] // 點選無束帶絕不出現第三行
+            },
+            'NDD_FBS_PACKING': {
+                'none': [], // 點選無絕不出現第三行
+                'lack': [
+                    { val: 'none', text: '無', inputs: [] },
+                    { val: 'found', text: '已刷已找', inputs: [] }
+                ]
+            },
+            'NDD_SHELVING': {
+                'none': [],
+                'lack': [ { val: 'no_pkg', text: '門市已無包裹', inputs: [] } ],
+                'exception': [
+                    { val: 'damage', text: '濕損破損', inputs: [] },
+                    { val: 'no_accept', text: '系統無法驗收', inputs: [] },
+                    { val: 'no_label', text: '無面單', inputs: [] },
+                    { val: 'double_label', text: '雙面單', inputs: [] }
+                ],
+                'stay_pcs': [ { val: 'no_suitable', text: '無合適櫃位', inputs: [] }, { val: 'no_cabinet', text: '無櫃位', inputs: [] } ],
+                'stay_naked': [ { val: 'no_suitable', text: '無合適櫃位', inputs: [] }, { val: 'no_cabinet', text: '無櫃位', inputs: [] } ]
+            },
+            'PDA_SHELVING': {
+                'none': [],
+                'stay_box_naked': [ { val: 'no_suitable', text: '無合適櫃位', inputs: [] }, { val: 'no_cabinet', text: '無櫃位', inputs: [] } ],
+                'stay_box': [ { val: 'no_suitable', text: '無合適櫃位', inputs: [] }, { val: 'no_cabinet', text: '無櫃位', inputs: [] } ],
+                'stay_naked': [ { val: 'no_suitable', text: '無合適櫃位', inputs: [] }, { val: 'no_cabinet', text: '無櫃位', inputs: [] } ]
+            },
+            'STAY_BOX_REPORT': {
+                'none': [],
+                'stay_box_naked': [ { val: 'no_suitable', text: '無合適櫃位', inputs: [] }, { val: 'no_cabinet', text: '無櫃位', inputs: [] } ],
+                'stay_box': [ { val: 'no_suitable', text: '無合適櫃位', inputs: [] }, { val: 'no_cabinet', text: '無櫃位', inputs: [] } ],
+                'stay_naked': [ { val: 'no_suitable', text: '無合適櫃位', inputs: [] }, { val: 'no_cabinet', text: '無櫃位', inputs: [] } ]
+            }
+        };
 
-        // 核心連動邏輯
-        function handleCategoryChange() {
-            const cat = document.getElementById('mainCategory').value;
-            
-            // 重置顯示狀態
-            l2Container.classList.remove('hidden');
-            l3Container.classList.remove('hidden');
-            
-            if (cat === 'parcel_reassign' || cat === 'facade_check') {
-                // 僅第一行
+        let currentCategory = '';
+
+        function onCategoryChange() {
+            currentCategory = document.getElementById('categorySelect').value;
+            const l2Conf = L2_CONFIG[currentCategory];
+            const l2Container = document.getElementById('line2Container');
+            const l3Container = document.getElementById('line3Container');
+
+            if (!l2Conf || l2Conf.length === 0) {
                 l2Container.classList.add('hidden');
                 l3Container.classList.add('hidden');
-            } else if (cat === 'scs_fbs') {
-                populateSelect(l2Select, ['strap', 'no_strap']);
-            } else if (cat === 'ndd_fbs_leave') {
-                populateSelect(l2Select, ['none', 'lack']);
-            } else if (cat === 'ndd_shelf') {
-                populateSelect(l2Select, ['none', 'lack', 'stay_pcs', 'stay_naked', 'abnormal_return']);
-            } else if (cat === 'pda_shelf' || cat === 'stay_box_report') {
-                populateSelect(l2Select, ['none', 'stay_box_naked', 'stay_box', 'stay_naked']);
+                return;
             }
-            
-            handleLine2Change(); // 觸發第二行更新
+
+            l2Container.classList.remove('hidden');
+            document.getElementById('line2Select').innerHTML = l2Conf.map(opt => `<option value="${opt.val}">${opt.text}</option>`).join('');
+            onL2Change();
         }
 
-        function handleLine2Change() {
-            const cat = document.getElementById('mainCategory').value;
-            const val2 = l2Select.value;
+        function onL2Change() {
+            const l2Val = document.getElementById('line2Select').value;
+            const l2Conf = L2_CONFIG[currentCategory].find(c => c.val === l2Val);
+            
+            // 渲染第二行輸入框
+            document.getElementById('line2Inputs').innerHTML = l2Conf.inputs.map((ph, i) => 
+                `<input type="number" id="l2_in_${i}" placeholder="${ph}" class="w-14 border border-gray-300 rounded px-1 py-1 text-center text-sm outline-none focus:ring-1 focus:ring-blue-500" min="0">`
+            ).join('');
 
-            // 1. 處理第二行的輸入框
-            renderInputs(val2, l2Inputs);
+            // 處理第三行邏輯
+            const l3Container = document.getElementById('line3Container');
+            const l3Options = L3_CONFIG[currentCategory]?.[l2Val];
 
-            // 2. 處理絕不出現第三行的條件
-            if (val2 === 'none' || val2 === 'no_strap') {
+            if (!l3Options || l3Options.length === 0) {
                 l3Container.classList.add('hidden');
-                return;
             } else {
                 l3Container.classList.remove('hidden');
-            }
-
-            // 3. 根據選項給予第三行內容
-            if (cat === 'scs_fbs') {
-                populateSelect(l3Select, ['strap', 'no_strap']);
-            } else if (cat === 'ndd_fbs_leave') {
-                populateSelect(l3Select, ['none', 'scanned_found']);
-            } else if (cat === 'ndd_shelf') {
-                if (val2 === 'lack') {
-                    populateSelect(l3Select, ['store_no_parcel']);
-                } else if (val2 === 'abnormal_return') {
-                    populateSelect(l3Select, ['wet_damage', 'system_error', 'no_label', 'double_label']);
-                } else {
-                    populateSelect(l3Select, ['no_suitable_cabinet', 'no_cabinet']);
-                }
-            } else if (cat === 'pda_shelf' || cat === 'stay_box_report') {
-                populateSelect(l3Select, ['no_suitable_cabinet', 'no_cabinet']);
-            }
-
-            handleLine3Change();
-        }
-
-        function handleLine3Change() {
-            const val3 = l3Select.value;
-            renderInputs(val3, l3Inputs);
-        }
-
-        // 動態產生輸入框
-        function renderInputs(type, container) {
-            container.innerHTML = '';
-            if (['strap', 'no_strap'].includes(type)) {
-                container.innerHTML = `<span class="text-xs text-gray-500">×</span><input type="number" class="num-input" placeholder="數量" min="0">`;
-            } else if (['lack', 'stay_pcs', 'stay_naked', 'abnormal_return', 'stay_box'].includes(type)) {
-                const unit = type === 'stay_box' ? '箱' : (type === 'stay_naked' ? '裸' : (type === 'lack' ? '' : '件'));
-                container.innerHTML = `<input type="number" class="num-input mx-1" placeholder="${unit}" min="0"><span class="text-xs text-gray-700 font-bold">${unit}</span>`;
-            } else if (type === 'stay_box_naked') {
-                container.innerHTML = `
-                    <input type="number" class="num-input mx-1" placeholder="箱" min="0"><span class="text-xs text-gray-700 font-bold">箱</span>
-                    <input type="number" class="num-input mx-1" placeholder="裸" min="0"><span class="text-xs text-gray-700 font-bold">裸</span>`;
+                document.getElementById('line3Select').innerHTML = l3Options.map(opt => `<option value="${opt.val}">${opt.text}</option>`).join('');
+                onL3Change();
             }
         }
 
-        // 讀取某一行產生的字串
-        function getLineString(selectElement, inputContainer) {
-            const val = selectElement.value;
-            const inputs = inputContainer.querySelectorAll('input');
-            const v1 = inputs.length > 0 ? (inputs[0].value || '0') : '';
-            const v2 = inputs.length > 1 ? (inputs[1].value || '0') : '';
+        function onL3Change() {
+            const l2Val = document.getElementById('line2Select').value;
+            const l3Val = document.getElementById('line3Select').value;
+            const l3Conf = L3_CONFIG[currentCategory]?.[l2Val]?.find(c => c.val === l3Val);
+            
+            if (l3Conf && l3Conf.inputs) {
+                document.getElementById('line3Inputs').innerHTML = l3Conf.inputs.map((ph, i) => 
+                    `<input type="number" id="l3_in_${i}" placeholder="${ph}" class="w-14 border border-gray-300 rounded px-1 py-1 text-center text-sm outline-none focus:ring-1 focus:ring-blue-500" min="0">`
+                ).join('');
+            } else {
+                document.getElementById('line3Inputs').innerHTML = '';
+            }
+        }
+
+        // 解析字串轉換
+        function formatLineText(val, level) {
+            if (val === 'none') return '';
+            
+            const inputs = [];
+            let i = 0;
+            while (document.getElementById(`l${level}_in_${i}`)) {
+                inputs.push(document.getElementById(`l${level}_in_${i}`).value || '0');
+                i++;
+            }
 
             switch(val) {
-                case 'strap': return `束帶×${v1}`;
-                case 'no_strap': return `無束帶×${v1}`;
-                case 'none': return '無';
-                case 'lack': return `缺${v1}`;
-                case 'stay_pcs': return `滯留${v1}件`;
-                case 'stay_naked': return `滯留${v1}裸`;
-                case 'abnormal_return': return `異退${v1}件`;
-                case 'stay_box': return `滯留${v1}箱`;
-                case 'stay_box_naked': return `滯留${v1}箱${v2}裸`;
-                default: return OPTIONS_MAP[val] || val; // 沒有輸入框的純文字選項
+                case 'strap': return `束帶×${inputs[0]}`;
+                case 'no_strap': return `無束帶×${inputs[0]}`;
+                case 'lack': return `缺${inputs[0]}`;
+                case 'stay_pcs': return `滯留${inputs[0]}件`;
+                case 'stay_naked': return `滯留${inputs[0]}裸`;
+                case 'stay_box': return `滯留${inputs[0]}箱`;
+                case 'stay_box_naked': return `滯留${inputs[0]}箱${inputs[1]}裸`;
+                case 'exception': return `異退${inputs[0]}件`;
+                
+                // 無輸入框的靜態文字
+                case 'found': return '已刷已找';
+                case 'no_pkg': return '門市已無包裹';
+                case 'damage': return '濕損破損';
+                case 'no_accept': return '系統無法驗收';
+                case 'no_label': return '無面單';
+                case 'double_label': return '雙面單';
+                case 'no_suitable': return '無合適櫃位';
+                case 'no_cabinet': return '無櫃位';
+                default: return '';
             }
         }
 
-        function generateString() {
-            const dateStr = document.getElementById('todayDate').textContent;
-            const store = document.getElementById('storeSelect').value;
-            let result = [`${dateStr} ${store}`];
+        function generateAndCopyString() {
+            const cat = document.getElementById('categorySelect').value;
+            if (!cat) return alert('⚠️ 請先選擇回報情境！');
 
+            const dateStr = document.getElementById('todayDate').innerText;
+            const store = document.getElementById('locationSelect').value;
+            
+            // 第一行：日期+門市
+            const lines = [`${dateStr} ${store}`];
+
+            const l2Container = document.getElementById('line2Container');
             if (!l2Container.classList.contains('hidden')) {
-                result.push(getLineString(l2Select, l2Inputs));
+                const l2Text = formatLineText(document.getElementById('line2Select').value, 2);
+                if (l2Text) lines.push(l2Text);
             }
+
+            const l3Container = document.getElementById('line3Container');
             if (!l3Container.classList.contains('hidden')) {
-                result.push(getLineString(l3Select, l3Inputs));
+                const l3Text = formatLineText(document.getElementById('line3Select').value, 3);
+                if (l3Text) lines.push(l3Text);
             }
 
-            const finalStr = result.join('\n');
-            document.getElementById('resultOutput').value = finalStr;
+            const finalString = lines.join('\n');
+            const output = document.getElementById('resultOutput');
+            output.value = finalString;
 
-            navigator.clipboard.writeText(finalStr).then(() => {
-                alert('✅ 複製成功！\n\n' + finalStr);
+            navigator.clipboard.writeText(finalString).then(() => {
+                alert('✅ 字串已成功複製！\n\n' + finalString);
             }).catch(() => {
-                alert('❌ 複製失敗，請手動複製文字框內容。');
+                alert('❌ 複製失敗，請手動選取文字框的內容複製。');
             });
         }
 
-
-        /* ================= 條碼 & QR Code 產生器邏輯 (維持不變) ================= */
-        
-        function toggleCodeType() {
+        /* ================= 3. 條碼 & QR Code 產生器邏輯 ================= */
+        function toggleAdvancedOptions() {
             const type = document.getElementById('codeType').value;
-            document.getElementById('barcodeFormat').classList.toggle('hidden', type !== 'barcode');
-            document.getElementById('qrErrorLevel').classList.toggle('hidden', type !== 'qrcode');
+            document.getElementById('barcodeFormat').style.display = type === 'barcode' ? 'block' : 'none';
+            document.getElementById('qrErrorLevel').style.display = type === 'qrcode' ? 'block' : 'none';
         }
 
         function generateCode() {
@@ -392,51 +457,49 @@
             const type = document.getElementById('codeType').value;
 
             if (!rawInput) return alert('⚠️ 請先輸入數值！');
-
             const safeInput = rawInput.replace(/[\u200B-\u200D\uFEFF]/g, '');
             const grid = document.getElementById('codeGrid');
+
             const card = document.createElement('div');
-            card.className = 'code-card';
+            card.className = 'bg-white p-4 border rounded-xl shadow-sm flex flex-col items-center gap-3';
 
             const textDisplay = document.createElement('div');
-            textDisplay.className = 'text-display';
+            textDisplay.className = 'font-bold text-gray-700 break-all text-center w-full text-sm';
             textDisplay.textContent = safeInput;
 
             const actions = document.createElement('div');
-            actions.className = 'card-actions';
+            actions.className = 'flex gap-2 w-full';
 
             let downloadTarget;
 
             try {
                 if (type === 'barcode') {
+                    if (typeof JsBarcode === 'undefined') return alert('⚠️ 條碼模組載入中，請稍候再試。');
                     const canvas = document.createElement('canvas');
-                    JsBarcode(canvas, safeInput, { 
-                        format: document.getElementById('barcodeFormat').value, 
-                        width: 2, height: 60, displayValue: false, margin: 10
-                    });
+                    const format = document.getElementById('barcodeFormat').value;
+                    JsBarcode(canvas, safeInput, { format: format, width: 2, height: 60, displayValue: false, margin: 10 });
+                    canvas.className = "max-w-full h-auto rounded bg-white p-2";
                     card.appendChild(canvas);
                     downloadTarget = canvas;
                 } else if (type === 'qrcode') {
+                    if (typeof QRious === 'undefined') return alert('⚠️ QR Code 模組載入中，請稍候再試。');
                     const qrCanvas = document.createElement('canvas');
-                    new QRious({
-                        element: qrCanvas, value: safeInput, size: 180,
-                        level: document.getElementById('qrErrorLevel').value
-                    });
+                    new QRious({ element: qrCanvas, value: safeInput, size: 160, level: document.getElementById('qrErrorLevel').value });
+                    qrCanvas.className = "max-w-full h-auto rounded bg-white p-2 border";
                     card.appendChild(qrCanvas);
                     downloadTarget = qrCanvas;
                 }
             } catch (e) {
-                return alert(`❌ 產生失敗！\n系統訊息: ${e.message || e}`);
+                return alert(`❌ 產生失敗！系統訊息: ${e.message || e}`); 
             }
 
-            const btnClass = "flex-1 text-white font-bold py-1 px-2 rounded text-sm transition";
             const downloadBtn = document.createElement('button');
-            downloadBtn.className = `${btnClass} bg-blue-500 hover:bg-blue-600`;
+            downloadBtn.className = 'flex-1 bg-blue-100 text-blue-600 font-bold py-2 rounded hover:bg-blue-200 transition text-sm';
             downloadBtn.textContent = '下載';
             downloadBtn.onclick = () => downloadImage(downloadTarget, safeInput, type);
 
             const removeBtn = document.createElement('button');
-            removeBtn.className = `${btnClass} bg-red-500 hover:bg-red-600`;
+            removeBtn.className = 'flex-1 bg-red-100 text-red-600 font-bold py-2 rounded hover:bg-red-200 transition text-sm';
             removeBtn.textContent = '移除';
             removeBtn.onclick = () => card.remove();
 
@@ -444,21 +507,26 @@
             actions.appendChild(removeBtn);
             card.appendChild(textDisplay);
             card.appendChild(actions);
+
             grid.prepend(card); 
             inputField.value = ''; 
         }
 
         function downloadImage(canvas, text, type) {
+            const url = canvas.toDataURL("image/png");
             const a = document.createElement('a');
-            a.href = canvas.toDataURL("image/png");
-            a.download = `${type}_${text.replace(/[^a-zA-Z0-9]/gi, '_').substring(0, 15)}.png`;
+            a.href = url;
+            const safeName = text.replace(/[^a-zA-Z0-9]/gi, '_').substring(0, 15);
+            a.download = `${type}_${safeName || 'image'}.png`;
+            document.body.appendChild(a);
             a.click();
+            document.body.removeChild(a);
         }
 
-        // 初始化執行
-        renderShortcuts();
-        handleCategoryChange(); // 初始化下拉選單狀態
-        toggleCodeType();
+        // 頁面載入完成時初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            renderShortcuts();
+        });
     </script>
 </body>
 </html>

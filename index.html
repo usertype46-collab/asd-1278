@@ -2,80 +2,155 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>足療客戶技師匹配系統</title>
-  <link rel="stylesheet" href="style.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>足療智能預約與管理系統</title>
+  <!-- 引入 Tailwind CSS (商用高階UI) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- 引入 FontAwesome 圖示 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    /* 隱藏未啟用的頁面 */
+    .page-hidden { display: none; }
+    body { padding-bottom: 70px; /* 預留底部導覽列空間 */ }
+  </style>
 </head>
-<body>
-  <!-- 頂部標題 -->
-  <header>
-    <h1>足療智能預約系統</h1>
+<body class="bg-gray-50 text-gray-800 font-sans">
+
+  <!-- 頂部標題列 -->
+  <header class="bg-teal-600 text-white p-4 shadow-md sticky top-0 z-50">
+    <h1 class="text-xl font-bold text-center" id="header-title">智能預約看板</h1>
   </header>
 
-  <!-- 內容區域 -->
-  <main id="main-content">
+  <!-- 主要內容區 -->
+  <main class="p-4 w-full max-w-md mx-auto">
     
-    <!-- 模組 1：預約與紀錄 -->
-    <section id="view-booking" class="view-section active">
-      <h2>新增預約</h2>
-      <form id="booking-form" class="card-form">
-        <input type="text" id="client-name" placeholder="客戶姓名 / 電話" required>
-        <select id="client-need" required>
-          <option value="" disabled selected>請選擇客戶需求</option>
-          <option value="腳底按摩">腳底按摩</option>
-          <option value="全身指壓">全身指壓</option>
-          <option value="肩頸舒壓">肩頸舒壓</option>
-          <option value="修腳皮/凍甲">修腳皮/凍甲</option>
-        </select>
-        <select id="tech-select" required>
-          <option value="" disabled selected>載入技師中...</option>
-        </select>
-        <input type="datetime-local" id="book-time" required>
-        <button type="submit" class="btn-primary">建立預約</button>
-      </form>
+    <!-- 頁面 1：預約與媒合看板 -->
+    <section id="page-dashboard">
+      <div class="bg-white rounded-xl shadow p-5 mb-5">
+        <h2 class="text-lg font-bold mb-4 border-b pb-2"><i class="fa-solid fa-calendar-plus text-teal-500 mr-2"></i>新增預約 (需求媒合)</h2>
+        <form id="booking-form" class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700">選擇客戶</label>
+            <select id="book-client" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border focus:ring-teal-500 focus:border-teal-500" required>
+              <option value="">載入中...</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700">客戶需求 (將連動技師)</label>
+            <select id="book-need" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border focus:ring-teal-500 focus:border-teal-500" required>
+              <option value="">請選擇需求...</option>
+              <option value="腳底按摩">腳底按摩</option>
+              <option value="全身指壓">全身指壓</option>
+              <option value="精油SPA">精油SPA</option>
+              <option value="刮痧拔罐">刮痧拔罐</option>
+              <option value="修腳皮/指甲">修腳皮/指甲</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700">選擇技師 (依需求篩選)</label>
+            <select id="book-tech" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border focus:ring-teal-500 focus:border-teal-500" required disabled>
+              <option value="">請先選擇客戶需求</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700">預約時間</label>
+            <input type="datetime-local" id="book-time" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border focus:ring-teal-500 focus:border-teal-500" required>
+          </div>
+          <button type="submit" class="w-full bg-teal-600 text-white py-2 rounded-md hover:bg-teal-700 font-bold shadow-lg transition">確認預約</button>
+        </form>
+      </div>
 
-      <h2>即時預約紀錄</h2>
-      <div id="appointments-list" class="list-container"></div>
+      <h2 class="text-lg font-bold mb-3"><i class="fa-solid fa-list-check text-teal-500 mr-2"></i>近期預約紀錄</h2>
+      <div id="booking-list" class="space-y-3">
+        <!-- 預約紀錄會即時渲染在這裡 -->
+      </div>
     </section>
 
-    <!-- 模組 2：技師管理 -->
-    <section id="view-techs" class="view-section">
-      <h2>新增/修改技師</h2>
-      <form id="tech-form" class="card-form">
-        <input type="hidden" id="tech-id">
-        <input type="text" id="tech-name" placeholder="技師名稱/編號" required>
-        <input type="text" id="tech-skills" placeholder="專長 (如: 腳底按摩, 修腳皮)" required>
-        <button type="submit" class="btn-primary" id="tech-submit-btn">新增技師</button>
-      </form>
-
-      <h2>技師名單</h2>
-      <div id="techs-list" class="list-container"></div>
+    <!-- 頁面 2：技師管理系統 -->
+    <section id="page-techs" class="page-hidden">
+      <div class="bg-white rounded-xl shadow p-5 mb-5">
+        <h2 class="text-lg font-bold mb-4 border-b pb-2"><i class="fa-solid fa-user-nurse text-teal-500 mr-2"></i>新增技師</h2>
+        <form id="tech-form" class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700">技師姓名/編號</label>
+            <input type="text" id="tech-name" class="mt-1 block w-full rounded-md border p-2" required placeholder="例如：8號技師 - 王大明">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">專業技能 (可複選)</label>
+            <div class="grid grid-cols-2 gap-2 text-sm" id="tech-skills-checkboxes">
+              <label><input type="checkbox" value="腳底按摩" class="mr-1">腳底按摩</label>
+              <label><input type="checkbox" value="全身指壓" class="mr-1">全身指壓</label>
+              <label><input type="checkbox" value="精油SPA" class="mr-1">精油SPA</label>
+              <label><input type="checkbox" value="刮痧拔罐" class="mr-1">刮痧拔罐</label>
+              <label><input type="checkbox" value="修腳皮/指甲" class="mr-1">修腳皮/指甲</label>
+            </div>
+          </div>
+          <button type="submit" class="w-full bg-teal-600 text-white py-2 rounded-md hover:bg-teal-700 font-bold transition">儲存技師資料</button>
+        </form>
+      </div>
+      <h2 class="text-lg font-bold mb-3"><i class="fa-solid fa-users-gear text-teal-500 mr-2"></i>技師列表</h2>
+      <div id="tech-list" class="space-y-3"></div>
     </section>
 
-    <!-- 模組 3：客戶管理與統計 -->
-    <section id="view-clients" class="view-section">
-      <h2>客戶造訪頻率統計</h2>
-      <div id="clients-list" class="list-container"></div>
+    <!-- 頁面 3：客戶 CRM 系統 -->
+    <section id="page-clients" class="page-hidden">
+      <div class="bg-white rounded-xl shadow p-5 mb-5">
+        <h2 class="text-lg font-bold mb-4 border-b pb-2"><i class="fa-solid fa-user-plus text-teal-500 mr-2"></i>新增客戶</h2>
+        <form id="client-form" class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700">客戶姓名</label>
+            <input type="text" id="client-name" class="mt-1 block w-full rounded-md border p-2" required>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700">聯絡電話</label>
+            <input type="tel" id="client-phone" class="mt-1 block w-full rounded-md border p-2" required>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700">偏好備註</label>
+            <input type="text" id="client-note" class="mt-1 block w-full rounded-md border p-2" placeholder="例如：怕痛、喜歡力道大">
+          </div>
+          <button type="submit" class="w-full bg-teal-600 text-white py-2 rounded-md hover:bg-teal-700 font-bold transition">建立客戶檔案</button>
+        </form>
+      </div>
+      <h2 class="text-lg font-bold mb-3"><i class="fa-solid fa-address-book text-teal-500 mr-2"></i>客戶總覽 (造訪頻率統計)</h2>
+      <div id="client-list" class="space-y-3"></div>
     </section>
 
   </main>
 
-  <!-- 底部手機版導航 -->
-  <nav class="bottom-nav">
-    <button onclick="switchTab('view-booking')" class="active" id="tab-view-booking">📅 預約大廳</button>
-    <button onclick="switchTab('view-techs')" id="tab-view-techs">💆‍♂️ 技師管理</button>
-    <button onclick="switchTab('view-clients')" id="tab-view-clients">📊 客戶統計</button>
+  <!-- 手機版底部導覽列 -->
+  <nav class="bg-white border-t border-gray-200 fixed bottom-0 w-full z-50">
+    <div class="flex justify-around items-center h-16 max-w-md mx-auto">
+      <button onclick="switchTab('dashboard', '智能預約看板')" class="flex flex-col items-center w-full text-teal-600 nav-btn" id="nav-dashboard">
+        <i class="fa-solid fa-calendar-check text-xl mb-1"></i>
+        <span class="text-xs font-bold">預約媒合</span>
+      </button>
+      <button onclick="switchTab('techs', '技師管理系統')" class="flex flex-col items-center w-full text-gray-400 nav-btn hover:text-teal-500" id="nav-techs">
+        <i class="fa-solid fa-spa text-xl mb-1"></i>
+        <span class="text-xs font-bold">技師管理</span>
+      </button>
+      <button onclick="switchTab('clients', '客戶關係管理')" class="flex flex-col items-center w-full text-gray-400 nav-btn hover:text-teal-500" id="nav-clients">
+        <i class="fa-solid fa-users text-xl mb-1"></i>
+        <span class="text-xs font-bold">客戶紀錄</span>
+      </button>
+    </div>
   </nav>
 
-  <!-- 引入模組化 JavaScript -->
-  <script type="module" src="app.js"></script>
+  <!-- 引入 Firebase 邏輯 (使用模組化 JS) -->
+  <script type="module" src="./app.js"></script>
+  
   <script>
-    // 簡單的 Tab 切換邏輯
-    function switchTab(tabId) {
-      document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
-      document.querySelectorAll('.bottom-nav button').forEach(el => el.classList.remove('active'));
-      document.getElementById(tabId).classList.add('active');
-      document.getElementById('tab-' + tabId).classList.add('active');
+    // 簡單的 SPA 頁面切換邏輯
+    function switchTab(tabId, title) {
+      document.getElementById('header-title').innerText = title;
+      ['dashboard', 'techs', 'clients'].forEach(id => {
+        document.getElementById(`page-${id}`).classList.add('page-hidden');
+        document.getElementById(`nav-${id}`).classList.remove('text-teal-600');
+        document.getElementById(`nav-${id}`).classList.add('text-gray-400');
+      });
+      document.getElementById(`page-${tabId}`).classList.remove('page-hidden');
+      document.getElementById(`nav-${tabId}`).classList.add('text-teal-600');
+      document.getElementById(`nav-${tabId}`).classList.remove('text-gray-400');
     }
   </script>
 </body>

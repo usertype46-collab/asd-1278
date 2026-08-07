@@ -415,7 +415,15 @@
                 openBookingModal(therapist) {
                     this.bookingForm.therapistId = therapist.id;
                     this.bookingForm.therapistName = therapist.name;
-                    this.bookingForm.clientName = '';
+                    
+                    // 【修正重點】判斷是否有選客戶，若有則自動帶入客戶名稱
+                    if (this.matchForm.clientId) {
+                        const selectedClient = this.clients.find(c => String(c.id) === String(this.matchForm.clientId));
+                        this.bookingForm.clientName = selectedClient ? selectedClient.name : '';
+                    } else {
+                        this.bookingForm.clientName = '';
+                    }
+                    
                     this.showBookingModal = true;
                 },
 
@@ -487,12 +495,18 @@
 
                 saveClient() {
                     if(!this.editingClient.name) return alert('請輸入姓名');
+                    
+                    const newClientId = Date.now();
                     this.clients.push({
-                        id: Date.now(),
+                        id: newClientId,
                         name: this.editingClient.name,
                         phone: this.editingClient.phone,
                         total_visits: 0
                     });
+                    
+                    // 【修正重點】儲存新客後，連動將其選取為目前配對的客戶
+                    this.matchForm.clientId = newClientId;
+                    
                     this.showClientModal = false;
                 }
             }));

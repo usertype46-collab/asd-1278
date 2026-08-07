@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>蝦皮門市回報系統</title>
+    <!-- 引入 Tailwind CSS 美化介面 (手機優先設計) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 Supabase JS 客戶端 -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { background-color: #f3f4f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .card { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); }
+    </style>
+</head>
+<body class="pb-10">
+
+    <!-- 頂部導航 -->
+    <header class="bg-orange-500 text-white text-center py-4 sticky top-0 z-10 shadow-md">
+        <h1 class="text-xl font-bold tracking-wider">📦 蝦皮門市回報系統</h1>
+    </header>
+
+    <main class="max-w-md mx-auto mt-4 px-4">
+        
+        <!-- LINE 群組快捷鍵 -->
+        <section class="mb-6">
+            <h2 class="text-sm font-semibold text-gray-600 mb-2">🟢 LINE 門市群組捷徑</h2>
+            <div class="grid grid-cols-3 gap-2 text-center">
+                <a href="https://line.me/R/ti/g/fZrPvcKMBK" target="_blank" class="bg-green-500 hover:bg-green-600 text-white text-xs font-bold py-2 px-1 rounded-lg shadow transition">潮州愛國</a>
+                <a href="https://line.me/R/ti/g/QBVMmunss2" target="_blank" class="bg-green-500 hover:bg-green-600 text-white text-xs font-bold py-2 px-1 rounded-lg shadow transition">潮州中洲</a>
+                <a href="https://line.me/R/ti/g/rqjPNW5fjg" target="_blank" class="bg-green-500 hover:bg-green-600 text-white text-xs font-bold py-2 px-1 rounded-lg shadow transition">新園仙吉</a>
+            </div>
+        </section>
+
+        <!-- 回報表單 -->
+        <section class="bg-white rounded-xl card p-5 mb-6 border-t-4 border-orange-500">
+            <h2 class="text-lg font-bold text-gray-800 mb-4" id="formTitle">📝 新增回報</h2>
+            <form id="reportForm">
+                <input type="hidden" id="editId" value="">
+                
+                <div class="mb-3">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">門市名稱</label>
+                    <select id="store_name" required class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500">
+                        <option value="">請選擇門市...</option>
+                        <option value="潮州愛國">潮州愛國</option>
+                        <option value="潮州中洲">潮州中洲</option>
+                        <option value="新園仙吉">新園仙吉</option>
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">包裹單號 / 追蹤號碼</label>
+                    <input type="text" id="tracking_number" required placeholder="請輸入單號" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500">
+                </div>
+
+                <div class="mb-3">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">狀況類型</label>
+                    <input type="text" id="issue_type" required placeholder="例如：包裝破損、未刷讀、遺失" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500">
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">詳細說明</label>
+                    <textarea id="description" rows="3" placeholder="補充說明狀況..." class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500"></textarea>
+                </div>
+
+                <div class="flex gap-2">
+                    <button type="submit" id="submitBtn" class="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition">
+                        送出回報
+                    </button>
+                    <button type="button" id="cancelBtn" onclick="resetForm()" class="hidden flex-1 bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg shadow-md transition">
+                        取消修改
+                    </button>
+                </div>
+            </form>
+        </section>
+
+        <!-- 歷史紀錄列表 -->
+        <section>
+            <h2 class="text-sm font-semibold text-gray-600 mb-3 flex justify-between items-center">
+                <span>📋 回報紀錄列表</span>
+                <button onclick="fetchReports()" class="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded hover:bg-blue-200">🔄 重新整理</button>
+            </h2>
+            <div id="reportsList" class="space-y-4">
+                <p class="text-center text-gray-400 text-sm py-4">載入中...</p>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        // 1. 初始化 Supabase 客戶端 (帶入您提供的 URL 和 Key)
+        const SUPABASE_URL = 'https://hyvcfxwoewvbpfzvfdnn.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_TR5C2Zc7eOj9uUosUUsX4g_KbBOwey2';
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // 2. 頁面載入時獲取資料
+        document.addEventListener('DOMContentLoaded', fetchReports);
+
+        // 3. 表單提交事件 (新增或修改)
+        document.getElementById('reportForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const id = document.getElementById('editId').value;
+            const data = {
+                store_name: document.getElementById('store_name').value,
+                tracking_number: document.getElementById('tracking_number').value,
+                issue_type: document.getElementById('issue_type').value,
+                description: document.getElementById('description').value
+            };
+
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.innerText = '處理中...';
+            submitBtn.disabled = true;
+
+            try {
+                if (id) {
+                    // 修改
+                    const { error } = await supabase.from('shopee_reports').update(data).eq('id', id);
+                    if (error) throw error;
+                    alert('✅ 修改成功！');
+                } else {
+                    // 新增
+                    const { error } = await supabase.from('shopee_reports').insert([data]);
+                    if (error) throw error;
+                    alert('✅ 新增成功！');
+                }
+                resetForm();
+                fetchReports();
+            } catch (error) {
+                console.error(error);
+                alert('❌ 發生錯誤: ' + error.message);
+            } finally {
+                submitBtn.disabled = false;
+            }
+        });
+
+        // 4. 讀取資料列表 (Read)
+        async function fetchReports() {
+            const listEl = document.getElementById('reportsList');
+            listEl.innerHTML = '<p class="text-center text-gray-400 text-sm py-4">載入中...</p>';
+
+            try {
+                const { data, error } = await supabase
+                    .from('shopee_reports')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+
+                if (data.length === 0) {
+                    listEl.innerHTML = '<p class="text-center text-gray-400 text-sm py-4">目前尚無回報紀錄</p>';
+                    return;
+                }
+
+                listEl.innerHTML = data.map(report => `
+                    <div class="bg-white rounded-xl p-4 card border-l-4 ${getStoreColor(report.store_name)}">
+                        <div class="flex justify-between items-start mb-2">
+                            <span class="inline-block px-2 py-1 bg-gray-100 text-xs font-bold rounded text-gray-700">${report.store_name}</span>
+                            <span class="text-xs text-gray-400">${new Date(report.created_at).toLocaleString('zh-TW')}</span>
+                        </div>
+                        <h3 class="font-bold text-gray-800 text-md break-all">單號：${report.tracking_number}</h3>
+                        <p class="text-sm text-red-500 font-semibold mt-1">[${report.issue_type}]</p>
+                        <p class="text-sm text-gray-600 mt-2 whitespace-pre-wrap">${report.description || '無詳細說明'}</p>
+                        
+                        <div class="mt-4 flex justify-end gap-2 border-t pt-3">
+                            <button onclick="editReport('${report.id}', '${report.store_name}', '${report.tracking_number}', '${report.issue_type}', '${escapeHtml(report.description || '')}')" 
+                                class="bg-blue-500 hover:bg-blue-600 text-white text-xs font-bold py-1 px-3 rounded">
+                                ✏️ 編輯
+                            </button>
+                            <button onclick="deleteReport('${report.id}')" 
+                                class="bg-red-500 hover:bg-red-600 text-white text-xs font-bold py-1 px-3 rounded">
+                                🗑️ 刪除
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error(error);
+                listEl.innerHTML = '<p class="text-center text-red-500 text-sm py-4">載入失敗</p>';
+            }
+        }
+
+        // 5. 準備編輯 (帶入資料到表單)
+        function editReport(id, store, tracking, type, desc) {
+            document.getElementById('editId').value = id;
+            document.getElementById('store_name').value = store;
+            document.getElementById('tracking_number').value = tracking;
+            document.getElementById('issue_type').value = type;
+            document.getElementById('description').value = desc;
+
+            document.getElementById('formTitle').innerText = '✏️ 修改回報';
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.innerText = '儲存修改';
+            submitBtn.classList.replace('bg-orange-500', 'bg-blue-500');
+            submitBtn.classList.replace('hover:bg-orange-600', 'hover:bg-blue-600');
+            document.getElementById('cancelBtn').classList.remove('hidden');
+
+            // 滾動到最上方
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // 6. 刪除資料 (Delete)
+        async function deleteReport(id) {
+            if (!confirm('確定要刪除這筆回報嗎？')) return;
+
+            try {
+                const { error } = await supabase.from('shopee_reports').delete().eq('id', id);
+                if (error) throw error;
+                fetchReports();
+            } catch (error) {
+                console.error(error);
+                alert('❌ 刪除失敗');
+            }
+        }
+
+        // 7. 重置表單狀態
+        function resetForm() {
+            document.getElementById('reportForm').reset();
+            document.getElementById('editId').value = '';
+            document.getElementById('formTitle').innerText = '📝 新增回報';
+            
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.innerText = '送出回報';
+            submitBtn.classList.replace('bg-blue-500', 'bg-orange-500');
+            submitBtn.classList.replace('hover:bg-blue-600', 'hover:bg-orange-600');
+            
+            document.getElementById('cancelBtn').classList.add('hidden');
+        }
+
+        // 輔助函式：根據門市給予不同邊框顏色
+        function getStoreColor(storeName) {
+            switch(storeName) {
+                case '潮州愛國': return 'border-green-500';
+                case '潮州中洲': return 'border-blue-500';
+                case '新園仙吉': return 'border-purple-500';
+                default: return 'border-gray-500';
+            }
+        }
+
+        // 輔助函式：防止 HTML 注入破壞版面
+        function escapeHtml(unsafe) {
+            return unsafe
+                 .replace(/&/g, "&amp;")
+                 .replace(/</g, "&lt;")
+                 .replace(/>/g, "&gt;")
+                 .replace(/"/g, "&quot;")
+                 .replace(/'/g, "&#039;");
+        }
+    </script>
+</body>
+</html>

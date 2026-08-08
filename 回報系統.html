@@ -401,7 +401,7 @@
             ],
             'PACKAGE_REALLOC': [],
             'PDA_SHELVING': [
-                { val: 'none', text: '無滯留', inputs: [] },
+                { val: 'no_stay', text: '無滯留', inputs: [] },
                 { val: 'stay_box_naked', text: '滯留（手動輸入）箱（手動輸入）裸', inputs: ['箱數', '裸數'] },
                 { val: 'stay_box', text: '滯留（手動輸入）箱', inputs: ['箱數'] },
                 { val: 'stay_naked', text: '滯留（手動輸入）裸', inputs: ['裸數'] }
@@ -443,7 +443,7 @@
                 'stay_naked': [ { val: 'no_suitable', text: '無合適櫃位', inputs: [] }, { val: 'no_cabinet', text: '無櫃位', inputs: [] } ]
             },
             'PDA_SHELVING': {
-                'none': [],
+                'no_stay': [],
                 'stay_box_naked': [ { val: 'no_suitable', text: '無合適櫃位', inputs: [] }, { val: 'no_cabinet', text: '無櫃位', inputs: [] } ],
                 'stay_box': [ { val: 'no_suitable', text: '無合適櫃位', inputs: [] }, { val: 'no_cabinet', text: '無櫃位', inputs: [] } ],
                 'stay_naked': [ { val: 'no_suitable', text: '無合適櫃位', inputs: [] }, { val: 'no_cabinet', text: '無櫃位', inputs: [] } ]
@@ -537,6 +537,7 @@
                 case 'double_label': return '雙面單';
                 case 'no_suitable': return '無合適櫃位';
                 case 'no_cabinet': return '無櫃位';
+                case 'no_stay': return '無滯留';
                 default: return '';
             }
         }

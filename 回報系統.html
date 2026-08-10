@@ -11,7 +11,6 @@
     <style>
         body { background-color: #f3f4f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         .card { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); }
-        /* 隱藏捲軸但可滾動 */
         .hide-scroll::-webkit-scrollbar { display: none; }
         .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
@@ -35,8 +34,7 @@
                 </button>
             </div>
             
-            <div id="shortcutButtons" class="grid grid-cols-3 gap-2 text-center">
-                </div>
+            <div id="shortcutButtons" class="grid grid-cols-3 gap-2 text-center"></div>
 
             <div id="manageShortcutsSection" class="hidden mt-4 pt-4 border-t border-gray-200">
                 <h3 class="text-sm font-bold text-gray-600 mb-2" id="shortcutFormTitle">新增捷徑</h3>
@@ -57,8 +55,7 @@
                         <button type="button" onclick="resetShortcutForm()" class="flex-1 bg-gray-400 text-white text-sm py-1 rounded hover:bg-gray-500 transition">取消</button>
                     </div>
                 </form>
-                <div id="manageShortcutList" class="space-y-2 max-h-40 overflow-y-auto hide-scroll">
-                    </div>
+                <div id="manageShortcutList" class="space-y-2 max-h-40 overflow-y-auto hide-scroll"></div>
             </div>
         </section>
 
@@ -67,8 +64,11 @@
             
             <div class="space-y-4">
                 <div class="flex items-center gap-2">
-                    <div class="bg-gray-100 text-gray-700 font-bold px-3 py-2 rounded border shrink-0" id="todayDate"></div>
-                    <select id="locationSelect" onchange="renderCategories()" class="flex-1 border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+                    <div class="bg-gray-100 text-gray-700 font-bold px-3 py-2 rounded border shrink-0 flex items-center gap-2">
+                        <span id="todayDate">讀取中</span>
+                        <span id="shiftIndicator" class="text-[10px] px-1.5 py-0.5 rounded-full text-white bg-gray-400">時段</span>
+                    </div>
+                    <select id="locationSelect" onchange="renderCategories()" class="flex-1 border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none text-sm h-full">
                         <option value="潮州中洲">潮州中洲</option>
                         <option value="潮州光華">潮州光華</option>
                         <option value="潮州大同">潮州大同</option>
@@ -169,42 +169,152 @@
     </main>
 
     <script>
-        /* ================= 1. Supabase 連線與 GPS 捷徑邏輯 ================= */
+        /* ================= 1. Supabase 連線設定與全域變數 ================= */
         const { createClient } = supabase;
         const supabaseUrl = 'https://hyvcfxwoewvbpfzvfdnn.supabase.co';
         const supabaseKey = 'sb_publishable_TR5C2Zc7eOj9uUosUUsX4g_KbBOwey2';
         const supabaseClient = createClient(supabaseUrl, supabaseKey);
 
         let shortcuts = [];
+        let STORE_LOCATIONS = { '愛國群組': [], '中洲群組': [] };
         let currentVisibleGroup = null; 
         let editShortcutId = null;
+        let currentShift = 'other'; // morning, evening, other
 
-        const STORE_LOCATIONS = {
-            '愛國群組': [
-                { name: '潮州愛國智取店', lat: 22.55148, lng: 120.54549 },
-                { name: '潮州四維智取店', lat: 22.55543, lng: 120.54819 },
-                { name: '潮州文化智取店', lat: 22.55827, lng: 120.54389 },
-                { name: '潮州延平智取店', lat: 22.55568, lng: 120.54041 },
-                { name: '潮州太平智取店', lat: 22.55389, lng: 120.53813 },
-                { name: '潮州新生智取店', lat: 22.55035, lng: 120.53872 }
+        const INPUT_HELP = '若需要手動輸入數值，請用「中括號」包住變數名稱。\n範例：「滯留[箱數]箱[裸數]裸」或「缺[數量]」';
+
+        // 預設的回報情境 (加入您要求的早晚班特定選項)
+        const DEFAULT_CONFIG = {
+            categories: [
+                { id: 'cat_1', text: 'SCS,FBS黑箱' },
+                { id: 'cat_2', text: 'NDD,FBS離店打包' },
+                { id: 'cat_3', text: 'NDD上架完成' },
+                { id: 'cat_4', text: '包裹重新分配' },
+                { id: 'cat_5', text: 'PDA上架完成' },
+                { id: 'cat_6', text: '滯留箱數回報' },
+                { id: 'cat_7', text: '門面檢查' },
+                { id: 'cat_8', text: '自助機檢查' },
+                { id: 'cat_9', text: '逾期包裹-打包前' },
+                { id: 'cat_10', text: '逾期包裹相簿' },
+                { id: 'cat_11', text: '逾期包裹-PDA打包後' },
+                { id: 'cat_12', text: '每週五系統更新' }
             ],
-            '中洲群組': [
-                { name: '潮州中洲智取店', lat: 22.54232, lng: 120.54150 },
-                { name: '潮州光華智取店', lat: 22.54361, lng: 120.54497 },
-                { name: '潮州大同智取店', lat: 22.54263, lng: 120.53265 },
-                { name: '潮州光春智取店', lat: 22.54329, lng: 120.53733 }
-            ]
+            l2: {
+                'cat_1': [ { id: 'l2_1_1', text: '束帶×[數量]' }, { id: 'l2_1_2', text: '無束帶×[數量]' } ],
+                'cat_2': [ { id: 'l2_2_1', text: '無' }, { id: 'l2_2_2', text: '缺[數量]' } ],
+                'cat_3': [ { id: 'l2_3_1', text: '無' }, { id: 'l2_3_2', text: '缺[數量]' }, { id: 'l2_3_3', text: '滯留[件數]件' }, { id: 'l2_3_4', text: '滯留[裸數]裸' }, { id: 'l2_3_5', text: '異退[件數]件' } ],
+                'cat_4': [],
+                'cat_5': [ { id: 'l2_5_1', text: '無滯留' }, { id: 'l2_5_2', text: '滯留[箱數]箱[裸數]裸' }, { id: 'l2_5_3', text: '滯留[箱數]箱' }, { id: 'l2_5_4', text: '滯留[裸數]裸' } ],
+                'cat_6': [ { id: 'l2_6_1', text: '無' }, { id: 'l2_6_2', text: '滯留[箱數]箱[裸數]裸' }, { id: 'l2_6_3', text: '滯留[箱數]箱' }, { id: 'l2_6_4', text: '滯留[裸數]裸' } ],
+                'cat_7': [], 'cat_8': [], 'cat_9': [], 'cat_10': [], 'cat_11': [], 'cat_12': []
+            },
+            l3: {
+                'l2_1_1': [ { id: 'l3_1_1_1', text: '束帶×[數量]' }, { id: 'l3_1_1_2', text: '無束帶×[數量]' } ],
+                'l2_2_2': [ { id: 'l3_2_2_1', text: '無' }, { id: 'l3_2_2_2', text: '已刷已找' } ],
+                'l2_3_2': [ { id: 'l3_3_2_1', text: '門市已無包裹' } ],
+                'l2_3_5': [ { id: 'l3_3_5_1', text: '濕損破損' }, { id: 'l3_3_5_2', text: '系統無法驗收' }, { id: 'l3_3_5_3', text: '無面單' }, { id: 'l3_3_5_4', text: '雙面單' } ],
+                'l2_3_3': [ { id: 'l3_3_3_1', text: '無合適櫃位' }, { id: 'l3_3_3_2', text: '無櫃位' } ],
+                'l2_3_4': [ { id: 'l3_3_4_1', text: '無合適櫃位' }, { id: 'l3_3_4_2', text: '無櫃位' } ],
+                'l2_5_2': [ { id: 'l3_5_2_1', text: '無合適櫃位' }, { id: 'l3_5_2_2', text: '無櫃位' } ],
+                'l2_5_3': [ { id: 'l3_5_3_1', text: '無合適櫃位' }, { id: 'l3_5_3_2', text: '無櫃位' } ],
+                'l2_5_4': [ { id: 'l3_5_4_1', text: '無合適櫃位' }, { id: 'l3_5_4_2', text: '無櫃位' } ],
+                'l2_6_2': [ { id: 'l3_6_2_1', text: '無合適櫃位' }, { id: 'l3_6_2_2', text: '無櫃位' } ],
+                'l2_6_3': [ { id: 'l3_6_3_1', text: '無合適櫃位' }, { id: 'l3_6_3_2', text: '無櫃位' } ],
+                'l2_6_4': [ { id: 'l3_6_4_1', text: '無合適櫃位' }, { id: 'l3_6_4_2', text: '無櫃位' } ]
+            }
         };
 
+        let config = DEFAULT_CONFIG; 
+
+        /* ================= 2. 核心同步邏輯 (Shortcuts, Locations, Config) ================= */
+
+        // 監聽所有變更
+        supabaseClient.channel('public:shortcuts').on('postgres_changes', { event: '*', schema: 'public', table: 'shortcuts' }, payload => { fetchShortcuts(); }).subscribe();
+        supabaseClient.channel('public:store_locations').on('postgres_changes', { event: '*', schema: 'public', table: 'store_locations' }, payload => { fetchLocations(); }).subscribe();
+        supabaseClient.channel('public:report_settings').on('postgres_changes', { event: '*', schema: 'public', table: 'report_settings' }, payload => { fetchConfig(); }).subscribe();
+
+        async function fetchShortcuts() {
+            const { data } = await supabaseClient.from('shortcuts').select('*').order('created_at', { ascending: true });
+            if (data) { shortcuts = data; renderShortcuts(); }
+        }
+
+        async function fetchLocations() {
+            const { data } = await supabaseClient.from('store_locations').select('*');
+            if (data && data.length > 0) {
+                STORE_LOCATIONS = { '愛國群組': [], '中洲群組': [] };
+                data.forEach(loc => {
+                    if(!STORE_LOCATIONS[loc.group_type]) STORE_LOCATIONS[loc.group_type] = [];
+                    STORE_LOCATIONS[loc.group_type].push({ name: loc.name, lat: loc.lat, lng: loc.lng });
+                });
+            }
+        }
+
+        async function fetchConfig() {
+            const { data } = await supabaseClient.from('report_settings').select('config_data').eq('id', 1).single();
+            if (data && data.config_data) {
+                config = data.config_data;
+                // 自動補齊新系統缺少的預設標籤，避免舊資料覆蓋
+                let changed = false;
+                DEFAULT_CONFIG.categories.forEach(defaultCat => {
+                    if (!config.categories.find(c => c.text === defaultCat.text)) {
+                        config.categories.push({ id: defaultCat.id, text: defaultCat.text });
+                        if (!config.l2[defaultCat.id]) config.l2[defaultCat.id] = [];
+                        changed = true;
+                    }
+                });
+                if (changed) syncConfigToSupabase();
+                renderCategories();
+            } else {
+                await supabaseClient.from('report_settings').upsert([{ id: 1, config_data: DEFAULT_CONFIG }]);
+                config = DEFAULT_CONFIG;
+                renderCategories();
+            }
+        }
+
+        async function syncConfigToSupabase() {
+            renderCategories(); 
+            await supabaseClient.from('report_settings').upsert([{ id: 1, config_data: config }]);
+        }
+
+        /* ================= 3. 時間與班別自動偵測邏輯 ================= */
+        function updateShiftStatus() {
+            const now = new Date();
+            const hour = now.getHours();
+            const day = now.getDay();
+            
+            let shiftName = "其他時段";
+            let shiftColor = "bg-gray-400";
+            
+            // 早班時間為(07:00~15:00)
+            if (hour >= 7 && hour < 15) {
+                currentShift = 'morning';
+                shiftName = day === 5 ? "週五早班" : "早班";
+                shiftColor = "bg-orange-500";
+            } 
+            // 晚班時間為(15:00~00:00)
+            else if (hour >= 15 && hour < 24) {
+                currentShift = 'evening';
+                shiftName = "晚班";
+                shiftColor = "bg-indigo-500";
+            } else {
+                currentShift = 'other';
+            }
+            
+            document.getElementById('todayDate').innerText = `${now.getMonth() + 1}/${now.getDate()}`;
+            document.getElementById('shiftIndicator').innerText = shiftName;
+            document.getElementById('shiftIndicator').className = `text-[10px] px-2 py-1 rounded-full text-white shadow-sm ${shiftColor}`;
+            
+            renderCategories(); 
+        }
+
+        /* ================= 4. GPS 距離計算與定位 ================= */
         function calculateDistance(lat1, lon1, lat2, lon2) {
             const R = 6371e3; 
             const φ1 = lat1 * Math.PI/180;
             const φ2 = lat2 * Math.PI/180;
             const Δφ = (lat2-lat1) * Math.PI/180;
             const Δλ = (lon2-lon1) * Math.PI/180;
-            const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
-                      Math.cos(φ1) * Math.cos(φ2) *
-                      Math.sin(Δλ/2) * Math.sin(Δλ/2);
+            const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2) * Math.sin(Δλ/2);
             return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
         }
 
@@ -226,41 +336,35 @@
             let newGroup = null;
             let closestStore = null;
 
-            for (let store of STORE_LOCATIONS['愛國群組']) {
+            for (let store of (STORE_LOCATIONS['愛國群組'] || [])) {
                 if (calculateDistance(userLat, userLng, store.lat, store.lng) <= 50) {
                     newGroup = '愛國群組';
-                    closestStore = store.name.replace('智取店', '');
-                    break;
+                    closestStore = store.name.replace('智取店', ''); break;
                 }
             }
 
             if (!newGroup) {
-                for (let store of STORE_LOCATIONS['中洲群組']) {
+                for (let store of (STORE_LOCATIONS['中洲群組'] || [])) {
                     if (calculateDistance(userLat, userLng, store.lat, store.lng) <= 50) {
                         newGroup = '中洲群組';
-                        closestStore = store.name.replace('智取店', '');
-                        break;
+                        closestStore = store.name.replace('智取店', ''); break;
                     }
                 }
             }
 
             currentVisibleGroup = newGroup;
-
             const gpsSpan = document.getElementById('gpsStatus');
+            
             if (newGroup) {
                 gpsSpan.className = 'text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700';
                 gpsSpan.innerText = `📍 在 ${newGroup} 範圍內`;
                 
-                // 自動帶出門市下拉選單並重整情境
                 if (closestStore) {
                     const locSelect = document.getElementById('locationSelect');
                     let changed = false;
                     for (let i = 0; i < locSelect.options.length; i++) {
                         if (locSelect.options[i].value === closestStore) {
-                            if (locSelect.selectedIndex !== i) {
-                                locSelect.selectedIndex = i;
-                                changed = true;
-                            }
+                            if (locSelect.selectedIndex !== i) { locSelect.selectedIndex = i; changed = true; }
                             break;
                         }
                     }
@@ -270,22 +374,10 @@
                 gpsSpan.className = 'text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500';
                 gpsSpan.innerText = `📍 未進入任何門市 50m 內`;
             }
-
             renderShortcuts();
         }
 
-        async function fetchShortcuts() {
-            const { data, error } = await supabaseClient.from('shortcuts').select('*').order('created_at', { ascending: true });
-            if (!error) {
-                shortcuts = data || [];
-                renderShortcuts();
-            }
-        }
-
-        supabaseClient.channel('public:shortcuts')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'shortcuts' }, payload => { fetchShortcuts(); })
-            .subscribe();
-
+        /* ================= 5. 捷徑管理與渲染 ================= */
         function renderShortcuts() {
             const btnContainer = document.getElementById('shortcutButtons');
             if (!currentVisibleGroup) {
@@ -316,10 +408,7 @@
             `).join('');
         }
 
-        function toggleManageShortcuts() {
-            document.getElementById('manageShortcutsSection').classList.toggle('hidden');
-            resetShortcutForm();
-        }
+        function toggleManageShortcuts() { document.getElementById('manageShortcutsSection').classList.toggle('hidden'); resetShortcutForm(); }
 
         async function saveShortcut(e) {
             e.preventDefault();
@@ -357,84 +446,39 @@
 
         function escapeHtml(str) { return str ? str.replace(/[&<>'"]/g, tag => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[tag] || tag)) : ''; }
 
-        /* ================= 2. 動態回報字串產生器邏輯 ================= */
-        const today = new Date();
-        document.getElementById('todayDate').innerText = `${today.getMonth() + 1}/${today.getDate()}`;
-
-        // 預設資料 (首次載入時使用)
-        const DEFAULT_CONFIG = {
-            categories: [
-                { id: 'cat_1', text: 'SCS,FBS黑箱' },
-                { id: 'cat_2', text: 'NDD,FBS離店打包' },
-                { id: 'cat_3', text: 'NDD上架完成' },
-                { id: 'cat_4', text: '包裹重新分配' },
-                { id: 'cat_5', text: 'PDA上架完成' },
-                { id: 'cat_6', text: '滯留箱數回報' },
-                { id: 'cat_7', text: '門面檢查' }
-            ],
-            l2: {
-                'cat_1': [ { id: 'l2_1_1', text: '束帶×[數量]' }, { id: 'l2_1_2', text: '無束帶×[數量]' } ],
-                'cat_2': [ { id: 'l2_2_1', text: '無' }, { id: 'l2_2_2', text: '缺[數量]' } ],
-                'cat_3': [ { id: 'l2_3_1', text: '無' }, { id: 'l2_3_2', text: '缺[數量]' }, { id: 'l2_3_3', text: '滯留[件數]件' }, { id: 'l2_3_4', text: '滯留[裸數]裸' }, { id: 'l2_3_5', text: '異退[件數]件' } ],
-                'cat_4': [],
-                'cat_5': [ { id: 'l2_5_1', text: '無滯留' }, { id: 'l2_5_2', text: '滯留[箱數]箱[裸數]裸' }, { id: 'l2_5_3', text: '滯留[箱數]箱' }, { id: 'l2_5_4', text: '滯留[裸數]裸' } ],
-                'cat_6': [ { id: 'l2_6_1', text: '無' }, { id: 'l2_6_2', text: '滯留[箱數]箱[裸數]裸' }, { id: 'l2_6_3', text: '滯留[箱數]箱' }, { id: 'l2_6_4', text: '滯留[裸數]裸' } ],
-                'cat_7': []
-            },
-            l3: {
-                'l2_1_1': [ { id: 'l3_1_1_1', text: '束帶×[數量]' }, { id: 'l3_1_1_2', text: '無束帶×[數量]' } ],
-                'l2_2_2': [ { id: 'l3_2_2_1', text: '無' }, { id: 'l3_2_2_2', text: '已刷已找' } ],
-                'l2_3_2': [ { id: 'l3_3_2_1', text: '門市已無包裹' } ],
-                'l2_3_5': [ { id: 'l3_3_5_1', text: '濕損破損' }, { id: 'l3_3_5_2', text: '系統無法驗收' }, { id: 'l3_3_5_3', text: '無面單' }, { id: 'l3_3_5_4', text: '雙面單' } ],
-                'l2_3_3': [ { id: 'l3_3_3_1', text: '無合適櫃位' }, { id: 'l3_3_3_2', text: '無櫃位' } ],
-                'l2_3_4': [ { id: 'l3_3_4_1', text: '無合適櫃位' }, { id: 'l3_3_4_2', text: '無櫃位' } ],
-                'l2_5_2': [ { id: 'l3_5_2_1', text: '無合適櫃位' }, { id: 'l3_5_2_2', text: '無櫃位' } ],
-                'l2_5_3': [ { id: 'l3_5_3_1', text: '無合適櫃位' }, { id: 'l3_5_3_2', text: '無櫃位' } ],
-                'l2_5_4': [ { id: 'l3_5_4_1', text: '無合適櫃位' }, { id: 'l3_5_4_2', text: '無櫃位' } ],
-                'l2_6_2': [ { id: 'l3_6_2_1', text: '無合適櫃位' }, { id: 'l3_6_2_2', text: '無櫃位' } ],
-                'l2_6_3': [ { id: 'l3_6_3_1', text: '無合適櫃位' }, { id: 'l3_6_3_2', text: '無櫃位' } ],
-                'l2_6_4': [ { id: 'l3_6_4_1', text: '無合適櫃位' }, { id: 'l3_6_4_2', text: '無櫃位' } ]
-            }
-        };
-
-        // 從 LocalStorage 載入設定或使用預設
-        let config = JSON.parse(localStorage.getItem('shopee_report_config')) || DEFAULT_CONFIG;
-        if (!config.l2) config.l2 = {};
-        if (!config.l3) config.l3 = {};
-
-        function saveConfig() { localStorage.setItem('shopee_report_config', JSON.stringify(config)); }
-        function genId() { return Date.now().toString(36) + Math.random().toString(36).substr(2); }
-        
-        const INPUT_HELP = '若需要手動輸入數值，請用「中括號」包住變數名稱。\n範例：「滯留[箱數]箱[裸數]裸」或「缺[數量]」';
-
-        // ---- 渲染與切換邏輯 ----
-        function initSelects() {
-            renderCategories();
-        }
-
+        /* ================= 6. 回報情境下拉選單與過濾 ================= */
         function renderCategories(selectId = null) {
             const select = document.getElementById('categorySelect');
             const currentLocation = document.getElementById('locationSelect').value;
+            const dayOfWeek = new Date().getDay();
             
-            // 處理「包裹重新分配」的隱藏與顯示規則
+            // 加入班別與地點過濾邏輯
             const filteredCategories = config.categories.filter(c => {
-                if (c.text === '包裹重新分配') {
-                    return currentLocation === '潮州中洲' || currentLocation === '潮州愛國';
-                }
-                return true;
+                const t = c.text;
+                
+                // 特定地點才顯示的設定保留
+                if (t === '包裹重新分配') return currentLocation === '潮州中洲' || currentLocation === '潮州愛國';
+                
+                // 早班限定
+                const morningOnly = ['自助機檢查', '逾期包裹-打包前', '逾期包裹相簿', '逾期包裹-PDA打包後'];
+                if (morningOnly.includes(t)) return currentShift === 'morning';
+                
+                // 星期五早班限定
+                if (t === '每週五系統更新') return currentShift === 'morning' && dayOfWeek === 5;
+                
+                // 晚班限定
+                const eveningOnly = ['NDD,FBS離店打包', 'NDD上架完成'];
+                if (eveningOnly.includes(t)) return currentShift === 'evening';
+                
+                return true; 
             });
 
             const currentSelected = selectId || select.value;
-
             select.innerHTML = '<option value="" disabled selected>請選擇回報情境...</option>' + 
                 filteredCategories.map(c => `<option value="${c.id}" data-raw="${escapeHtml(c.text)}">${escapeHtml(c.text)}</option>`).join('');
             
-            // 如果原本選的狀態因切換地點被過濾掉，則清空重選
-            if (currentSelected && filteredCategories.some(c => c.id === currentSelected)) {
-                select.value = currentSelected;
-            } else {
-                select.value = "";
-            }
+            if (currentSelected && filteredCategories.some(c => c.id === currentSelected)) { select.value = currentSelected; } 
+            else { select.value = ""; }
 
             onCategoryChange();
         }
@@ -443,67 +487,47 @@
             const catId = document.getElementById('categorySelect').value;
             const l2Container = document.getElementById('line2Container');
             const l3Container = document.getElementById('line3Container');
-            
             if (!catId) {
-                l2Container.classList.add('hidden');
-                l3Container.classList.add('hidden');
-                return;
+                l2Container.classList.add('hidden'); l3Container.classList.add('hidden'); return;
             }
-
-            // 只要有選擇主情境，第二、第三行狀態就一併顯示出來
-            l2Container.classList.remove('hidden');
-            l3Container.classList.remove('hidden');
-            
+            l2Container.classList.remove('hidden'); l3Container.classList.remove('hidden');
             renderL2(catId);
         }
 
         function renderL2(catId, selectId = null) {
             const select = document.getElementById('line2Select');
             const options = config.l2[catId] || [];
-            
-            if (options.length === 0) {
-                select.innerHTML = '<option value="" disabled selected>無選項</option>';
-            } else {
+            if (options.length === 0) select.innerHTML = '<option value="" disabled selected>無選項</option>';
+            else {
                 select.innerHTML = options.map(o => `<option value="${o.id}" data-raw="${escapeHtml(o.text)}">${escapeHtml(o.text.replace(/\[.*?\]/g, ' ')).trim()}</option>`).join('');
                 if (selectId && options.find(o => o.id === selectId)) select.value = selectId;
             }
-            
             onL2Change();
         }
 
         function onL2Change() {
             const l2Id = document.getElementById('line2Select').value;
             parseInputs('line2Select', 'line2Inputs', 'l2');
-            // 將 L2 ID 傳遞給 L3 渲染
             renderL3(l2Id);
         }
 
         function renderL3(l2Id, selectId = null) {
             const select = document.getElementById('line3Select');
             const options = l2Id ? (config.l3[l2Id] || []) : [];
-            
-            if (options.length === 0) {
-                select.innerHTML = '<option value="" disabled selected>無選項</option>';
-            } else {
+            if (options.length === 0) select.innerHTML = '<option value="" disabled selected>無選項</option>';
+            else {
                 select.innerHTML = options.map(o => `<option value="${o.id}" data-raw="${escapeHtml(o.text)}">${escapeHtml(o.text.replace(/\[.*?\]/g, ' ')).trim()}</option>`).join('');
                 if (selectId && options.find(o => o.id === selectId)) select.value = selectId;
             }
-            
             onL3Change();
         }
 
-        function onL3Change() {
-            parseInputs('line3Select', 'line3Inputs', 'l3');
-        }
+        function onL3Change() { parseInputs('line3Select', 'line3Inputs', 'l3'); }
 
         function parseInputs(selectId, containerId, levelPrefix) {
             const select = document.getElementById(selectId);
             const container = document.getElementById(containerId);
-            // 處理「無選項」時為 disabled 的狀況
-            if (!select.value || select.options[select.selectedIndex].disabled) {
-                container.innerHTML = '';
-                return;
-            }
+            if (!select.value || select.options[select.selectedIndex].disabled) { container.innerHTML = ''; return; }
             const rawText = select.options[select.selectedIndex].getAttribute('data-raw');
             const regex = /\[(.*?)\]/g;
             let match, html = '', i = 0;
@@ -514,149 +538,102 @@
             container.innerHTML = html;
         }
 
-        // ---- 動態管理功能 (增刪改) ----
+        function genId() { return Date.now().toString(36) + Math.random().toString(36).substr(2); }
+
         function addCategory() {
-            const text = prompt('請輸入新「回報情境」名稱:');
-            if (!text) return;
+            const text = prompt('請輸入新「回報情境」名稱:'); if (!text) return;
             const id = 'cat_' + genId();
-            config.categories.push({ id, text });
-            config.l2[id] = [];
-            saveConfig(); renderCategories(id);
+            config.categories.push({ id, text }); config.l2[id] = [];
+            syncConfigToSupabase();
         }
         function editCategory() {
-            const sel = document.getElementById('categorySelect');
-            if (!sel.value) return;
-            const text = prompt('修改「回報情境」名稱:', sel.options[sel.selectedIndex].getAttribute('data-raw'));
-            if (!text) return;
+            const sel = document.getElementById('categorySelect'); if (!sel.value) return;
+            const text = prompt('修改「回報情境」名稱:', sel.options[sel.selectedIndex].getAttribute('data-raw')); if (!text) return;
             config.categories.find(c => c.id === sel.value).text = text;
-            saveConfig(); renderCategories(sel.value);
+            syncConfigToSupabase();
         }
         function deleteCategory() {
             const sel = document.getElementById('categorySelect');
             if (!sel.value || !confirm('確定刪除此情境？\n(底下的子選項將會一併刪除)')) return;
-            config.categories = config.categories.filter(c => c.id !== sel.value);
-            delete config.l2[sel.value];
-            saveConfig(); renderCategories();
+            config.categories = config.categories.filter(c => c.id !== sel.value); delete config.l2[sel.value];
+            syncConfigToSupabase();
         }
 
         function addL2() {
-            const catId = document.getElementById('categorySelect').value;
-            if (!catId) return alert('請先選擇回報情境！');
-            const text = prompt('【新增第二行狀態】\n' + INPUT_HELP);
-            if (!text) return;
+            const catId = document.getElementById('categorySelect').value; if (!catId) return alert('請先選擇回報情境！');
+            const text = prompt('【新增第二行狀態】\n' + INPUT_HELP); if (!text) return;
             const id = 'l2_' + genId();
             if(!config.l2[catId]) config.l2[catId] = [];
-            config.l2[catId].push({ id, text });
-            config.l3[id] = [];
-            saveConfig(); renderL2(catId, id);
+            config.l2[catId].push({ id, text }); config.l3[id] = [];
+            syncConfigToSupabase(); 
         }
         function editL2() {
-            const catId = document.getElementById('categorySelect').value;
-            const sel = document.getElementById('line2Select');
-            if (!sel.value) return;
-            const text = prompt('【修改第二行狀態】\n' + INPUT_HELP, sel.options[sel.selectedIndex].getAttribute('data-raw'));
-            if (!text) return;
+            const catId = document.getElementById('categorySelect').value; const sel = document.getElementById('line2Select'); if (!sel.value) return;
+            const text = prompt('【修改第二行狀態】\n' + INPUT_HELP, sel.options[sel.selectedIndex].getAttribute('data-raw')); if (!text) return;
             config.l2[catId].find(c => c.id === sel.value).text = text;
-            saveConfig(); renderL2(catId, sel.value);
+            syncConfigToSupabase();
         }
         function deleteL2() {
-            const catId = document.getElementById('categorySelect').value;
-            const sel = document.getElementById('line2Select');
+            const catId = document.getElementById('categorySelect').value; const sel = document.getElementById('line2Select');
             if (!sel.value || !confirm('確定刪除？')) return;
-            config.l2[catId] = config.l2[catId].filter(c => c.id !== sel.value);
-            delete config.l3[sel.value];
-            saveConfig(); renderL2(catId);
+            config.l2[catId] = config.l2[catId].filter(c => c.id !== sel.value); delete config.l3[sel.value];
+            syncConfigToSupabase();
         }
 
         function addL3() {
-            const l2Id = document.getElementById('line2Select').value;
-            if (!l2Id) return alert('請先新增並選擇第二行狀態！');
-            const text = prompt('【新增第三行狀態】\n' + INPUT_HELP);
-            if (!text) return;
+            const l2Id = document.getElementById('line2Select').value; if (!l2Id) return alert('請先新增並選擇第二行狀態！');
+            const text = prompt('【新增第三行狀態】\n' + INPUT_HELP); if (!text) return;
             const id = 'l3_' + genId();
             if(!config.l3[l2Id]) config.l3[l2Id] = [];
             config.l3[l2Id].push({ id, text });
-            saveConfig(); renderL3(l2Id, id);
+            syncConfigToSupabase(); 
         }
         function editL3() {
-            const l2Id = document.getElementById('line2Select').value;
-            const sel = document.getElementById('line3Select');
-            if (!sel.value) return;
-            const text = prompt('【修改第三行狀態】\n' + INPUT_HELP, sel.options[sel.selectedIndex].getAttribute('data-raw'));
-            if (!text) return;
+            const l2Id = document.getElementById('line2Select').value; const sel = document.getElementById('line3Select'); if (!sel.value) return;
+            const text = prompt('【修改第三行狀態】\n' + INPUT_HELP, sel.options[sel.selectedIndex].getAttribute('data-raw')); if (!text) return;
             config.l3[l2Id].find(c => c.id === sel.value).text = text;
-            saveConfig(); renderL3(l2Id, sel.value);
+            syncConfigToSupabase(); 
         }
         function deleteL3() {
-            const l2Id = document.getElementById('line2Select').value;
-            const sel = document.getElementById('line3Select');
+            const l2Id = document.getElementById('line2Select').value; const sel = document.getElementById('line3Select');
             if (!sel.value || !confirm('確定刪除？')) return;
             config.l3[l2Id] = config.l3[l2Id].filter(c => c.id !== sel.value);
-            saveConfig(); renderL3(l2Id);
+            syncConfigToSupabase();
         }
 
-        // ---- 產生最終字串 ----
         function formatDynamicLine(selectId, levelPrefix) {
             const select = document.getElementById(selectId);
-            // 略過「無選項」狀態
             if (!select || !select.value || select.options[select.selectedIndex].disabled) return '';
             const rawText = select.options[select.selectedIndex].getAttribute('data-raw');
             if (rawText === '無') return ''; 
-
-            let result = rawText;
-            let i = 0;
-            result = result.replace(/\[.*?\]/g, () => {
-                const el = document.getElementById(`${levelPrefix}_in_${i}`);
-                const val = el ? (el.value || '0') : '0';
-                i++;
-                return val;
-            });
+            let result = rawText; let i = 0;
+            result = result.replace(/\[.*?\]/g, () => { const el = document.getElementById(`${levelPrefix}_in_${i}`); const val = el ? (el.value || '0') : '0'; i++; return val; });
             return result;
         }
 
         function generateAndCopyString() {
             const cat = document.getElementById('categorySelect').value;
             if (!cat) return alert('⚠️ 請先選擇回報情境！');
-
             const dateStr = document.getElementById('todayDate').innerText;
             const store = document.getElementById('locationSelect').value;
             const lines = [`${dateStr} ${store}`];
-
-            const l2Container = document.getElementById('line2Container');
-            if (!l2Container.classList.contains('hidden')) {
-                const l2Text = formatDynamicLine('line2Select', 'l2');
-                if (l2Text) lines.push(l2Text);
-            }
-
-            const l3Container = document.getElementById('line3Container');
-            if (!l3Container.classList.contains('hidden')) {
-                const l3Text = formatDynamicLine('line3Select', 'l3');
-                if (l3Text) lines.push(l3Text);
-            }
-
+            const l2Text = formatDynamicLine('line2Select', 'l2'); if (l2Text && !document.getElementById('line2Container').classList.contains('hidden')) lines.push(l2Text);
+            const l3Text = formatDynamicLine('line3Select', 'l3'); if (l3Text && !document.getElementById('line3Container').classList.contains('hidden')) lines.push(l3Text);
             const finalString = lines.join('\n');
-            const output = document.getElementById('resultOutput');
-            output.value = finalString;
-
-            navigator.clipboard.writeText(finalString).then(() => {
-                alert('✅ 字串已成功複製！\n\n' + finalString);
-            }).catch(() => {
-                alert('❌ 複製失敗，請手動選取文字框的內容複製。');
-            });
+            document.getElementById('resultOutput').value = finalString;
+            navigator.clipboard.writeText(finalString).then(() => { alert('✅ 字串已成功複製！\n\n' + finalString); }).catch(() => { alert('❌ 複製失敗，請手動選取文字框的內容複製。'); });
         }
 
-        /* ================= 3. 條碼 & QR Code 產生器邏輯 (未更動) ================= */
+        /* ================= 7. 條碼 & QR Code ================= */
         function toggleAdvancedOptions() {
             const type = document.getElementById('codeType').value;
             document.getElementById('barcodeFormat').style.display = type === 'barcode' ? 'block' : 'none';
             document.getElementById('qrErrorLevel').style.display = type === 'qrcode' ? 'block' : 'none';
         }
-
         function generateCode() {
             const inputField = document.getElementById('inputValue');
             let rawInput = inputField.value.trim();
             const type = document.getElementById('codeType').value;
-
             if (!rawInput) return alert('⚠️ 請先輸入數值！');
             const safeInput = rawInput.replace(/[\u200B-\u200D\uFEFF]/g, '');
             const grid = document.getElementById('codeGrid');
@@ -667,63 +644,45 @@
             textDisplay.textContent = safeInput;
             const actions = document.createElement('div');
             actions.className = 'flex gap-2 w-full';
-
             let downloadTarget;
             try {
                 if (type === 'barcode') {
                     if (typeof JsBarcode === 'undefined') return alert('⚠️ 條碼模組載入中，請稍候再試。');
-                    const canvas = document.createElement('canvas');
-                    const format = document.getElementById('barcodeFormat').value;
+                    const canvas = document.createElement('canvas'); const format = document.getElementById('barcodeFormat').value;
                     JsBarcode(canvas, safeInput, { format: format, width: 2, height: 60, displayValue: false, margin: 10 });
-                    canvas.className = "max-w-full h-auto rounded bg-white p-2";
-                    card.appendChild(canvas);
-                    downloadTarget = canvas;
+                    canvas.className = "max-w-full h-auto rounded bg-white p-2"; card.appendChild(canvas); downloadTarget = canvas;
                 } else if (type === 'qrcode') {
                     if (typeof QRious === 'undefined') return alert('⚠️ QR Code 模組載入中，請稍候再試。');
                     const qrCanvas = document.createElement('canvas');
                     new QRious({ element: qrCanvas, value: safeInput, size: 160, level: document.getElementById('qrErrorLevel').value });
-                    qrCanvas.className = "max-w-full h-auto rounded bg-white p-2 border";
-                    card.appendChild(qrCanvas);
-                    downloadTarget = qrCanvas;
+                    qrCanvas.className = "max-w-full h-auto rounded bg-white p-2 border"; card.appendChild(qrCanvas); downloadTarget = qrCanvas;
                 }
-            } catch (e) {
-                return alert(`❌ 產生失敗！系統訊息: ${e.message || e}`); 
-            }
-
+            } catch (e) { return alert(`❌ 產生失敗！系統訊息: ${e.message || e}`); }
             const downloadBtn = document.createElement('button');
             downloadBtn.className = 'flex-1 bg-blue-100 text-blue-600 font-bold py-2 rounded hover:bg-blue-200 transition text-sm';
-            downloadBtn.textContent = '下載';
-            downloadBtn.onclick = () => downloadImage(downloadTarget, safeInput, type);
-
+            downloadBtn.textContent = '下載'; downloadBtn.onclick = () => downloadImage(downloadTarget, safeInput, type);
             const removeBtn = document.createElement('button');
             removeBtn.className = 'flex-1 bg-red-100 text-red-600 font-bold py-2 rounded hover:bg-red-200 transition text-sm';
-            removeBtn.textContent = '移除';
-            removeBtn.onclick = () => card.remove();
-
-            actions.appendChild(downloadBtn);
-            actions.appendChild(removeBtn);
-            card.appendChild(textDisplay);
-            card.appendChild(actions);
-
-            grid.prepend(card); 
-            inputField.value = ''; 
+            removeBtn.textContent = '移除'; removeBtn.onclick = () => card.remove();
+            actions.appendChild(downloadBtn); actions.appendChild(removeBtn);
+            card.appendChild(textDisplay); card.appendChild(actions); grid.prepend(card); inputField.value = ''; 
         }
-
         function downloadImage(canvas, text, type) {
-            const url = canvas.toDataURL("image/png");
-            const a = document.createElement('a');
-            a.href = url;
+            const a = document.createElement('a'); a.href = canvas.toDataURL("image/png");
             const safeName = text.replace(/[^a-zA-Z0-9]/gi, '_').substring(0, 15);
             a.download = `${type}_${safeName || 'image'}.png`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            fetchShortcuts(); 
-            startGPS();       
-            initSelects();    
+        // 初始化
+        document.addEventListener('DOMContentLoaded', async () => {
+            updateShiftStatus(); 
+            setInterval(updateShiftStatus, 60000); // 每分鐘自動刷新一次班別
+            
+            await fetchLocations(); // 優先取得定位點
+            fetchShortcuts();       // 取得捷徑
+            fetchConfig();          // 取得情境選項
+            startGPS();             
         });
     </script>
 </body>

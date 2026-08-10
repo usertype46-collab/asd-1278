@@ -68,7 +68,7 @@
             <div class="space-y-4">
                 <div class="flex items-center gap-2">
                     <div class="bg-gray-100 text-gray-700 font-bold px-3 py-2 rounded border shrink-0" id="todayDate"></div>
-                    <select id="locationSelect" class="flex-1 border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+                    <select id="locationSelect" onchange="renderCategories()" class="flex-1 border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none text-sm">
                         <option value="潮州中洲">潮州中洲</option>
                         <option value="潮州光華">潮州光華</option>
                         <option value="潮州大同">潮州大同</option>
@@ -251,15 +251,20 @@
                 gpsSpan.className = 'text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700';
                 gpsSpan.innerText = `📍 在 ${newGroup} 範圍內`;
                 
-                // 自動帶出門市下拉選單
+                // 自動帶出門市下拉選單並重整情境
                 if (closestStore) {
                     const locSelect = document.getElementById('locationSelect');
+                    let changed = false;
                     for (let i = 0; i < locSelect.options.length; i++) {
                         if (locSelect.options[i].value === closestStore) {
-                            locSelect.selectedIndex = i;
+                            if (locSelect.selectedIndex !== i) {
+                                locSelect.selectedIndex = i;
+                                changed = true;
+                            }
                             break;
                         }
                     }
+                    if (changed) renderCategories();
                 }
             } else {
                 gpsSpan.className = 'text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500';
@@ -356,7 +361,7 @@
         const today = new Date();
         document.getElementById('todayDate').innerText = `${today.getMonth() + 1}/${today.getDate()}`;
 
-        // 預設資料 (首次載入時使用)[span_0](start_span)[span_0](end_span)
+        // 預設資料 (首次載入時使用)
         const DEFAULT_CONFIG = {
             categories: [
                 { id: 'cat_1', text: 'SCS,FBS黑箱' },
@@ -409,9 +414,28 @@
 
         function renderCategories(selectId = null) {
             const select = document.getElementById('categorySelect');
+            const currentLocation = document.getElementById('locationSelect').value;
+            
+            // 處理「包裹重新分配」的隱藏與顯示規則
+            const filteredCategories = config.categories.filter(c => {
+                if (c.text === '包裹重新分配') {
+                    return currentLocation === '潮州中洲' || currentLocation === '潮州愛國';
+                }
+                return true;
+            });
+
+            const currentSelected = selectId || select.value;
+
             select.innerHTML = '<option value="" disabled selected>請選擇回報情境...</option>' + 
-                config.categories.map(c => `<option value="${c.id}" data-raw="${escapeHtml(c.text)}">${escapeHtml(c.text)}</option>`).join('');
-            if (selectId) select.value = selectId;
+                filteredCategories.map(c => `<option value="${c.id}" data-raw="${escapeHtml(c.text)}">${escapeHtml(c.text)}</option>`).join('');
+            
+            // 如果原本選的狀態因切換地點被過濾掉，則清空重選
+            if (currentSelected && filteredCategories.some(c => c.id === currentSelected)) {
+                select.value = currentSelected;
+            } else {
+                select.value = "";
+            }
+
             onCategoryChange();
         }
 
@@ -426,7 +450,10 @@
                 return;
             }
 
+            // 只要有選擇主情境，第二、第三行狀態就一併顯示出來
             l2Container.classList.remove('hidden');
+            l3Container.classList.remove('hidden');
+            
             renderL2(catId);
         }
 
@@ -434,8 +461,12 @@
             const select = document.getElementById('line2Select');
             const options = config.l2[catId] || [];
             
-            select.innerHTML = options.length ? options.map(o => `<option value="${o.id}" data-raw="${escapeHtml(o.text)}">${escapeHtml(o.text.replace(/\[.*?\]/g, ' ')).trim()}</option>`).join('') : '<option value="" disabled selected>無選項</option>';
-            if (selectId && options.find(o => o.id === selectId)) select.value = selectId;
+            if (options.length === 0) {
+                select.innerHTML = '<option value="" disabled selected>無選項</option>';
+            } else {
+                select.innerHTML = options.map(o => `<option value="${o.id}" data-raw="${escapeHtml(o.text)}">${escapeHtml(o.text.replace(/\[.*?\]/g, ' ')).trim()}</option>`).join('');
+                if (selectId && options.find(o => o.id === selectId)) select.value = selectId;
+            }
             
             onL2Change();
         }
@@ -443,29 +474,21 @@
         function onL2Change() {
             const l2Id = document.getElementById('line2Select').value;
             parseInputs('line2Select', 'line2Inputs', 'l2');
-
-            const l3Container = document.getElementById('line3Container');
-            if (!l2Id) {
-                l3Container.classList.add('hidden');
-                return;
-            }
-
-            l3Container.classList.remove('hidden');
+            // 將 L2 ID 傳遞給 L3 渲染
             renderL3(l2Id);
         }
 
         function renderL3(l2Id, selectId = null) {
             const select = document.getElementById('line3Select');
-            const options = config.l3[l2Id] || [];
+            const options = l2Id ? (config.l3[l2Id] || []) : [];
             
             if (options.length === 0) {
-                document.getElementById('line3Container').classList.add('hidden');
-                select.innerHTML = '';
+                select.innerHTML = '<option value="" disabled selected>無選項</option>';
             } else {
-                document.getElementById('line3Container').classList.remove('hidden');
                 select.innerHTML = options.map(o => `<option value="${o.id}" data-raw="${escapeHtml(o.text)}">${escapeHtml(o.text.replace(/\[.*?\]/g, ' ')).trim()}</option>`).join('');
                 if (selectId && options.find(o => o.id === selectId)) select.value = selectId;
             }
+            
             onL3Change();
         }
 
@@ -476,6 +499,7 @@
         function parseInputs(selectId, containerId, levelPrefix) {
             const select = document.getElementById(selectId);
             const container = document.getElementById(containerId);
+            // 處理「無選項」時為 disabled 的狀況
             if (!select.value || select.options[select.selectedIndex].disabled) {
                 container.innerHTML = '';
                 return;
@@ -574,6 +598,7 @@
         // ---- 產生最終字串 ----
         function formatDynamicLine(selectId, levelPrefix) {
             const select = document.getElementById(selectId);
+            // 略過「無選項」狀態
             if (!select || !select.value || select.options[select.selectedIndex].disabled) return '';
             const rawText = select.options[select.selectedIndex].getAttribute('data-raw');
             if (rawText === '無') return ''; 

@@ -285,14 +285,14 @@
             let shiftName = "其他時段";
             let shiftColor = "bg-gray-400";
             
-            // 早班時間為(07:00~15:00)
-            if (hour >= 7 && hour < 15) {
+            // 早班時間為(06:00~17:00)
+            if (hour >= 6 && hour < 17) {
                 currentShift = 'morning';
                 shiftName = day === 5 ? "週五早班" : "早班";
                 shiftColor = "bg-orange-500";
             } 
-            // 晚班時間為(15:00~00:00)
-            else if (hour >= 15 && hour < 24) {
+            // 晚班時間為(17:00~06:00)
+            else if (hour >= 17 || hour < 6) {
                 currentShift = 'evening';
                 shiftName = "晚班";
                 shiftColor = "bg-indigo-500";

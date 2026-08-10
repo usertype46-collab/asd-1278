@@ -280,17 +280,26 @@
             })
             .subscribe();
 
+        // 🟢 已修正：判斷距離範圍與無資料的顯示邏輯
         function renderShortcuts() {
-            // 渲染上方按鈕 (僅顯示符合 GPS 定位群組的捷徑)
             const btnContainer = document.getElementById('shortcutButtons');
-            const visibleShortcuts = shortcuts.filter(s => s.group_type === currentVisibleGroup);
-
-            if (visibleShortcuts.length === 0) {
+            
+            // 情況 1：未進入任何群組範圍
+            if (!currentVisibleGroup) {
                 btnContainer.innerHTML = `<div class="col-span-3 text-xs text-gray-400 text-center py-3 bg-gray-50 rounded border border-dashed border-gray-300">目前距離過遠，捷徑隱藏中。</div>`;
             } else {
-                btnContainer.innerHTML = visibleShortcuts.map(s => 
-                    `<a href="${s.url}" target="_blank" class="bg-green-500 hover:bg-green-600 text-white text-xs font-bold py-3 px-1 rounded-lg shadow transition flex items-center justify-center break-all">${escapeHtml(s.name)}</a>`
-                ).join('');
+                // 情況 2 & 3：已進入範圍，開始過濾該群組的捷徑
+                const visibleShortcuts = shortcuts.filter(s => s.group_type === currentVisibleGroup);
+
+                if (visibleShortcuts.length === 0) {
+                    // 情況 2：在範圍內，但資料庫中沒有該群組的資料
+                    btnContainer.innerHTML = `<div class="col-span-3 text-xs text-gray-400 text-center py-3 bg-gray-50 rounded border border-dashed border-gray-300">已進入 ${escapeHtml(currentVisibleGroup)}，但尚未設定捷徑。<br>請點擊右上方「管理」新增。</div>`;
+                } else {
+                    // 情況 3：正常顯示捷徑
+                    btnContainer.innerHTML = visibleShortcuts.map(s => 
+                        `<a href="${s.url}" target="_blank" class="bg-green-500 hover:bg-green-600 text-white text-xs font-bold py-3 px-1 rounded-lg shadow transition flex items-center justify-center break-all">${escapeHtml(s.name)}</a>`
+                    ).join('');
+                }
             }
 
             // 渲染管理列表 (無論距離多遠皆會顯示所有項目，以利管理)

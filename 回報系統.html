@@ -460,7 +460,7 @@
                 if (t === '包裹重新分配') return currentLocation === '潮州中洲' || currentLocation === '潮州愛國';
                 
                 // 早班限定
-                const morningOnly = ['自助機檢查', '逾期包裹-打包前', '逾期包裹相簿', '逾期包裹-PDA打包後'];
+                const morningOnly = ['自助機檢查', '逾期包裹-打包前', '逾期包裹相簿', '逾期包裹-PDA打包後','NDD早班相簿'];
                 if (morningOnly.includes(t)) return currentShift === 'morning';
                 
                 // 星期五早班限定

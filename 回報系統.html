@@ -460,7 +460,7 @@
                 if (t === '包裹重新分配') return currentLocation === '潮州中洲' || currentLocation === '潮州愛國';
                 
                 // 早班限定
-                const morningOnly = ['自助機檢查', '逾期包裹-打包前', '逾期包裹相簿', '逾期包裹-PDA打包後','NDD早班相簿'];
+                const morningOnly = ['自助機檢查', '逾期包裹-打包前', '逾期包裹相簿', '逾期包裹-PDA打包後'];
                 if (morningOnly.includes(t)) return currentShift === 'morning';
                 
                 // 星期五早班限定
@@ -619,17 +619,6 @@
             const lines = [`${dateStr} ${store}`];
             const l2Text = formatDynamicLine('line2Select', 'l2'); if (l2Text && !document.getElementById('line2Container').classList.contains('hidden')) lines.push(l2Text);
             const l3Text = formatDynamicLine('line3Select', 'l3'); if (l3Text && !document.getElementById('line3Container').classList.contains('hidden')) lines.push(l3Text);
-            
-            // 自動遞增序號邏輯（依當天日期自動累加計數）
-            const todayKey = 'report_counter_' + dateStr;
-            let counter = parseInt(localStorage.getItem(todayKey) || '0') + 1;
-            localStorage.setItem(todayKey, counter);
-
-            // 在最後一行的末端添加自動遞增的序號
-            if (lines.length > 0) {
-                lines[lines.length - 1] += ` (${counter})`;
-            }
-
             const finalString = lines.join('\n');
             document.getElementById('resultOutput').value = finalString;
             navigator.clipboard.writeText(finalString).then(() => { alert('✅ 字串已成功複製！\n\n' + finalString); }).catch(() => { alert('❌ 複製失敗，請手動選取文字框的內容複製。'); });

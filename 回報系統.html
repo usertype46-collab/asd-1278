@@ -167,7 +167,7 @@
 
                 <!-- 顯示 OCR 解析圖片範例的區塊 -->
                 <div id="ocrPreviewContainer" class="hidden flex-col items-center mt-2 bg-gray-50 p-3 border rounded-lg shadow-inner">
-                    <span class="text-xs text-gray-600 mb-2 font-bold w-full text-left">📸 最新 OCR 裁切解析圖片 (已強化對比)：</span>
+                    <span class="text-xs text-gray-600 mb-2 font-bold w-full text-left">📸 最新 OCR 裁切解析圖片 (已強化陰影防護)：</span>
                     <img id="ocrPreviewImg" class="max-h-24 object-contain rounded shadow-sm border border-gray-200">
                 </div>
                 
@@ -203,10 +203,8 @@
         <div class="bg-white rounded-xl max-w-md w-full p-4 flex flex-col items-center relative shadow-lg">
             <h3 class="text-md font-bold text-gray-800 mb-3">📷 相機掃描與範圍裁切 OCR</h3>
             
-            <!-- 攝影機與裁切框疊加層 (已將高度縮小至適合物流編號單行大小) -->
             <div id="readerWrapper" class="relative w-full rounded overflow-hidden bg-black min-h-[200px]">
                 <div id="reader" class="w-full"></div>
-                <!-- 視覺化裁切框引導層 -->
                 <div class="absolute inset-0 pointer-events-none flex items-center justify-center">
                     <div class="border-2 border-dashed border-yellow-400 w-4/5 h-16 rounded-lg bg-yellow-400/10 flex items-center justify-center shadow-lg relative">
                         <span class="absolute -top-3 left-1/2 -translate-x-1/2 text-yellow-300 text-[10px] font-bold bg-black/80 px-2 py-0.5 rounded whitespace-nowrap shadow">📌 請將物流編號對準此框內</span>
@@ -725,7 +723,7 @@
                 { facingMode: "environment" },
                 {
                     fps: 10,
-                    qrbox: { width: 250, height: 60 } // 同步縮小高度，讓預覽掃描框對應單行物流編號
+                    qrbox: { width: 250, height: 60 } 
                 },
                 (decodedText, decodedResult) => {
                     document.getElementById('inputValue').value = decodedText;
@@ -748,7 +746,7 @@
             document.getElementById('scannerStatus').innerText = '自動尋找條碼... 或將物流編號對準黃色虛線框點擊拍照';
         }
 
-        // 拍照並精準依據「黃色虛線裁切框」範圍解析文字 (已修正裁剪高度為物流編號單行範圍的大小)
+        // 拍照並精準依據「黃色虛線裁切框」範圍解析文字 (已升級：動態對比度拉伸 + 智慧去陰影)
         async function captureAndOCR() {
             const video = document.querySelector('#reader video');
             if (!video) return alert('⚠️ 找不到相機畫面，請確認相機已授權並啟動。');
@@ -765,7 +763,7 @@
             const displayHeight = video.clientHeight;
 
             const cropW = displayWidth * 0.8;
-            const cropH = 60; // 修正：將裁剪高度設定為 60px（剛好對應單行物流編號範圍的大小）
+            const cropH = 60; 
             const cropX = (displayWidth - cropW) / 2;
             const cropY = (displayHeight - cropH) / 2;
 
@@ -783,14 +781,32 @@
 
             ctx.drawImage(video, sx, sy, sWidth, sHeight, 0, 0, canvas.width, canvas.height);
 
+            // 影像預處理：針對陰影與光線不均進行動態直方圖對比度拉伸 (Histogram Normalization)
             const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
             const data = imageData.data;
+            
+            let minGray = 255;
+            let maxGray = 0;
+            
+            // 第一步：掃描取得當前裁切框內的最低與最高灰階值，精準定位背景與陰影範圍
             for (let i = 0; i < data.length; i += 4) {
                 const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-                const contrast = 2.0;
-                let color = ((gray / 255 - 0.5) * contrast + 0.5) * 255;
-                if (color < 0) color = 0;
-                if (color > 255) color = 255;
+                if (gray < minGray) minGray = gray;
+                if (gray > maxGray) maxGray = gray;
+            }
+
+            // 第二步：進行對比拉伸並智慧強化字體（過濾陰影干擾，保留字元完整性）
+            const range = maxGray - minGray;
+            for (let i = 0; i < data.length; i += 4) {
+                const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+                let color = range > 0 ? ((gray - minGray) / range) * 255 : gray;
+                
+                // 智慧二值化微調：加深文字、提亮背景，彻底消除陰影黑塊
+                if (color < 120) {
+                    color = Math.max(0, color - 35); 
+                } else {
+                    color = Math.min(255, color + 35); 
+                }
                 
                 data[i] = data[i + 1] = data[i + 2] = color;
             }

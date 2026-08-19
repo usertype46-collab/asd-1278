@@ -9,6 +9,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+    <!-- 新增：Tesseract.js 文字解析引擎 -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <style>
         body { background-color: #f3f4f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         .card { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); }
@@ -24,6 +26,7 @@
 
     <main class="max-w-lg mx-auto mt-4 px-4 space-y-6">
         
+        <!-- 捷徑區域 -->
         <section class="bg-white rounded-xl card p-5 border-t-4 border-green-500">
             <div class="flex justify-between items-center mb-3">
                 <h2 class="text-md font-bold text-gray-800 flex items-center gap-2">
@@ -60,6 +63,7 @@
             </div>
         </section>
 
+        <!-- 回報字串產生器區域 -->
         <section class="bg-white rounded-xl card p-5 border-t-4 border-blue-500">
             <h2 class="text-md font-bold text-gray-800 mb-4">📝 狀態回報字串產生器</h2>
             
@@ -93,9 +97,7 @@
                             <button onclick="deleteCategory()" class="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded shadow-sm">🗑️刪除</button>
                         </div>
                     </div>
-                    <select id="categorySelect" onchange="onCategoryChange()" class="w-full border border-gray-300 rounded px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500 outline-none text-sm">
-                        <!-- 動態產生 -->
-                    </select>
+                    <select id="categorySelect" onchange="onCategoryChange()" class="w-full border border-gray-300 rounded px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500 outline-none text-sm"></select>
                 </div>
 
                 <div id="line2Container" class="hidden bg-gray-50 p-3 rounded border">
@@ -151,6 +153,7 @@
             </div>
         </section>
 
+        <!-- 條碼產生器區域 -->
         <section class="bg-white rounded-xl card p-5 border-t-4 border-purple-500 mb-10">
             <h2 class="text-md font-bold text-gray-800 mb-4">🔣 條碼 & QR Code 產生器</h2>
             
@@ -158,7 +161,7 @@
                 <div class="flex gap-2">
                     <input type="text" id="inputValue" placeholder="請輸入數值 (例如: TW266484886B)..." class="flex-1 border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-purple-500 outline-none text-sm">
                     <button type="button" onclick="openScannerModal()" class="bg-purple-600 hover:bg-purple-700 text-white font-bold px-3 py-2 rounded-lg shadow transition text-xs flex items-center gap-1 shrink-0">
-                        📷 相機掃描
+                        📷 掃描 / 拍照
                     </button>
                 </div>
                 
@@ -189,15 +192,21 @@
 
     </main>
 
-    <!-- 相機掃描彈跳視窗 -->
+    <!-- 相機掃描彈跳視窗 (更新版：加入 OCR 與拍照鈕) -->
     <div id="scannerModal" class="fixed inset-0 bg-black bg-opacity-70 z-50 hidden flex flex-col items-center justify-center p-4">
-        <div class="bg-white rounded-xl max-w-md w-full p-4 flex flex-col items-center relative">
-            <h3 class="text-md font-bold text-gray-800 mb-3">📷 相機條碼掃描辨識</h3>
-            <div id="reader" class="w-full rounded overflow-hidden bg-black"></div>
-            <p class="text-xs text-gray-500 mt-2 text-center">請將鏡頭對準條碼 (如: TW266484886B) 或 QR Code</p>
-            <button type="button" onclick="closeScannerModal()" class="mt-4 w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 rounded-lg transition text-sm">
-                關閉掃描
-            </button>
+        <div class="bg-white rounded-xl max-w-md w-full p-4 flex flex-col items-center relative shadow-lg">
+            <h3 class="text-md font-bold text-gray-800 mb-3">📷 相機掃描與文字辨識 (OCR)</h3>
+            <div id="reader" class="w-full rounded overflow-hidden bg-black min-h-[200px]"></div>
+            <p id="scannerStatus" class="text-xs text-gray-500 mt-2 text-center font-semibold">自動尋找條碼... 或對準單號文字點擊拍照</p>
+            
+            <div class="flex gap-2 w-full mt-4">
+                <button type="button" onclick="captureAndOCR()" id="ocrBtn" class="flex-[2] bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 rounded-lg transition text-sm flex justify-center items-center gap-1 shadow">
+                    📸 拍照解析文字
+                </button>
+                <button type="button" onclick="closeScannerModal()" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 rounded-lg transition text-sm shadow">
+                    關閉
+                </button>
+            </div>
         </div>
     </div>
 
@@ -687,7 +696,7 @@
             navigator.clipboard.writeText(finalString).then(() => { alert('✅ 字串已成功複製！\n\n' + finalString); }).catch(() => { alert('❌ 複製失敗，請手動選取文字框複製。'); });
         }
 
-        /* ================= 7. 條碼 & QR Code 與相機掃描辨識 ================= */
+        /* ================= 7. 條碼 & QR Code 與相機掃描/OCR文字辨識 ================= */
         let html5QrCode = null;
 
         function openScannerModal() {
@@ -695,6 +704,7 @@
             if (!html5QrCode) {
                 html5QrCode = new Html5Qrcode("reader");
             }
+            // 啟動相機 (自動尋找條碼)
             html5QrCode.start(
                 { facingMode: "environment" },
                 {
@@ -704,10 +714,11 @@
                 (decodedText, decodedResult) => {
                     document.getElementById('inputValue').value = decodedText;
                     closeScannerModal();
-                    generateCode();
+                    // 掃描條碼成功可選擇是否自動產圖
+                    // generateCode();
                 },
                 (errorMessage) => {
-                    // 掃描中尋找條碼，略過錯誤
+                    // 背景持續尋找條碼中，不回報錯誤
                 }
             ).catch(err => {
                 alert(`無法啟動相機: ${err}`);
@@ -719,6 +730,66 @@
             document.getElementById('scannerModal').classList.add('hidden');
             if (html5QrCode && html5QrCode.isScanning) {
                 html5QrCode.stop().catch(err => console.log(err));
+            }
+            // 復原狀態文字
+            document.getElementById('scannerStatus').innerText = '自動尋找條碼... 或對準單號文字點擊拍照';
+        }
+
+        // 新增：拍照並透過 Tesseract.js 解析文字
+        async function captureAndOCR() {
+            const video = document.querySelector('#reader video');
+            if (!video) return alert('⚠️ 找不到相機畫面，請確認相機已授權並啟動。');
+
+            const ocrBtn = document.getElementById('ocrBtn');
+            const statusText = document.getElementById('scannerStatus');
+            
+            // 建立隱藏的 canvas 來擷取當下攝影機的畫面
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            try {
+                // 鎖定按鈕，防止重複點擊
+                ocrBtn.disabled = true;
+                ocrBtn.innerHTML = '⏳ 影像解析中...';
+                statusText.innerText = '正在透過 OCR 引擎解析文字，請稍候...';
+
+                // 呼叫 Tesseract.js 解析英數文字
+                const result = await Tesseract.recognize(
+                    canvas,
+                    'eng', // 使用英文語言包 (最適合解析交貨便純英數代碼)
+                    { 
+                        logger: m => { 
+                            if (m.status === 'recognizing text') {
+                                statusText.innerText = `OCR 解析進度: ${Math.round(m.progress * 100)}%`; 
+                            }
+                        } 
+                    }
+                );
+
+                const text = result.data.text;
+                
+                // 智慧過濾：找出長度大於5的最長連續英數字組合 (類似包裹單號)
+                const matches = text.match(/[A-Za-z0-9]{5,}/g);
+                const finalString = matches ? matches.reduce((a, b) => a.length > b.length ? a : b) : text.replace(/[^a-zA-Z0-9]/g, '');
+
+                if (finalString) {
+                    document.getElementById('inputValue').value = finalString.toUpperCase();
+                    alert('✅ 文字解析成功: ' + finalString.toUpperCase());
+                    closeScannerModal();
+                } else {
+                    alert('❌ 畫面中找不到可辨識的文字，請重新對準後拍照。');
+                    statusText.innerText = '自動尋找條碼... 或對準單號文字點擊拍照';
+                }
+            } catch (err) {
+                alert('❌ 解析發生錯誤: ' + err.message);
+                statusText.innerText = '解析失敗，請重試';
+            } finally {
+                // 恢復按鈕狀態
+                ocrBtn.disabled = false;
+                ocrBtn.innerHTML = '📸 拍照解析文字';
             }
         }
 

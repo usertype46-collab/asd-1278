@@ -746,7 +746,7 @@
             document.getElementById('scannerStatus').innerText = '自動尋找條碼... 或將物流編號對準黃色虛線框點擊拍照';
         }
 
-        // 拍照並精準依據「黃色虛線裁切框」範圍解析文字 (已升級：動態對比度拉伸 + 智慧去陰影)
+        // 拍照並精準依據「黃色虛線裁切框」範圍解析文字 (已修正：白名單限制 + 強化物流單號正規表達式)
         async function captureAndOCR() {
             const video = document.querySelector('#reader video');
             if (!video) return alert('⚠️ 找不到相機畫面，請確認相機已授權並啟動。');
@@ -781,27 +781,24 @@
 
             ctx.drawImage(video, sx, sy, sWidth, sHeight, 0, 0, canvas.width, canvas.height);
 
-            // 影像預處理：針對陰影與光線不均進行動態直方圖對比度拉伸 (Histogram Normalization)
+            // 影像預處理：針對陰影與光線不均進行動態直方圖對比度拉伸
             const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
             const data = imageData.data;
             
             let minGray = 255;
             let maxGray = 0;
             
-            // 第一步：掃描取得當前裁切框內的最低與最高灰階值，精準定位背景與陰影範圍
             for (let i = 0; i < data.length; i += 4) {
                 const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
                 if (gray < minGray) minGray = gray;
                 if (gray > maxGray) maxGray = gray;
             }
 
-            // 第二步：進行對比拉伸並智慧強化字體（過濾陰影干擾，保留字元完整性）
             const range = maxGray - minGray;
             for (let i = 0; i < data.length; i += 4) {
                 const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
                 let color = range > 0 ? ((gray - minGray) / range) * 255 : gray;
                 
-                // 智慧二值化微調：加深文字、提亮背景，彻底消除陰影黑塊
                 if (color < 120) {
                     color = Math.max(0, color - 35); 
                 } else {
@@ -815,43 +812,49 @@
             try {
                 ocrBtn.disabled = true;
                 ocrBtn.innerHTML = '⏳ 範圍影像解析中...';
-                statusText.innerText = '正在透過優化 OCR 引擎解析單號，請稍候...';
+                statusText.innerText = '正在透過優化 OCR 引擎解析物流編號，請稍候...';
 
                 const worker = await Tesseract.createWorker('eng');
                 await worker.setParameters({
-                    tessedit_pageseg_mode: '6',
+                    tessedit_pageseg_mode: '7', // PSM 7: 視為單行文字，大幅提升物流條碼與單號辨識準確度
+                    tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789' // 字元白名單：僅允許大寫英文字母與數字，徹底杜絕雜訊與誤判
                 });
                 
                 const result = await worker.recognize(canvas);
                 await worker.terminate();
 
-                const text = result.data.text;
-                const cleanText = text.replace(/[\r\n]+/g, ' ').trim();
-                
-                const matches = cleanText.match(/[A-Z0-9]{8,}/gi) || [];
+                const rawText = result.data.text || '';
+                // 移除所有非英數字元並轉換為大寫
+                const cleaned = rawText.toUpperCase().replace(/[^A-Z0-9]/g, '');
+
                 let finalString = '';
                 
-                const explicitCode = matches.find(m => /[A-Z]/i.test(m) && /\d/.test(m));
-                if (explicitCode) {
-                    finalString = explicitCode;
-                } else if (matches.length > 0) {
-                    finalString = matches.reduce((a, b) => a.length >= b.length ? a : b);
+                // 優先匹配常見蝦皮物流單號格式（例如 TW 開頭或 SPX 開頭後接英數字，或是 10~16 碼英數字組合）
+                const matchPattern = cleaned.match(/(?:TW|SPX)[A-Z0-9]{8,}/i) || cleaned.match(/[A-Z]{2}[0-9]{8,}[A-Z0-9]*/i);
+                
+                if (matchPattern) {
+                    finalString = matchPattern[0];
                 } else {
-                    const allMatches = cleanText.match(/[A-Za-z0-9]{5,}/g);
-                    finalString = allMatches ? allMatches.reduce((a, b) => a.length >= b.length ? a : b) : cleanText.replace(/[^a-zA-Z0-9]/g, '');
+                    const potentialCodes = cleaned.match(/[A-Z0-9]{10,16}/g);
+                    if (potentialCodes && potentialCodes.length > 0) {
+                        const validCode = potentialCodes.find(c => /[A-Z]/.test(c) && /\d/.test(c));
+                        finalString = validCode || potentialCodes[0];
+                    } else {
+                        finalString = cleaned.length >= 8 ? cleaned : '';
+                    }
                 }
 
                 if (finalString) {
-                    document.getElementById('inputValue').value = finalString.toUpperCase();
+                    document.getElementById('inputValue').value = finalString;
                     
                     document.getElementById('ocrPreviewImg').src = canvas.toDataURL('image/jpeg');
                     document.getElementById('ocrPreviewContainer').classList.remove('hidden');
                     document.getElementById('ocrPreviewContainer').classList.add('flex');
 
-                    alert('✅ 裁切範圍文字解析成功: ' + finalString.toUpperCase());
+                    alert('✅ 物流編號解析成功: ' + finalString);
                     closeScannerModal();
                 } else {
-                    alert('❌ 裁切框內找不到可辨識的文字，請將單號對準框內後重試。');
+                    alert('❌ 無法正確辨識物流編號，請將單號對準黃色虛線框內後重試。');
                     statusText.innerText = '自動尋找條碼... 或將物流編號對準黃色虛線框點擊拍照';
                 }
             } catch (err) {

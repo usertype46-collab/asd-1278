@@ -206,10 +206,10 @@
             <!-- 攝影機與裁切框疊加層 -->
             <div id="readerWrapper" class="relative w-full rounded overflow-hidden bg-black min-h-[200px]">
                 <div id="reader" class="w-full"></div>
-                <!-- 視覺化裁切框引導層 -->
+                <!-- 視覺化裁切框引導層 (提示改至上方外側，避免擋住畫面中心) -->
                 <div class="absolute inset-0 pointer-events-none flex items-center justify-center">
-                    <div class="border-2 border-dashed border-yellow-400 w-4/5 h-24 rounded-lg bg-yellow-400/10 flex items-center justify-center shadow-lg">
-                        <span class="text-yellow-300 text-[11px] font-bold bg-black/60 px-2 py-0.5 rounded">📌 拍照裁切範圍 (對準單號)</span>
+                    <div class="border-2 border-dashed border-yellow-400 w-4/5 h-24 rounded-lg bg-yellow-400/10 flex items-center justify-center shadow-lg relative">
+                        <span class="absolute -top-3 left-1/2 -translate-x-1/2 text-yellow-300 text-[10px] font-bold bg-black/80 px-2 py-0.5 rounded whitespace-nowrap shadow">📌 請將單號對準此框內</span>
                     </div>
                 </div>
             </div>
@@ -748,7 +748,7 @@
             document.getElementById('scannerStatus').innerText = '自動尋找條碼... 或將單號對準黃色虛線框點擊拍照';
         }
 
-        // 拍照並精準依據「黃色虛線裁切框」範圍解析文字 (OCR - 已修正解析邏輯)
+        // 拍照並精準依據「黃色虛線裁切框」範圍解析文字 (OCR - 已修正解析邏輯與 PSM 模式)
         async function captureAndOCR() {
             const video = document.querySelector('#reader video');
             if (!video) return alert('⚠️ 找不到相機畫面，請確認相機已授權並啟動。');
@@ -801,10 +801,10 @@
                 ocrBtn.innerHTML = '⏳ 範圍影像解析中...';
                 statusText.innerText = '正在透過優化 OCR 引擎解析單號，請稍候...';
 
-                // 使用 Tesseract v5 worker 設定單行辨識模式 (PSM 7) 以提升準確率
+                // 改用 PSM 6（統一文字區塊模式），以正確辨識標籤上的多行文字（如代碼與中文）
                 const worker = await Tesseract.createWorker('eng');
                 await worker.setParameters({
-                    tessedit_pageseg_mode: '7',
+                    tessedit_pageseg_mode: '6',
                 });
                 
                 const result = await worker.recognize(canvas);
@@ -813,17 +813,15 @@
                 const text = result.data.text;
                 const cleanText = text.replace(/[\r\n]+/g, ' ').trim();
                 
-                // 精準過濾與解析物流單號格式 (優先抓取含英文與數字、長度 8 碼以上的代碼)
-                const potentialCodes = cleanText.match(/[A-Za-z0-9]{8,}/g) || [];
+                // 優化過濾邏輯：優先尋找蝦皮物流單號格式（例如英文字母開頭後接多碼數字，如 P22359528038）
+                const matches = cleanText.match(/[A-Z0-9]{8,}/gi) || [];
                 let finalString = '';
                 
-                if (potentialCodes.length > 0) {
-                    const validCodes = potentialCodes.filter(c => /[A-Za-z]/.test(c) && /\d/.test(c));
-                    if (validCodes.length > 0) {
-                        finalString = validCodes.reduce((a, b) => a.length >= b.length ? a : b);
-                    } else {
-                        finalString = potentialCodes.reduce((a, b) => a.length >= b.length ? a : b);
-                    }
+                const explicitCode = matches.find(m => /[A-Z]/i.test(m) && /\d/.test(m));
+                if (explicitCode) {
+                    finalString = explicitCode;
+                } else if (matches.length > 0) {
+                    finalString = matches.reduce((a, b) => a.length >= b.length ? a : b);
                 } else {
                     const allMatches = cleanText.match(/[A-Za-z0-9]{5,}/g);
                     finalString = allMatches ? allMatches.reduce((a, b) => a.length >= b.length ? a : b) : cleanText.replace(/[^a-zA-Z0-9]/g, '');

@@ -710,12 +710,9 @@
             if (!html5QrCode) {
                 html5QrCode = new Html5Qrcode("reader");
             }
-            // 啟動相機 (自動尋找條碼)，並開啟微距對焦功能
+            // 啟動相機 (修正：符合 html5-qrcode 限制，只傳入單一 facingMode 物件)
             html5QrCode.start(
-                { 
-                    facingMode: "environment",
-                    advanced: [{ focusMode: "macro" }, { focusMode: "continuous" }] 
-                },
+                { facingMode: "environment" },
                 {
                     fps: 10,
                     qrbox: { width: 250, height: 150 }

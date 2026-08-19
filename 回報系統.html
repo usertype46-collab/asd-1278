@@ -9,7 +9,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
-    <!-- 新增：Tesseract.js 文字解析引擎 -->
+    <!-- Tesseract.js 文字解析引擎 -->
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <style>
         body { background-color: #f3f4f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
@@ -164,6 +164,12 @@
                         📷 掃描 / 拍照
                     </button>
                 </div>
+
+                <!-- 顯示 OCR 解析圖片範例的區塊 -->
+                <div id="ocrPreviewContainer" class="hidden flex-col items-center mt-2 bg-gray-50 p-3 border rounded-lg shadow-inner">
+                    <span class="text-xs text-gray-600 mb-2 font-bold w-full text-left">📸 最新 OCR 解析圖片 (已強化對比)：</span>
+                    <img id="ocrPreviewImg" class="max-h-24 object-contain rounded shadow-sm border border-gray-200">
+                </div>
                 
                 <div class="flex gap-2">
                     <select id="codeType" onchange="toggleAdvancedOptions()" class="flex-1 border border-gray-300 rounded px-2 py-2 bg-gray-100 outline-none text-sm">
@@ -192,7 +198,7 @@
 
     </main>
 
-    <!-- 相機掃描彈跳視窗 (更新版：加入 OCR 與拍照鈕) -->
+    <!-- 相機掃描彈跳視窗 -->
     <div id="scannerModal" class="fixed inset-0 bg-black bg-opacity-70 z-50 hidden flex flex-col items-center justify-center p-4">
         <div class="bg-white rounded-xl max-w-md w-full p-4 flex flex-col items-center relative shadow-lg">
             <h3 class="text-md font-bold text-gray-800 mb-3">📷 相機掃描與文字辨識 (OCR)</h3>
@@ -704,9 +710,12 @@
             if (!html5QrCode) {
                 html5QrCode = new Html5Qrcode("reader");
             }
-            // 啟動相機 (自動尋找條碼)
+            // 啟動相機 (自動尋找條碼)，並開啟微距對焦功能
             html5QrCode.start(
-                { facingMode: "environment" },
+                { 
+                    facingMode: "environment",
+                    advanced: [{ focusMode: "macro" }, { focusMode: "continuous" }] 
+                },
                 {
                     fps: 10,
                     qrbox: { width: 250, height: 150 }
@@ -714,8 +723,6 @@
                 (decodedText, decodedResult) => {
                     document.getElementById('inputValue').value = decodedText;
                     closeScannerModal();
-                    // 掃描條碼成功可選擇是否自動產圖
-                    // generateCode();
                 },
                 (errorMessage) => {
                     // 背景持續尋找條碼中，不回報錯誤
@@ -735,7 +742,7 @@
             document.getElementById('scannerStatus').innerText = '自動尋找條碼... 或對準單號文字點擊拍照';
         }
 
-        // 新增：拍照並透過 Tesseract.js 解析文字
+        // 拍照並透過 Tesseract.js 解析文字，加入影像前處理完美解析
         async function captureAndOCR() {
             const video = document.querySelector('#reader video');
             if (!video) return alert('⚠️ 找不到相機畫面，請確認相機已授權並啟動。');
@@ -743,12 +750,31 @@
             const ocrBtn = document.getElementById('ocrBtn');
             const statusText = document.getElementById('scannerStatus');
             
-            // 建立隱藏的 canvas 來擷取當下攝影機的畫面
+            // 建立 canvas 來擷取當下攝影機的畫面 (放大兩倍提升辨識精準度)
+            const scale = 2;
             const canvas = document.createElement('canvas');
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            const ctx = canvas.getContext('2d');
+            canvas.width = video.videoWidth * scale;
+            canvas.height = video.videoHeight * scale;
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
+            
+            // 繪製影像並放大
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            // 影像前處理：灰階化與增加對比度 (二值化強化)，讓 Tesseract 解析更完美
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+            for (let i = 0; i < data.length; i += 4) {
+                // 轉灰階
+                const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+                // 強化對比度
+                const contrast = 1.8; // 對比強度
+                let color = ((gray / 255 - 0.5) * contrast + 0.5) * 255;
+                if (color < 0) color = 0;
+                if (color > 255) color = 255;
+                
+                data[i] = data[i + 1] = data[i + 2] = color;
+            }
+            ctx.putImageData(imageData, 0, 0);
 
             try {
                 // 鎖定按鈕，防止重複點擊
@@ -759,7 +785,7 @@
                 // 呼叫 Tesseract.js 解析英數文字
                 const result = await Tesseract.recognize(
                     canvas,
-                    'eng', // 使用英文語言包 (最適合解析交貨便純英數代碼)
+                    'eng', // 使用英文語言包 (適合解析交貨便純英數代碼)
                     { 
                         logger: m => { 
                             if (m.status === 'recognizing text') {
@@ -777,6 +803,12 @@
 
                 if (finalString) {
                     document.getElementById('inputValue').value = finalString.toUpperCase();
+                    
+                    // 將前處理過（給機器看）的完美高對比解析圖片顯示在畫面上供檢視
+                    document.getElementById('ocrPreviewImg').src = canvas.toDataURL('image/jpeg');
+                    document.getElementById('ocrPreviewContainer').classList.remove('hidden');
+                    document.getElementById('ocrPreviewContainer').classList.add('flex');
+
                     alert('✅ 文字解析成功: ' + finalString.toUpperCase());
                     closeScannerModal();
                 } else {

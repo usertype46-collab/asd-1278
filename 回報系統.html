@@ -748,7 +748,7 @@
             document.getElementById('scannerStatus').innerText = '自動尋找條碼... 或將單號對準黃色虛線框點擊拍照';
         }
 
-        // 拍照並精準依據「黃色虛線裁切框」範圍解析文字 (OCR)
+        // 拍照並精準依據「黃色虛線裁切框」範圍解析文字 (OCR - 已修正解析邏輯)
         async function captureAndOCR() {
             const video = document.querySelector('#reader video');
             if (!video) return alert('⚠️ 找不到相機畫面，請確認相機已授權並啟動。');
@@ -759,19 +759,16 @@
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
-            // 取得視訊真實解析度與畫面顯示大小
             const videoWidth = video.videoWidth;
             const videoHeight = video.videoHeight;
             const displayWidth = video.clientWidth;
             const displayHeight = video.clientHeight;
 
-            // 對應畫面上黃色虛線裁切框的相對大小與位置 (w-4/5, h-24 / 96px, 置中)
             const cropW = displayWidth * 0.8;
             const cropH = 96;
             const cropX = (displayWidth - cropW) / 2;
             const cropY = (displayHeight - cropH) / 2;
 
-            // 換算成攝影機影片實際畫素的座標
             const scaleX = videoWidth / displayWidth;
             const scaleY = videoHeight / displayHeight;
 
@@ -780,20 +777,17 @@
             const sWidth = cropW * scaleX;
             const sHeight = cropH * scaleY;
 
-            // 設定 canvas 大小 (放大 2 倍提升 OCR 解析精準度)
             const upscale = 2;
             canvas.width = sWidth * upscale;
             canvas.height = sHeight * upscale;
 
-            // 僅擷取裁切框內的圖像並繪製
             ctx.drawImage(video, sx, sy, sWidth, sHeight, 0, 0, canvas.width, canvas.height);
 
-            // 影像前處理：灰階化與增加對比度 (二值化強化)
             const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
             const data = imageData.data;
             for (let i = 0; i < data.length; i += 4) {
                 const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-                const contrast = 1.8;
+                const contrast = 2.0;
                 let color = ((gray / 255 - 0.5) * contrast + 0.5) * 255;
                 if (color < 0) color = 0;
                 if (color > 255) color = 255;
@@ -805,23 +799,35 @@
             try {
                 ocrBtn.disabled = true;
                 ocrBtn.innerHTML = '⏳ 範圍影像解析中...';
-                statusText.innerText = '正在透過 OCR 引擎解析裁切範圍內的文字，請稍候...';
+                statusText.innerText = '正在透過優化 OCR 引擎解析單號，請稍候...';
 
-                const result = await Tesseract.recognize(
-                    canvas,
-                    'eng',
-                    { 
-                        logger: m => { 
-                            if (m.status === 'recognizing text') {
-                                statusText.innerText = `OCR 解析進度: ${Math.round(m.progress * 100)}%`; 
-                            }
-                        } 
-                    }
-                );
+                // 使用 Tesseract v5 worker 設定單行辨識模式 (PSM 7) 以提升準確率
+                const worker = await Tesseract.createWorker('eng');
+                await worker.setParameters({
+                    tessedit_pageseg_mode: '7',
+                });
+                
+                const result = await worker.recognize(canvas);
+                await worker.terminate();
 
                 const text = result.data.text;
-                const matches = text.match(/[A-Za-z0-9]{5,}/g);
-                const finalString = matches ? matches.reduce((a, b) => a.length > b.length ? a : b) : text.replace(/[^a-zA-Z0-9]/g, '');
+                const cleanText = text.replace(/[\r\n]+/g, ' ').trim();
+                
+                // 精準過濾與解析物流單號格式 (優先抓取含英文與數字、長度 8 碼以上的代碼)
+                const potentialCodes = cleanText.match(/[A-Za-z0-9]{8,}/g) || [];
+                let finalString = '';
+                
+                if (potentialCodes.length > 0) {
+                    const validCodes = potentialCodes.filter(c => /[A-Za-z]/.test(c) && /\d/.test(c));
+                    if (validCodes.length > 0) {
+                        finalString = validCodes.reduce((a, b) => a.length >= b.length ? a : b);
+                    } else {
+                        finalString = potentialCodes.reduce((a, b) => a.length >= b.length ? a : b);
+                    }
+                } else {
+                    const allMatches = cleanText.match(/[A-Za-z0-9]{5,}/g);
+                    finalString = allMatches ? allMatches.reduce((a, b) => a.length >= b.length ? a : b) : cleanText.replace(/[^a-zA-Z0-9]/g, '');
+                }
 
                 if (finalString) {
                     document.getElementById('inputValue').value = finalString.toUpperCase();

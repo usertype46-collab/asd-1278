@@ -203,18 +203,18 @@
         <div class="bg-white rounded-xl max-w-md w-full p-4 flex flex-col items-center relative shadow-lg">
             <h3 class="text-md font-bold text-gray-800 mb-3">📷 相機掃描與範圍裁切 OCR</h3>
             
-            <!-- 攝影機與裁切框疊加層 -->
+            <!-- 攝影機與裁切框疊加層 (已將高度縮小至適合物流編號單行大小) -->
             <div id="readerWrapper" class="relative w-full rounded overflow-hidden bg-black min-h-[200px]">
                 <div id="reader" class="w-full"></div>
-                <!-- 視覺化裁切框引導層 (提示改至上方外側，避免擋住畫面中心) -->
+                <!-- 視覺化裁切框引導層 -->
                 <div class="absolute inset-0 pointer-events-none flex items-center justify-center">
-                    <div class="border-2 border-dashed border-yellow-400 w-4/5 h-24 rounded-lg bg-yellow-400/10 flex items-center justify-center shadow-lg relative">
-                        <span class="absolute -top-3 left-1/2 -translate-x-1/2 text-yellow-300 text-[10px] font-bold bg-black/80 px-2 py-0.5 rounded whitespace-nowrap shadow">📌 請將單號對準此框內</span>
+                    <div class="border-2 border-dashed border-yellow-400 w-4/5 h-16 rounded-lg bg-yellow-400/10 flex items-center justify-center shadow-lg relative">
+                        <span class="absolute -top-3 left-1/2 -translate-x-1/2 text-yellow-300 text-[10px] font-bold bg-black/80 px-2 py-0.5 rounded whitespace-nowrap shadow">📌 請將物流編號對準此框內</span>
                     </div>
                 </div>
             </div>
 
-            <p id="scannerStatus" class="text-xs text-gray-500 mt-2 text-center font-semibold">自動尋找條碼... 或將單號對準黃色虛線框點擊拍照</p>
+            <p id="scannerStatus" class="text-xs text-gray-500 mt-2 text-center font-semibold">自動尋找條碼... 或將物流編號對準黃色虛線框點擊拍照</p>
             
             <div class="flex gap-2 w-full mt-4">
                 <button type="button" onclick="captureAndOCR()" id="ocrBtn" class="flex-[2] bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 rounded-lg transition text-sm flex justify-center items-center gap-1 shadow">
@@ -725,7 +725,7 @@
                 { facingMode: "environment" },
                 {
                     fps: 10,
-                    qrbox: { width: 250, height: 150 }
+                    qrbox: { width: 250, height: 60 } // 同步縮小高度，讓預覽掃描框對應單行物流編號
                 },
                 (decodedText, decodedResult) => {
                     document.getElementById('inputValue').value = decodedText;
@@ -745,10 +745,10 @@
             if (html5QrCode && html5QrCode.isScanning) {
                 html5QrCode.stop().catch(err => console.log(err));
             }
-            document.getElementById('scannerStatus').innerText = '自動尋找條碼... 或將單號對準黃色虛線框點擊拍照';
+            document.getElementById('scannerStatus').innerText = '自動尋找條碼... 或將物流編號對準黃色虛線框點擊拍照';
         }
 
-        // 拍照並精準依據「黃色虛線裁切框」範圍解析文字 (OCR - 已修正解析邏輯與 PSM 模式)
+        // 拍照並精準依據「黃色虛線裁切框」範圍解析文字 (已修正裁剪高度為物流編號單行範圍的大小)
         async function captureAndOCR() {
             const video = document.querySelector('#reader video');
             if (!video) return alert('⚠️ 找不到相機畫面，請確認相機已授權並啟動。');
@@ -765,7 +765,7 @@
             const displayHeight = video.clientHeight;
 
             const cropW = displayWidth * 0.8;
-            const cropH = 96;
+            const cropH = 60; // 修正：將裁剪高度設定為 60px（剛好對應單行物流編號範圍的大小）
             const cropX = (displayWidth - cropW) / 2;
             const cropY = (displayHeight - cropH) / 2;
 
@@ -801,7 +801,6 @@
                 ocrBtn.innerHTML = '⏳ 範圍影像解析中...';
                 statusText.innerText = '正在透過優化 OCR 引擎解析單號，請稍候...';
 
-                // 改用 PSM 6（統一文字區塊模式），以正確辨識標籤上的多行文字（如代碼與中文）
                 const worker = await Tesseract.createWorker('eng');
                 await worker.setParameters({
                     tessedit_pageseg_mode: '6',
@@ -813,7 +812,6 @@
                 const text = result.data.text;
                 const cleanText = text.replace(/[\r\n]+/g, ' ').trim();
                 
-                // 優化過濾邏輯：優先尋找蝦皮物流單號格式（例如英文字母開頭後接多碼數字，如 P22359528038）
                 const matches = cleanText.match(/[A-Z0-9]{8,}/gi) || [];
                 let finalString = '';
                 
@@ -838,7 +836,7 @@
                     closeScannerModal();
                 } else {
                     alert('❌ 裁切框內找不到可辨識的文字，請將單號對準框內後重試。');
-                    statusText.innerText = '自動尋找條碼... 或將單號對準黃色虛線框點擊拍照';
+                    statusText.innerText = '自動尋找條碼... 或將物流編號對準黃色虛線框點擊拍照';
                 }
             } catch (err) {
                 alert('❌ 解析發生錯誤: ' + err.message);

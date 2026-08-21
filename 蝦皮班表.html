@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>蝦皮班表管理系統</title>
+    <!-- 引入 Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8f9fa; }
+        .navbar-brand { font-weight: bold; color: #ee4d2d !important; }
+        .page-section { display: none; padding: 20px 0; }
+        .page-section.active { display: block; }
+        .table-responsive { background: white; border-radius: 8px; padding: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .img-preview { max-width: 100%; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body>
+
+    <!-- 導覽列 -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="#">🦐 蝦皮班表系統</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link active" href="#" onclick="switchPage('today-page')">今日班表</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#" onclick="switchPage('week-page')">個人週班表</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#" onclick="switchPage('admin-page')">資料庫管理</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        
+        <!-- 頁面一：今日班表 -->
+        <div id="today-page" class="page-section active">
+            <h2 class="mb-4">📅 今日班表 (<span id="today-date-display"></span>)</h2>
+            <div id="drive-image-container" class="text-center" style="display:none;">
+                <img id="schedule-img" class="img-preview" src="" alt="最新班表圖片">
+            </div>
+            <div class="table-responsive">
+                <table class="table table-striped table-hover align-middle">
+                    <thead class="table-primary">
+                        <tr>
+                            <th>姓名</th>
+                            <th>班別</th>
+                            <th>地點</th>
+                            <th>時間</th>
+                            <th>狀態</th>
+                        </tr>
+                    </thead>
+                    <tbody id="today-table-body">
+                        <!-- 動態載入 -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 頁面二：個人週班表 -->
+        <div id="week-page" class="page-section">
+            <h2 class="mb-4">👤 個人週班表</h2>
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <select id="week-name-select" class="form-select name-selector">
+                        <option value="">請選擇人員...</option>
+                    </select>
+                </div>
+                <div class="col-md-8 pt-2">
+                    <span class="text-muted">本週範圍：<span id="week-range-display"></span></span>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-bordered align-middle text-center">
+                    <thead class="table-success">
+                        <tr>
+                            <th>日期</th>
+                            <th>星期</th>
+                            <th>班別</th>
+                            <th>地點</th>
+                            <th>時間</th>
+                            <th>狀態</th>
+                        </tr>
+                    </thead>
+                    <tbody id="week-table-body">
+                        <!-- 動態載入 -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 頁面三：資料庫管理 -->
+        <div id="admin-page" class="page-section">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>⚙️ 資料庫管理</h2>
+                <button class="btn btn-danger" id="btn-clear-db">清除所有資料</button>
+            </div>
+            
+            <!-- 圖片網址設定 -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">Google Drive 班表圖片設定</h5>
+                    <div class="input-group">
+                        <input type="text" id="img-url-input" class="form-control" placeholder="請輸入 Google Drive 圖片直連網址...">
+                        <button class="btn btn-primary" id="btn-save-img">更新圖片</button>
+                    </div>
+                    <small class="text-muted">請將 Google Drive 權限設為「知道連結的使用者」，並轉換為直連格式。</small>
+                </div>
+            </div>
+
+            <!-- 新增班表 -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">新增 / 修改班表</h5>
+                    <form id="shift-form" class="row g-3">
+                        <input type="hidden" id="edit-id">
+                        <div class="col-md-2">
+                            <label class="form-label">姓名</label>
+                            <input type="text" id="input-name" class="form-control" required list="name-list">
+                            <datalist id="name-list"></datalist>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">日期</label>
+                            <input type="date" id="input-date" class="form-control" required>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">班別</label>
+                            <select id="input-shift" class="form-select">
+                                <option value="PT/早班">PT/早班</option>
+                                <option value="PT/晚班">PT/晚班</option>
+                                <option value="PT/夜班">PT/夜班</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">地點</label>
+                            <input type="text" id="input-location" class="form-control" placeholder="例: 大同/光春">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">時間</label>
+                            <input type="text" id="input-time" class="form-control" placeholder="例: 0830~1130">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">狀態</label>
+                            <select id="input-status" class="form-select">
+                                <option value="正常">正常</option>
+                                <option value="休">休</option>
+                                <option value="指休">指休</option>
+                            </select>
+                        </div>
+                        <div class="col-12 text-end">
+                            <button type="submit" class="btn btn-success" id="btn-submit">新增班表</button>
+                            <button type="button" class="btn btn-secondary d-none" id="btn-cancel">取消修改</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 所有班表清單 -->
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <select id="admin-name-select" class="form-select name-selector">
+                        <option value="ALL">顯示所有人班表</option>
+                    </select>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-sm table-hover align-middle">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>姓名</th>
+                            <th>日期</th>
+                            <th>班別</th>
+                            <th>地點</th>
+                            <th>時間</th>
+                            <th>狀態</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="admin-table-body">
+                        <!-- 動態載入 -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap & 頁面切換腳本 -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function switchPage(pageId) {
+            document.querySelectorAll('.page-section').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
+            document.getElementById(pageId).classList.add('active');
+            event.target.classList.add('active');
+        }
+    </script>
+
+    <!-- Firebase 邏輯核心 -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-app.js";
+        import { getDatabase, ref, set, push, onValue, remove, update } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBsa52NHndX2bL4LzrXgBam4Kf5_sTmhMQ",
+            authDomain: "shopee-rush.firebaseapp.com",
+            databaseURL: "https://shopee-rush-default-rtdb.firebaseio.com",
+            projectId: "shopee-rush",
+            storageBucket: "shopee-rush.firebasestorage.app",
+            messagingSenderId: "728584846999",
+            appId: "1:728584846999:web:e5d0e8696f1cc6719733d2",
+            measurementId: "G-83T3PBXX8Q"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const shiftsRef = ref(db, 'shifts');
+        const settingsRef = ref(db, 'settings');
+
+        let allShifts = {};
+        
+        // --- 取得台灣時間與日期邏輯 ---
+        function getTaiwanDateObj(offsetDays = 0) {
+            const tzDate = new Date().toLocaleString("en-US", {timeZone: "Asia/Taipei"});
+            let d = new Date(tzDate);
+            d.setDate(d.getDate() + offsetDays);
+            return d;
+        }
+
+        function formatDate(d) {
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        const todayStr = formatDate(getTaiwanDateObj());
+        const dayOfWeek = ["日", "一", "二", "三", "四", "五", "六"];
+        document.getElementById('today-date-display').innerText = `${todayStr} (星期${dayOfWeek[getTaiwanDateObj().getDay()]})`;
+
+        // 計算本週範圍 (週一至週日)
+        const todayObj = getTaiwanDateObj();
+        const currentDay = todayObj.getDay() === 0 ? 7 : todayObj.getDay(); 
+        const weekStartStr = formatDate(getTaiwanDateObj(-(currentDay - 1)));
+        const weekEndStr = formatDate(getTaiwanDateObj(7 - currentDay));
+        document.getElementById('week-range-display').innerText = `${weekStartStr} ~ ${weekEndStr}`;
+
+        // --- 監聽資料庫更新 ---
+        onValue(shiftsRef, (snapshot) => {
+            allShifts = snapshot.val() || {};
+            updateUI();
+            updateNameDropdowns();
+        });
+
+        onValue(settingsRef, (snapshot) => {
+            const settings = snapshot.val() || {};
+            if(settings.scheduleImageUrl) {
+                document.getElementById('schedule-img').src = settings.scheduleImageUrl;
+                document.getElementById('drive-image-container').style.display = 'block';
+                document.getElementById('img-url-input').value = settings.scheduleImageUrl;
+            }
+        });
+
+        // --- 更新 UI 表格 ---
+        function updateUI() {
+            const todayTbody = document.getElementById('today-table-body');
+            const adminTbody = document.getElementById('admin-table-body');
+            const adminFilter = document.getElementById('admin-name-select').value;
+            
+            todayTbody.innerHTML = '';
+            adminTbody.innerHTML = '';
+
+            // 轉換為陣列並按日期排序
+            const shiftArray = Object.keys(allShifts).map(key => ({ id: key, ...allShifts[key] }));
+            shiftArray.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            shiftArray.forEach(shift => {
+                // 今日班表
+                if (shift.date === todayStr) {
+                    const row = `<tr>
+                        <td><strong>${shift.name}</strong></td>
+                        <td>${shift.shiftType}</td>
+                        <td>${shift.location || '-'}</td>
+                        <td>${shift.time || '-'}</td>
+                        <td><span class="badge ${shift.status === '正常' ? 'bg-primary' : 'bg-secondary'}">${shift.status}</span></td>
+                    </tr>`;
+                    todayTbody.insertAdjacentHTML('beforeend', row);
+                }
+
+                // 管理員資料表 (依過濾器)
+                if (adminFilter === 'ALL' || adminFilter === shift.name) {
+                    const adminRow = `<tr>
+                        <td>${shift.name}</td>
+                        <td>${shift.date}</td>
+                        <td>${shift.shiftType}</td>
+                        <td>${shift.location || '-'}</td>
+                        <td>${shift.time || '-'}</td>
+                        <td>${shift.status}</td>
+                        <td>
+                            <button class="btn btn-sm btn-warning" onclick="editShift('${shift.id}')">修改</button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteShift('${shift.id}')">刪除</button>
+                        </td>
+                    </tr>`;
+                    adminTbody.insertAdjacentHTML('beforeend', adminRow);
+                }
+            });
+            renderWeekTable();
+        }
+
+        // --- 個人週班表渲染 ---
+        document.getElementById('week-name-select').addEventListener('change', renderWeekTable);
+        function renderWeekTable() {
+            const selectedName = document.getElementById('week-name-select').value;
+            const weekTbody = document.getElementById('week-table-body');
+            weekTbody.innerHTML = '';
+
+            if(!selectedName) {
+                weekTbody.innerHTML = '<tr><td colspan="6" class="text-muted">請由上方選擇人員</td></tr>';
+                return;
+            }
+
+            // 產生本週 7 天的空模板
+            let weekData = {};
+            for(let i=0; i<7; i++) {
+                let d = getTaiwanDateObj(-(currentDay - 1) + i);
+                let dateStr = formatDate(d);
+                weekData[dateStr] = { date: dateStr, day: dayOfWeek[d.getDay()], shiftType: '-', location: '-', time: '-', status: '休' };
+            }
+
+            // 填入資料庫真實資料
+            Object.values(allShifts).forEach(shift => {
+                if(shift.name === selectedName && weekData[shift.date]) {
+                    weekData[shift.date] = { ...weekData[shift.date], ...shift, day: weekData[shift.date].day };
+                }
+            });
+
+            Object.values(weekData).forEach(data => {
+                const isOff = data.status === '休' || data.status === '指休';
+                const row = `<tr class="${isOff ? 'table-light text-muted' : ''}">
+                    <td>${data.date}</td>
+                    <td>${data.day}</td>
+                    <td>${isOff ? '-' : data.shiftType}</td>
+                    <td>${isOff ? '-' : data.location}</td>
+                    <td>${isOff ? '-' : data.time}</td>
+                    <td><span class="badge ${isOff ? 'bg-secondary' : 'bg-primary'}">${data.status}</span></td>
+                </tr>`;
+                weekTbody.insertAdjacentHTML('beforeend', row);
+            });
+        }
+
+        // --- 動態更新人員選單 ---
+        function updateNameDropdowns() {
+            const names = [...new Set(Object.values(allShifts).map(s => s.name))].sort();
+            const weekSelect = document.getElementById('week-name-select');
+            const adminSelect = document.getElementById('admin-name-select');
+            const dataList = document.getElementById('name-list');
+            
+            const weekVal = weekSelect.value;
+            const adminVal = adminSelect.value;
+
+            let opts = names.map(n => `<option value="${n}">${n}</option>`).join('');
+            
+            weekSelect.innerHTML = `<option value="">請選擇人員...</option>` + opts;
+            adminSelect.innerHTML = `<option value="ALL">顯示所有人班表</option>` + opts;
+            dataList.innerHTML = opts;
+
+            if(names.includes(weekVal)) weekSelect.value = weekVal;
+            if(names.includes(adminVal)) adminSelect.value = adminVal;
+        }
+
+        document.getElementById('admin-name-select').addEventListener('change', updateUI);
+
+        // --- CRUD 操作 ---
+        document.getElementById('shift-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const editId = document.getElementById('edit-id').value;
+            const data = {
+                name: document.getElementById('input-name').value,
+                date: document.getElementById('input-date').value,
+                shiftType: document.getElementById('input-shift').value,
+                location: document.getElementById('input-location').value,
+                time: document.getElementById('input-time').value,
+                status: document.getElementById('input-status').value,
+            };
+
+            if (editId) {
+                update(ref(db, `shifts/${editId}`), data);
+                document.getElementById('btn-submit').innerText = '新增班表';
+                document.getElementById('btn-cancel').classList.add('d-none');
+            } else {
+                push(shiftsRef, data);
+            }
+            e.target.reset();
+            document.getElementById('edit-id').value = '';
+        });
+
+        window.editShift = (id) => {
+            const shift = allShifts[id];
+            document.getElementById('edit-id').value = id;
+            document.getElementById('input-name').value = shift.name;
+            document.getElementById('input-date').value = shift.date;
+            document.getElementById('input-shift').value = shift.shiftType;
+            document.getElementById('input-location').value = shift.location || '';
+            document.getElementById('input-time').value = shift.time || '';
+            document.getElementById('input-status').value = shift.status;
+            
+            document.getElementById('btn-submit').innerText = '儲存修改';
+            document.getElementById('btn-cancel').classList.remove('d-none');
+            window.scrollTo(0, 0);
+        };
+
+        document.getElementById('btn-cancel').addEventListener('click', () => {
+            document.getElementById('shift-form').reset();
+            document.getElementById('edit-id').value = '';
+            document.getElementById('btn-submit').innerText = '新增班表';
+            document.getElementById('btn-cancel').classList.add('d-none');
+        });
+
+        window.deleteShift = (id) => {
+            if(confirm('確定要刪除這筆班表嗎？')) {
+                remove(ref(db, `shifts/${id}`));
+            }
+        };
+
+        document.getElementById('btn-clear-db').addEventListener('click', () => {
+            if(confirm('⚠️ 警告：這將會清除資料庫中所有的班表資料！確定要繼續嗎？') && confirm('再次確認，資料刪除後無法復原！')) {
+                remove(shiftsRef);
+                alert('資料已全數清除。');
+            }
+        });
+
+        // --- 圖片 URL 儲存 ---
+        document.getElementById('btn-save-img').addEventListener('click', () => {
+            const url = document.getElementById('img-url-input').value;
+            set(settingsRef, { scheduleImageUrl: url });
+            alert('班表圖片網址已更新！');
+        });
+
+    </script>
+</body>
+</html>

@@ -3,421 +3,164 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>烤漆順序系統 / Hệ thống thứ tự sơn</title>
-    <!-- 引入 Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        /* 隱藏預設捲軸，美化版面 */
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: #f1f1f1; }
-        ::-webkit-scrollbar-thumb { background: #888; border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: #555; }
-    </style>
+    <title>烤漆順序管理系統 | Hệ thống quản lý thứ tự sơn</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-<body class="bg-gray-100 text-gray-800 font-sans">
-
-    <!-- 頂部導覽列 / 語言切換 -->
-    <nav class="bg-blue-600 text-white p-4 shadow-md flex justify-between items-center">
-        <h1 class="text-xl font-bold" id="t-app-title">烤漆順序系統</h1>
-        <div>
-            <button onclick="setLang('zh')" class="px-3 py-1 bg-blue-700 hover:bg-blue-800 rounded mr-2 font-bold">繁體中文</button>
-            <button onclick="setLang('vi')" class="px-3 py-1 bg-blue-700 hover:bg-blue-800 rounded font-bold">Tiếng Việt</button>
-        </div>
-    </nav>
-
-    <div class="container mx-auto p-4 grid grid-cols-1 lg:grid-cols-2 gap-6">
-        
-        <!-- 左側：隔日作業錄入 -->
-        <div class="bg-white p-6 rounded-lg shadow-md border-t-4 border-blue-500">
-            <h2 class="text-2xl font-bold mb-4 border-b pb-2" id="t-next-day-title">新增隔日烤漆作業</h2>
-            
-            <form id="recordForm" class="space-y-4">
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700" id="t-date-label">作業日期 (自動計算)</label>
-                        <input type="text" id="nextDayStr" readonly class="mt-1 block w-full bg-gray-100 border border-gray-300 rounded-md p-2 font-bold text-blue-600">
-                        <input type="hidden" id="nextDayIso">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700" id="t-serial-label">序號 (自動遞增)</label>
-                        <input type="number" id="serialNum" readonly class="mt-1 block w-full bg-gray-100 border border-gray-300 rounded-md p-2 font-bold text-red-500">
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700" id="t-color-label">顏色 (可選/可填/可查)</label>
-                        <input list="colorList" id="colorInput" required class="mt-1 block w-full border border-gray-300 rounded-md p-2 uppercase" autocomplete="off">
-                        <datalist id="colorList"></datalist>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700" id="t-model-label">機型 (可選/可填/可查)</label>
-                        <input list="modelList" id="modelInput" required class="mt-1 block w-full border border-gray-300 rounded-md p-2 uppercase" autocomplete="off">
-                        <datalist id="modelList"></datalist>
-                    </div>
-                </div>
-
-                <div>
-                    <div class="flex justify-between items-center mb-1">
-                        <label class="block text-sm font-medium text-gray-700" id="t-remark-label">備註</label>
-                        <button type="button" onclick="addRemarkField()" class="bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded text-sm shadow">➕ <span id="t-add-remark">新增備註</span></button>
-                    </div>
-                    <div id="remarksContainer" class="space-y-2">
-                        <input type="text" class="remark-input block w-full border border-gray-300 rounded-md p-2">
-                    </div>
-                </div>
-
-                <div class="pt-4">
-                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-md shadow-lg text-lg flex items-center justify-center gap-2">
-                        ➕ <span id="t-btn-save">儲存並加入下一筆</span>
-                    </button>
-                </div>
-            </form>
-        </div>
-
-        <!-- 右側：今日作業資料 -->
-        <div class="bg-white p-6 rounded-lg shadow-md border-t-4 border-green-500 h-[600px] flex flex-col">
-            <div class="flex justify-between items-center mb-4 border-b pb-2">
-                <h2 class="text-2xl font-bold" id="t-today-title">今日作業清單</h2>
-                <span id="todayDateStr" class="font-bold text-gray-600 bg-gray-100 px-3 py-1 rounded"></span>
+<body>
+    <div class="app-container">
+        <!-- 頂部導航與設定 -->
+        <header class="app-header">
+            <h1 data-i18n="appTitle">烤漆順序管理系統</h1>
+            <div class="header-controls">
+                <button id="lang-switch-btn" class="btn-lang">
+                    <i class="fas fa-globe"></i> <span id="current-lang">繁體中文</span>
+                </button>
             </div>
-            
-            <div class="overflow-y-auto flex-1">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50 sticky top-0">
-                        <tr>
-                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase" id="t-th-serial">序號</th>
-                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase" id="t-th-color">顏色</th>
-                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase" id="t-th-model">機型</th>
-                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase" id="t-th-remark">備註</th>
-                        </tr>
-                    </thead>
-                    <tbody id="todayList" class="bg-white divide-y divide-gray-200">
-                        <!-- 資料由 JS 動態生成 -->
-                    </tbody>
-                </table>
-            </div>
-        </div>
+        </header>
+
+        <!-- 頁籤導航 -->
+        <nav class="tabs">
+            <button class="tab-btn active" data-target="tab-today" data-i18n="tabToday">今日作業</button>
+            <button class="tab-btn" data-target="tab-plan" data-i18n="tabPlan">明日排程</button>
+            <button class="tab-btn" data-target="tab-history" data-i18n="tabHistory">歷史記錄</button>
+        </nav>
+
+        <main class="content-area">
+            <!-- 今日作業區塊 -->
+            <section id="tab-today" class="tab-content active">
+                <h2 class="section-title"><i class="fas fa-calendar-day"></i> <span data-i18n="todayTitle">今日烤漆作業</span> (<span id="today-date-display"></span>)</h2>
+                <div class="table-responsive">
+                    <table class="data-table" id="today-table">
+                        <thead>
+                            <tr>
+                                <th data-i18n="colSeq">序號</th>
+                                <th data-i18n="colColor">顏色</th>
+                                <th data-i18n="colMachine">機型</th>
+                                <th data-i18n="colRemarks">備註</th>
+                            </tr>
+                        </thead>
+                        <tbody id="today-tbody">
+                            <!-- 動態載入今日資料 -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- 明日排程區塊 (新增紀錄) -->
+            <section id="tab-plan" class="tab-content">
+                <h2 class="section-title"><i class="fas fa-calendar-plus"></i> <span data-i18n="planTitle">安排下一個工作日作業</span></h2>
+                
+                <div class="form-card">
+                    <div class="form-header">
+                        <div class="target-date-badge">
+                            <span data-i18n="targetDateLabel">目標日期：</span>
+                            <strong id="next-working-day-display">載入中...</strong>
+                        </div>
+                        <div class="seq-badge">
+                            <span data-i18n="nextSeqLabel">下一筆序號：</span>
+                            <strong id="next-seq-display">1</strong>
+                        </div>
+                    </div>
+
+                    <form id="add-record-form">
+                        <div class="form-group">
+                            <label for="color-input" data-i18n="labelColor">顏色 (可選或輸入)</label>
+                            <input type="text" id="color-input" list="color-datalist" required placeholder="請選擇或輸入顏色代碼" data-i18n-placeholder="phColor">
+                            <datalist id="color-datalist">
+                                <!-- 動態載入顏色 -->
+                            </datalist>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="machine-input" data-i18n="labelMachine">機型 (可選或輸入)</label>
+                            <input type="text" id="machine-input" list="machine-datalist" required placeholder="請選擇或輸入機型" data-i18n-placeholder="phMachine">
+                            <datalist id="machine-datalist">
+                                <!-- 動態載入機型 -->
+                            </datalist>
+                        </div>
+
+                        <div class="form-group">
+                            <label data-i18n="labelRemarks">備註</label>
+                            <div id="remarks-container">
+                                <div class="remark-row">
+                                    <input type="text" class="remark-input" placeholder="輸入備註事項" data-i18n-placeholder="phRemark">
+                                    <button type="button" class="btn-icon btn-add-remark" title="新增備註欄位"><i class="fas fa-plus"></i></button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="submit" class="btn-primary">
+                                <i class="fas fa-save"></i> <span data-i18n="btnSave">儲存並加入下一筆</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                
+                <h3 class="subsection-title" data-i18n="planListTitle">已排定之作業</h3>
+                <div class="table-responsive">
+                    <table class="data-table" id="plan-table">
+                        <thead>
+                            <tr>
+                                <th data-i18n="colSeq">序號</th>
+                                <th data-i18n="colColor">顏色</th>
+                                <th data-i18n="colMachine">機型</th>
+                                <th data-i18n="colRemarks">備註</th>
+                            </tr>
+                        </thead>
+                        <tbody id="plan-tbody">
+                            <!-- 動態載入計畫資料 -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- 歷史記錄查詢區塊 -->
+            <section id="tab-history" class="tab-content">
+                <h2 class="section-title"><i class="fas fa-history"></i> <span data-i18n="historyTitle">歷史記錄查詢</span></h2>
+                
+                <div class="search-filters">
+                    <div class="filter-group">
+                        <label data-i18n="filterDate">日期</label>
+                        <input type="date" id="search-date">
+                    </div>
+                    <div class="filter-group">
+                        <label data-i18n="filterColor">顏色</label>
+                        <input type="text" id="search-color" list="color-datalist" placeholder="搜尋顏色" data-i18n-placeholder="phSearchColor">
+                    </div>
+                    <div class="filter-group">
+                        <label data-i18n="filterMachine">機型</label>
+                        <input type="text" id="search-machine" list="machine-datalist" placeholder="搜尋機型" data-i18n-placeholder="phSearchMachine">
+                    </div>
+                    <div class="filter-actions">
+                        <button id="btn-search" class="btn-secondary"><i class="fas fa-search"></i> <span data-i18n="btnSearch">查詢</span></button>
+                        <button id="btn-reset" class="btn-outline"><i class="fas fa-undo"></i> <span data-i18n="btnReset">重置</span></button>
+                    </div>
+                </div>
+
+                <div class="table-responsive mt-20">
+                    <table class="data-table" id="history-table">
+                        <thead>
+                            <tr>
+                                <th data-i18n="colDate">日期</th>
+                                <th data-i18n="colSeq">序號</th>
+                                <th data-i18n="colColor">顏色</th>
+                                <th data-i18n="colMachine">機型</th>
+                                <th data-i18n="colRemarks">備註</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-tbody">
+                            <!-- 查詢結果 -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
     </div>
 
-    <!-- 下方：歷史紀錄查詢 -->
-    <div class="container mx-auto p-4 mb-10">
-        <div class="bg-white p-6 rounded-lg shadow-md border-t-4 border-purple-500">
-            <h2 class="text-2xl font-bold mb-4 border-b pb-2" id="t-history-title">歷史紀錄查詢</h2>
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700" id="t-search-date">日期 (YYYY-MM-DD)</label>
-                    <input type="date" id="searchDate" class="mt-1 block w-full border border-gray-300 rounded-md p-2">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700" id="t-search-color">顏色</label>
-                    <input type="text" id="searchColor" class="mt-1 block w-full border border-gray-300 rounded-md p-2 uppercase">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700" id="t-search-model">機型</label>
-                    <input type="text" id="searchModel" class="mt-1 block w-full border border-gray-300 rounded-md p-2 uppercase">
-                </div>
-                <div class="flex items-end">
-                    <button onclick="searchHistory()" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-md shadow">
-                        🔍 <span id="t-btn-search">查詢</span>
-                    </button>
-                </div>
-            </div>
-            
-            <div class="overflow-x-auto max-h-[400px]">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50 sticky top-0">
-                        <tr>
-                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">日期 / Ngày</th>
-                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">序號 / STT</th>
-                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">顏色 / Màu sắc</th>
-                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">機型 / Mô hình</th>
-                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">備註 / Ghi chú</th>
-                        </tr>
-                    </thead>
-                    <tbody id="searchResultList" class="bg-white divide-y divide-gray-200">
-                        <!-- 查詢結果 -->
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <!-- Firebase SDK (Modular v9) -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getDatabase, ref, push, set, onValue, get, child, query, orderByChild, equalTo } 
-        from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
-
-        // 1. 您的 Firebase 設定檔
-        const firebaseConfig = {
-            apiKey: "AIzaSyBvx7Ej2h9ZV5S1t_Gag756qop_jcoxy2U",
-            authDomain: "shopee-60a13.firebaseapp.com",
-            databaseURL: "https://shopee-60a13-default-rtdb.firebaseio.com",
-            projectId: "shopee-60a13",
-            storageBucket: "shopee-60a13.firebasestorage.app",
-            messagingSenderId: "18436404849",
-            appId: "1:18436404849:web:f2bdfa4189ff15456fcdd0"
-        };
-
-        // 初始化 Firebase
-        const app = initializeApp(firebaseConfig);
-        const db = getDatabase(app);
-
-        // --- 全域變數與預設資料 ---
-        let currentLang = 'zh';
-        let currentNextDayIso = '';
-        let nextSerial = 1;
-
-        // 預設顏色 (包含提問中要求的)
-        const defaultColors = ["WE","YW","GYW","YWH","BKE","BK","BKH","BKS","BKS1","BKS5","BKSA","BKSA1","OE","GN","FGN","PEL","BE","BEG","DBE","IG","IGS","DGS","ATG","GAST","PK","RD","SAT2"];
-        let customColors = [];
-        let allModels = [];
-
-        // 台灣國定假日 (格式 YYYY-MM-DD)，可隨時手動擴充此陣列
-        const holidays = [
-            "2024-04-04", "2024-04-05", "2024-06-10", "2024-09-17", "2024-10-10",
-            "2025-01-01", "2025-01-27", "2025-01-28", "2025-01-29", "2025-01-30", "2025-01-31", 
-            "2025-04-04", "2025-05-30", "2025-10-06"
-        ];
-
-        // --- 多國語言字典 (繁體中文 / 越南文) ---
-        const i18n = {
-            zh: {
-                "t-app-title": "烤漆順序系統",
-                "t-next-day-title": "新增隔日烤漆作業",
-                "t-date-label": "作業日期 (自動計算略過休假)",
-                "t-serial-label": "序號 (自動遞增)",
-                "t-color-label": "顏色 (下拉選單/可手動輸入)",
-                "t-model-label": "機型 (下拉選單/可手動輸入)",
-                "t-remark-label": "備註",
-                "t-add-remark": "新增備註",
-                "t-btn-save": "儲存並加入下一筆",
-                "t-today-title": "今日作業清單",
-                "t-th-serial": "序號",
-                "t-th-color": "顏色",
-                "t-th-model": "機型",
-                "t-th-remark": "備註",
-                "t-history-title": "歷史紀錄查詢",
-                "t-search-date": "日期",
-                "t-search-color": "顏色",
-                "t-search-model": "機型",
-                "t-btn-search": "查詢",
-                "weekdays": ["週日","週一","週二","週三","週四","週五","週六"]
-            },
-            vi: {
-                "t-app-title": "Hệ thống thứ tự sơn",
-                "t-next-day-title": "Nhập công việc ngày mai",
-                "t-date-label": "Ngày làm việc (Tự động tính)",
-                "t-serial-label": "Số thứ tự (STT)",
-                "t-color-label": "Màu sắc (Chọn hoặc nhập)",
-                "t-model-label": "Dòng máy / Mô hình",
-                "t-remark-label": "Ghi chú",
-                "t-add-remark": "Thêm ghi chú",
-                "t-btn-save": "Lưu & Thêm mới (+)",
-                "t-today-title": "Danh sách hôm nay",
-                "t-th-serial": "STT",
-                "t-th-color": "Màu sắc",
-                "t-th-model": "Mô hình",
-                "t-th-remark": "Ghi chú",
-                "t-history-title": "Tra cứu lịch sử",
-                "t-search-date": "Ngày",
-                "t-search-color": "Màu sắc",
-                "t-search-model": "Mô hình",
-                "t-btn-search": "Tìm kiếm",
-                "weekdays": ["CN","Thứ 2","Thứ 3","Thứ 4","Thứ 5","Thứ 6","Thứ 7"]
-            }
-        };
-
-        // 切換語言函數
-        window.setLang = function(lang) {
-            currentLang = lang;
-            const dict = i18n[lang];
-            for (let key in dict) {
-                if (key !== "weekdays") {
-                    const el = document.getElementById(key);
-                    if (el) el.innerText = dict[key];
-                }
-            }
-            updateDateDisplays();
-        };
-
-        // --- 核心邏輯：計算下一個工作日 ---
-        function getNextWorkingDay(baseDate) {
-            let d = new Date(baseDate);
-            d.setDate(d.getDate() + 1); // 先加一天
-            
-            // 檢查是否為週末(0=週日, 6=週六) 或 國定假日
-            while (true) {
-                let dayOfWeek = d.getDay();
-                let isoDate = d.toISOString().split('T')[0];
-                
-                if (dayOfWeek === 0 || dayOfWeek === 6 || holidays.includes(isoDate)) {
-                    d.setDate(d.getDate() + 1); // 順延一天
-                } else {
-                    break; // 是工作日
-                }
-            }
-            return d;
-        }
-
-        function formatDisplayDate(dateObj) {
-            const m = String(dateObj.getMonth() + 1).padStart(2, '0');
-            const d = String(dateObj.getDate()).padStart(2, '0');
-            const w = i18n[currentLang].weekdays[dateObj.getDay()];
-            return `${m}/${d} (${w})`;
-        }
-
-        function updateDateDisplays() {
-            // 處理今日日期
-            const today = new Date();
-            const todayIso = today.toISOString().split('T')[0];
-            document.getElementById('todayDateStr').innerText = formatDisplayDate(today) + " - " + todayIso;
-
-            // 處理隔日作業日期
-            const nextDay = getNextWorkingDay(today);
-            currentNextDayIso = nextDay.toISOString().split('T')[0];
-            document.getElementById('nextDayStr').value = formatDisplayDate(nextDay) + " [" + nextDay.getFullYear() + "年度]";
-            document.getElementById('nextDayIso').value = currentNextDayIso;
-            
-            // 重新讀取隔日的最後一筆序號
-            fetchNextSerial();
-        }
-
-        // --- 備註欄動態增減 ---
-        window.addRemarkField = function() {
-            const container = document.getElementById('remarksContainer');
-            const input = document.createElement('input');
-            input.type = 'text';
-            input.className = 'remark-input block w-full border border-gray-300 rounded-md p-2 mt-2';
-            container.appendChild(input);
-        };
-
-        function resetForm() {
-            document.getElementById('colorInput').value = '';
-            document.getElementById('modelInput').value = '';
-            document.getElementById('remarksContainer').innerHTML = '<input type="text" class="remark-input block w-full border border-gray-300 rounded-md p-2">';
-            document.getElementById('colorInput').focus();
-        }
-
-        // --- Firebase 資料庫操作 ---
-
-        // 1. 初始化讀取：顏色與機型清單 (下拉選單)
-        function loadSettings() {
-            const settingsRef = ref(db, 'settings');
-            onValue(settingsRef, (snapshot) => {
-                const data = snapshot.val() || {};
-                customColors = data.colors ? Object.values(data.colors) : [];
-                allModels = data.models ? Object.values(data.models) : [];
-                
-                // 合併預設與自訂顏色，並去除重複
-                const finalColors = [...new Set([...defaultColors, ...customColors])];
-                
-                // 渲染 Datalist
-                const colorDatalist = document.getElementById('colorList');
-                colorDatalist.innerHTML = finalColors.map(c => `<option value="${c}">`).join('');
-                
-                const modelDatalist = document.getElementById('modelList');
-                modelDatalist.innerHTML = allModels.map(m => `<option value="${m}">`).join('');
-            });
-        }
-
-        // 2. 獲取「新增隔日作業」的最新序號
-        function fetchNextSerial() {
-            if(!currentNextDayIso) return;
-            const recordsRef = query(ref(db, 'records'), orderByChild('date'), equalTo(currentNextDayIso));
-            
-            onValue(recordsRef, (snapshot) => {
-                let maxSerial = 0;
-                snapshot.forEach(childSnapshot => {
-                    const data = childSnapshot.val();
-                    if(data.serial > maxSerial) maxSerial = data.serial;
-                });
-                nextSerial = maxSerial + 1;
-                document.getElementById('serialNum').value = nextSerial;
-            });
-        }
-
-        // 3. 讀取並監聽「當日」作業表單 (主頁面左下/右側顯示)
-        function loadTodayTasks() {
-            const todayIso = new Date().toISOString().split('T')[0];
-            const recordsRef = query(ref(db, 'records'), orderByChild('date'), equalTo(todayIso));
-            
-            onValue(recordsRef, (snapshot) => {
-                const tbody = document.getElementById('todayList');
-                tbody.innerHTML = '';
-                
-                let records = [];
-                snapshot.forEach(childSnapshot => {
-                    records.push(childSnapshot.val());
-                });
-                
-                // 依序號排序
-                records.sort((a, b) => a.serial - b.serial);
-                
-                records.forEach(r => {
-                    const tr = document.createElement('tr');
-                    tr.className = "hover:bg-gray-100";
-                    tr.innerHTML = `
-                        <td class="px-4 py-2 text-sm text-gray-900 font-bold">${r.serial}</td>
-                        <td class="px-4 py-2 text-sm text-blue-600 font-bold">${r.color}</td>
-                        <td class="px-4 py-2 text-sm text-gray-900">${r.model}</td>
-                        <td class="px-4 py-2 text-sm text-gray-500">${r.remarks.join(' <br> ')}</td>
-                    `;
-                    tbody.appendChild(tr);
-                });
-                
-                if(records.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="4" class="px-4 py-4 text-center text-gray-500">尚無資料 / Chưa có dữ liệu</td></tr>`;
-                }
-            });
-        }
-
-        // 4. 表單送出：儲存紀錄並自動判定是否新增選項
-        document.getElementById('recordForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            let colorVal = document.getElementById('colorInput').value.trim().toUpperCase();
-            let modelVal = document.getElementById('modelInput').value.trim().toUpperCase();
-            
-            // 抓取所有備註
-            let remarksNodes = document.querySelectorAll('.remark-input');
-            let remarksArr = Array.from(remarksNodes).map(input => input.value.trim()).filter(v => v !== '');
-
-            const newRecord = {
-                date: currentNextDayIso,
-                serial: nextSerial,
-                color: colorVal,
-                model: modelVal,
-                remarks: remarksArr,
-                timestamp: Date.now()
-            };
-
-            try {
-                // 寫入紀錄
-                const newRecordRef = push(ref(db, 'records'));
-                await set(newRecordRef, newRecord);
-
-                // 檢查是否需要把手動輸入的顏色存入 Firebase
-                if (colorVal && !defaultColors.includes(colorVal) && !customColors.includes(colorVal)) {
-                    push(ref(db, 'settings/colors'), colorVal);
-                }
-                
-                // 檢查是否需要把機型存入 Firebase
-                if (modelVal && !allModels.includes(modelVal)) {
-                    push(ref(db, 'settings/models'), modelVal);
-                }
-
-                // 重設表單，準備下一筆 (序號會因 onValue 自動遞增更新)
-                resetForm();
-
-            } catch (error) {
-                alert("儲存失敗 / Lỗi lưu: " + error.message);
-            }
-        });
-
-        // 5. 歷史紀錄查詢
-        window.searchHistory = async function() {
-            const sDate = document.getElementById('searchDate').value;
-            const sColor = document.getElementById('searchColor').value.trim().toUpperCase();
-            const sModel = document.getElementById('searchModel').value.trim().toUpperCase()
+    <!-- Firebase SDK (Modular) & Application Logic -->
+    <script type="module" src="app.js"></script>
+</body>
+</html>

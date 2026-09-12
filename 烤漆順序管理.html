@@ -1,385 +1,377 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>烤漆作業順序紀錄系統</title>
-    <style>
-        :root {
-            --primary: #4F46E5;
-            --primary-hover: #4338CA;
-            --bg: #F3F4F6;
-            --card-bg: #FFFFFF;
-            --border: #E5E7EB;
-        }
-        body {
-            font-family: "Segoe UI", "Microsoft JhengHei", sans-serif;
-            background-color: var(--bg);
-            margin: 0;
-            padding: 20px;
-            color: #333;
-        }
-        .container {
-            max-width: 1000px;
-            margin: 0 auto;
-            display: grid;
-            gap: 20px;
-        }
-        .card {
-            background: var(--card-bg);
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        }
-        h2 { margin-top: 0; color: #111; font-size: 1.25rem; border-bottom: 2px solid var(--primary); padding-bottom: 10px; }
-        .form-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 0.9rem; }
-        input[type="text"], input[type="date"], select {
-            width: 100%; padding: 10px; border: 1px solid var(--border);
-            border-radius: 6px; box-sizing: border-box; font-size: 1rem;
-        }
-        .btn {
-            background-color: var(--primary); color: white; border: none;
-            padding: 10px 15px; border-radius: 6px; cursor: pointer;
-            font-size: 1rem; font-weight: bold; transition: background 0.2s;
-        }
-        .btn:hover { background-color: var(--primary-hover); }
-        .btn-outline { background: transparent; border: 2px solid var(--primary); color: var(--primary); }
-        .btn-outline:hover { background: var(--primary); color: white; }
-        .flex { display: flex; gap: 10px; align-items: center; }
-        .remark-row { display: flex; gap: 10px; margin-bottom: 10px; }
-        .remark-row button { background: #EF4444; }
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); }
-        th { background-color: #F9FAFB; font-weight: bold; }
-        .sql-output {
-            background: #1F2937; color: #10B981; padding: 15px;
-            border-radius: 6px; font-family: monospace; white-space: pre-wrap;
-            max-height: 200px; overflow-y: auto;
-        }
-        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>烤漆作業順序紀錄系統</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome 圖示 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/org/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap');
+    body { font-family: 'Noto Sans TC', sans-serif; }
+  </style>
 </head>
-<body>
+<body class="bg-slate-100 min-h-screen text-slate-800 p-4 md:p-8">
 
-<div class="container">
-    <!-- 新增紀錄區塊 -->
-    <div class="card">
-        <h2>➕ 新增烤漆排程</h2>
-        <form id="paintForm">
-            <div class="grid-2">
-                <div class="form-group">
-                    <label>烤漆日期 (自動辨識隔日工作天)</label>
-                    <input type="text" id="targetDate" required>
-                </div>
-                <div class="form-group">
-                    <label>排程序號</label>
-                    <input type="text" id="serialNum" readonly style="background:#f0f0f0; cursor:not-allowed;">
-                </div>
-            </div>
-
-            <div class="grid-2">
-                <div class="form-group">
-                    <label>顏色 (可下拉選擇或手動輸入)</label>
-                    <input list="colorList" id="colorInput" required placeholder="請選擇或輸入顏色">
-                    <datalist id="colorList"></datalist>
-                </div>
-                <div class="form-group">
-                    <label>機型 (可下拉選擇或手動輸入)</label>
-                    <input list="modelList" id="modelInput" required placeholder="請選擇或輸入機型">
-                    <datalist id="modelList"></datalist>
-                </div>
-            </div>
-
-            <div class="form-group">
-                <label>備註欄 <button type="button" class="btn btn-outline" style="padding: 2px 8px; font-size:0.8rem;" id="addRemarkBtn"> + 新增欄位</button></label>
-                <div id="remarksContainer">
-                    <div class="remark-row">
-                        <input type="text" class="remark-input" placeholder="輸入備註事項...">
-                    </div>
-                </div>
-            </div>
-
-            <button type="submit" class="btn" style="width: 100%; font-size: 1.1rem;">+ 加入下一筆資料並儲存</button>
-        </form>
+  <div class="max-w-7xl mx-auto space-y-6">
+    
+    <!-- 標題與系統狀態 -->
+    <div class="bg-white p-6 rounded-xl shadow-md flex flex-col md:flex-row justify-between items-center gap-4">
+      <div>
+        <h1 class="text-2xl font-bold text-slate-900 flex items-center gap-2">
+          <i class="fa-solid font-sharp fa-fill-drip text-indigo-600"></i>
+          烤漆作業順序紀錄系統
+        </h1>
+        <p class="text-sm text-slate-500 mt-1">當天預登隔天作業程序 | 即時雲端同步</p>
+      </div>
+      <div class="flex items-center gap-3">
+        <span class="text-xs font-semibold px-3 py-1 bg-slate-100 text-slate-600 rounded-full flex items-center gap-1.5 border">
+          <span id="targetDateBadge" class="font-bold text-indigo-600">---</span> (下一工作日)
+        </span>
+        <span id="syncStatus" class="text-xs px-2.5 py-1 bg-emerald-100 text-emerald-700 rounded-full font-medium flex items-center gap-1">
+          <i class="fa-solid fa-circle text-[8px]"></i> 已連線 Firebase
+        </span>
+      </div>
     </div>
 
-    <!-- SQL 語法產出區塊 -->
-    <div class="card">
-        <h2>💻 自動產生 SQL 語法</h2>
-        <div class="sql-output" id="sqlOutput">-- 當前會話新增的紀錄將轉為 SQL INSERT 顯示於此...</div>
-    </div>
+    <!-- 表單區塊：新增紀錄 -->
+    <div class="bg-white p-6 rounded-xl shadow-md border border-slate-200">
+      <h2 class="text-lg font-bold text-slate-800 mb-4 pb-2 border-b flex items-center gap-2">
+        <i class="fa-solid fa-plus-circle text-indigo-600"></i> 新增烤漆作業資料
+      </h2>
 
-    <!-- 歷史紀錄查詢區塊 -->
-    <div class="card">
-        <h2>🔍 歷史紀錄查詢</h2>
-        <div class="flex" style="margin-bottom: 15px;">
-            <input type="text" id="searchDate" placeholder="搜尋日期 (例: 09/14)">
-            <input type="text" id="searchColor" placeholder="搜尋顏色">
-            <input type="text" id="searchModel" placeholder="搜尋機型">
-            <button class="btn" id="searchBtn">查詢</button>
-            <button class="btn btn-outline" id="resetBtn">重置</button>
+      <form id="scheduleForm" class="space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+          
+          <!-- 工作日期 -->
+          <div>
+            <label class="block text-xs font-bold text-slate-600 mb-1">預計排程日期</label>
+            <input type="text" id="targetDateInput" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-700 font-bold" readonly>
+          </div>
+
+          <!-- 序號 (自動遞增) -->
+          <div>
+            <label class="block text-xs font-bold text-slate-600 mb-1">自動序號</label>
+            <input type="number" id="seqNoInput" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm font-bold text-indigo-600" readonly>
+          </div>
+
+          <!-- 顏色下拉/可查詢/動態擴充 -->
+          <div>
+            <label class="block text-xs font-bold text-slate-600 mb-1">顏色</label>
+            <input list="colorOptions" id="colorInput" placeholder="選擇或輸入顏色" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" required>
+            <datalist id="colorOptions"></datalist>
+          </div>
+
+          <!-- 機型下拉/可查詢/動態擴充 -->
+          <div>
+            <label class="block text-xs font-bold text-slate-600 mb-1">機型</label>
+            <input list="modelOptions" id="modelInput" placeholder="選擇或輸入機型" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" required>
+            <datalist id="modelOptions"></datalist>
+          </div>
+
         </div>
-        <div style="overflow-x: auto;">
-            <table id="historyTable">
-                <thead>
-                    <tr>
-                        <th>序號</th>
-                        <th>日期</th>
-                        <th>顏色</th>
-                        <th>機型</th>
-                        <th>備註</th>
-                        <th>建立時間</th>
-                    </tr>
-                </thead>
-                <tbody id="historyBody">
-                    <tr><td colspan="6" style="text-align:center;">載入中...</td></tr>
-                </tbody>
-            </table>
+
+        <!-- 動態備註欄 -->
+        <div>
+          <div class="flex justify-between items-center mb-1">
+            <label class="block text-xs font-bold text-slate-600">備註項目</label>
+            <button type="button" id="addRemarkBtn" class="text-xs text-indigo-600 hover:text-indigo-800 font-bold flex items-center gap-1">
+              <i class="fa-solid fa-plus"></i> 新增備註欄
+            </button>
+          </div>
+          <div id="remarkContainer" class="space-y-2">
+            <div class="flex gap-2">
+              <input type="text" class="remark-field w-full border border-slate-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="輸入備註事項...">
+            </div>
+          </div>
         </div>
+
+        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-lg transition duration-200 shadow hover:shadow-lg flex justify-center items-center gap-2">
+          <i class="fa-solid fa-paper-plane"></i> 儲存至雲端資料庫
+        </button>
+      </form>
     </div>
-</div>
 
-<!-- Firebase SDK 模組化引入 -->
-<script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-    import { getDatabase, ref, push, set, onValue, get, update } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+    <!-- 歷史記錄查詢與資料列表 -->
+    <div class="bg-white p-6 rounded-xl shadow-md border border-slate-200">
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4 pb-2 border-b">
+        <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+          <i class="fa-solid fa-clock-history text-indigo-600"></i> 烤漆紀錄與歷史查詢
+        </h2>
+        
+        <!-- 查詢過濾欄 -->
+        <div class="flex flex-wrap gap-2 w-full md:w-auto">
+          <input type="text" id="filterDate" placeholder="過濾日期 (月/日)" class="border border-slate-300 rounded-md px-2.5 py-1 text-xs outline-none focus:border-indigo-500 w-28">
+          <input type="text" id="filterColor" placeholder="過濾顏色" class="border border-slate-300 rounded-md px-2.5 py-1 text-xs outline-none focus:border-indigo-500 w-28">
+          <input type="text" id="filterModel" placeholder="過濾機型" class="border border-slate-300 rounded-md px-2.5 py-1 text-xs outline-none focus:border-indigo-500 w-28">
+          <button id="resetFilterBtn" class="bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs px-2.5 py-1 rounded-md font-medium">重置</button>
+        </div>
+      </div>
 
-    // Firebase 配置設定 (依照您提供)
+      <!-- 表格 -->
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse text-sm">
+          <thead>
+            <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold text-xs">
+              <th class="p-3">序號</th>
+              <th class="p-3">排程日期</th>
+              <th class="p-3">顏色</th>
+              <th class="p-3">機型</th>
+              <th class="p-3">備註</th>
+              <th class="p-3">建立時間</th>
+              <th class="p-3 text-center">操作</th>
+            </tr>
+          </thead>
+          <tbody id="recordTableBody" class="divide-y divide-slate-100">
+            <tr>
+              <td colspan="7" class="text-center py-8 text-slate-400">載入中或尚無資料...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Firebase SDK JS Module -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getDatabase, ref, push, onValue, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+    // Firebase 配置
     const firebaseConfig = {
-        apiKey: "AIzaSyBvx7Ej2h9ZV5S1t_Gag756qop_jcoxy2U",
-        authDomain: "shopee-60a13.firebaseapp.com",
-        databaseURL: "https://shopee-60a13-default-rtdb.firebaseio.com",
-        projectId: "shopee-60a13",
-        storageBucket: "shopee-60a13.firebasestorage.app",
-        messagingSenderId: "18436404849",
-        appId: "1:18436404849:web:f2bdfa4189ff15456fcdd0"
+      apiKey: "AIzaSyBvx7Ej2h9ZV5S1t_Gag756qop_jcoxy2U",
+      authDomain: "shopee-60a13.firebaseapp.com",
+      databaseURL: "https://shopee-60a13-default-rtdb.firebaseio.com",
+      projectId: "shopee-60a13",
+      storageBucket: "shopee-60a13.firebasestorage.app",
+      messagingSenderId: "18436404849",
+      appId: "1:18436404849:web:f2bdfa4189ff15456fcdd0"
     };
 
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
+    const dbRef = ref(db, "painting_schedules");
+    const colorsRef = ref(db, "custom_colors");
+    const modelsRef = ref(db, "custom_models");
 
-    // 初始預設選項
-    const defaultColors = ["WE","YW","GYW","YWH","BKEBK","BKH","BKS","BKS1","BKS5","BKSA","BKSA1","OE","GN","FGN","PELBE","BEG","DBE","IG","IGS","DGS","ATG","GAST","PK","RD","SAT2"];
-    let currentSerialNum = 1;
-    let allRecords = []; // 本地緩存用於搜尋
+    // 預設顏色選項清單
+    let colorList = ["WE","YW","GYW","YWH","BKEBK","BKH","BKS","BKS1","BKS5","BKSA","BKSA1","OE","GN","FGN","PELBE","BEG","DBE","IG","IGS","DGS","ATG","GAST","PK","RD","SAT2"];
+    let modelList = ["Model-A", "Model-B", "Model-C"];
+    let rawRecords = [];
+    let currentNextSeq = 1;
 
-    // 國定假日設定 (格式: YYYY-MM-DD)
-    const nationalHolidays = [
-        "2026-01-01", "2026-02-17", "2026-04-04", "2026-04-05", "2026-05-01", "2026-10-10" // 依據當年實際假日新增
-    ];
+    // 常用國定假日清單 (MM-DD格式，可自行擴充)
+    const holidays = ["01-01", "02-28", "04-04", "04-05", "05-01", "10-10"];
 
-    // 初始化功能
-    async function init() {
-        setupNextWorkday();
-        initDatalist("colors", defaultColors, "colorList");
-        initDatalist("models", ["Model-A", "Model-B"], "modelList"); // 給予一點預設機型
-        listenSerialNum();
-        listenRecords();
-    }
+    // 計算下一個工作日 (自動跳過六日與國定假日)
+    function getNextWorkingDate(startDate = new Date()) {
+      let date = new Date(startDate);
+      date.setDate(date.getDate() + 1); // 當天紀錄隔天
 
-    // 取得並過濾下一個工作天
-    function setupNextWorkday() {
-        let date = new Date();
-        date.setDate(date.getDate() + 1); // 先預設隔天
-
-        while(true) {
-            let dayOfWeek = date.getDay();
-            let dateStr = date.toISOString().split('T')[0]; // 取得 YYYY-MM-DD
-            
-            // 判斷是否為週末(0=日, 6=六) 或 國定假日
-            let isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
-            let isHoliday = nationalHolidays.includes(dateStr);
-
-            if (!isWeekend && !isHoliday) {
-                break; // 找到工作天
-            }
-            date.setDate(date.getDate() + 1); // 若為假日，再加一天
-        }
-
-        const days = ['日','一','二','三','四','五','六'];
-        const mm = String(date.getMonth() + 1).padStart(2, '0');
-        const dd = String(date.getDate()).padStart(2, '0');
+      while (true) {
+        const dayOfWeek = date.getDay(); // 0: 日, 6: 六
+        const monthDay = String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
         
-        document.getElementById('targetDate').value = `${mm}/${dd}/週${days[date.getDay()]}`;
-    }
+        const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+        const isHoliday = holidays.includes(monthDay);
 
-    // 動態下拉選單同步(若Firebase有新資料則加上)
-    function initDatalist(dbNode, defaultArray, htmlListId) {
-        const listRef = ref(db, `metadata/${dbNode}`);
-        onValue(listRef, (snapshot) => {
-            let items = snapshot.val() || defaultArray;
-            if(!snapshot.exists()){
-                set(listRef, defaultArray); // 若資料庫沒資料，寫入預設
-            }
-            const datalist = document.getElementById(htmlListId);
-            datalist.innerHTML = "";
-            items.forEach(item => {
-                let option = document.createElement('option');
-                option.value = item;
-                datalist.appendChild(option);
-            });
-        });
-    }
-
-    // 監聽並取得遞增序號
-    function listenSerialNum() {
-        const serialRef = ref(db, 'metadata/currentSerial');
-        onValue(serialRef, (snapshot) => {
-            if(snapshot.exists()) {
-                currentSerialNum = snapshot.val();
-            } else {
-                currentSerialNum = 1;
-                set(serialRef, 1);
-            }
-            document.getElementById('serialNum').value = currentSerialNum;
-        });
-    }
-
-    // 監聽所有歷史紀錄
-    function listenRecords() {
-        const recordsRef = ref(db, 'records');
-        onValue(recordsRef, (snapshot) => {
-            allRecords = [];
-            snapshot.forEach(child => {
-                allRecords.push({ id: child.key, ...child.val() });
-            });
-            // 反轉讓最新的在最上面
-            allRecords.reverse();
-            renderTable(allRecords);
-        });
-    }
-
-    // 渲染表格
-    function renderTable(data) {
-        const tbody = document.getElementById('historyBody');
-        tbody.innerHTML = '';
-        if(data.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">暫無紀錄</td></tr>';
-            return;
+        if (!isWeekend && !isHoliday) {
+          break;
         }
-        data.forEach(item => {
-            let tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>${item.serial}</td>
-                <td>${item.date}</td>
-                <td>${item.color}</td>
-                <td>${item.model}</td>
-                <td>${(item.remarks || []).join('<br>')}</td>
-                <td style="font-size:0.85rem; color:#666;">${new Date(item.timestamp).toLocaleString()}</td>
-            `;
-            tbody.appendChild(tr);
+        date.setDate(date.getDate() + 1);
+      }
+
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const weeks = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
+      const weekStr = weeks[date.getDay()];
+
+      return `${year}/${month}/${day} (${weekStr})`;
+    }
+
+    // 初始化選單
+    function renderDropdowns() {
+      const colorDatalist = document.getElementById("colorOptions");
+      colorDatalist.innerHTML = colorList.map(c => `<option value="${c}">`).join('');
+
+      const modelDatalist = document.getElementById("modelOptions");
+      modelDatalist.innerHTML = modelList.map(m => `<option value="${m}">`).join('');
+    }
+
+    // 頁面初始化執行
+    const targetDateFormatted = getNextWorkingDate();
+    document.getElementById("targetDateInput").value = targetDateFormatted;
+    document.getElementById("targetDateBadge").innerText = targetDateFormatted;
+
+    // Firebase 顏色與機型動態選單同步
+    onValue(colorsRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const customColors = Object.values(snapshot.val());
+        colorList = Array.from(new Set([...colorList, ...customColors]));
+      }
+      renderDropdowns();
+    });
+
+    onValue(modelsRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const customModels = Object.values(snapshot.val());
+        modelList = Array.from(new Set([...modelList, ...customModels]));
+      }
+      renderDropdowns();
+    });
+
+    // 動態新增備註欄
+    document.getElementById("addRemarkBtn").addEventListener("click", () => {
+      const container = document.getElementById("remarkContainer");
+      const div = document.createElement("div");
+      div.className = "flex gap-2 items-center";
+      div.innerHTML = `
+        <input type="text" class="remark-field w-full border border-slate-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="輸入備註事項...">
+        <button type="button" class="remove-remark text-red-500 hover:text-red-700 px-2 py-1"><i class="fa-solid fa-trash"></i></button>
+      `;
+      container.appendChild(div);
+
+      div.querySelector(".remove-remark").addEventListener("click", () => div.remove());
+    });
+
+    // 監聽 Firebase 即時資料更新與自動算序號
+    onValue(dbRef, (snapshot) => {
+      const tableBody = document.getElementById("recordTableBody");
+      tableBody.innerHTML = "";
+      rawRecords = [];
+
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        let maxSeq = 0;
+
+        Object.keys(data).forEach(key => {
+          const item = { id: key, ...data[key] };
+          rawRecords.push(item);
+          if (item.targetDate === targetDateFormatted && item.seqNo > maxSeq) {
+            maxSeq = item.seqNo;
+          }
         });
+
+        currentNextSeq = maxSeq + 1;
+        document.getElementById("seqNoInput").value = currentNextSeq;
+
+        // 預設倒序顯示最新紀錄
+        renderTable(rawRecords.reverse());
+      } else {
+        currentNextSeq = 1;
+        document.getElementById("seqNoInput").value = currentNextSeq;
+        tableBody.innerHTML = `<tr><td colspan="7" class="text-center py-8 text-slate-400">目前尚無排程資料</td></tr>`;
+      }
+    });
+
+    // 繪製資料表
+    function renderTable(records) {
+      const tableBody = document.getElementById("recordTableBody");
+      if (records.length === 0) {
+        tableBody.innerHTML = `<tr><td colspan="7" class="text-center py-6 text-slate-400">查無符合條件的歷史紀錄</td></tr>`;
+        return;
+      }
+
+      tableBody.innerHTML = records.map(r => `
+        <tr class="hover:bg-slate-50 transition">
+          <td class="p-3 font-bold text-indigo-600">#${r.seqNo}</td>
+          <td class="p-3 font-medium">${r.targetDate}</td>
+          <td class="p-3"><span class="px-2 py-0.5 bg-slate-100 rounded border border-slate-200 text-xs font-semibold">${r.color}</span></td>
+          <td class="p-3"><span class="px-2 py-0.5 bg-blue-50 text-blue-700 rounded border border-blue-100 text-xs font-semibold">${r.model}</span></td>
+          <td class="p-3 text-slate-600">${Array.isArray(r.remarks) ? r.remarks.join("；") : (r.remarks || "-")}</td>
+          <td class="p-3 text-xs text-slate-400">${r.createdAt || "-"}</td>
+          <td class="p-3 text-center">
+            <button onclick="deleteRecord('${r.id}')" class="text-xs text-red-500 hover:text-red-700 font-medium px-2 py-1 rounded">
+              <i class="fa-solid fa-trash"></i> 刪除
+            </button>
+          </td>
+        </tr>
+      `).join('');
     }
 
-    // 動態新增備註欄位
-    document.getElementById('addRemarkBtn').addEventListener('click', () => {
-        const container = document.getElementById('remarksContainer');
-        const div = document.createElement('div');
-        div.className = 'remark-row';
-        div.innerHTML = `
-            <input type="text" class="remark-input" placeholder="輸入備註事項...">
-            <button type="button" class="btn" onclick="this.parentElement.remove()">X</button>
+    // 全域刪除函數
+    window.deleteRecord = (id) => {
+      if (confirm("確定要刪除這筆烤漆紀錄嗎？")) {
+        remove(ref(db, `painting_schedules/${id}`));
+      }
+    };
+
+    // 表單提交：寫入 Firebase
+    document.getElementById("scheduleForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+
+      const colorVal = document.getElementById("colorInput").value.trim().toUpperCase();
+      const modelVal = document.getElementById("modelInput").value.trim();
+      const targetDate = document.getElementById("targetDateInput").value;
+      const seqNo = parseInt(document.getElementById("seqNoInput").value);
+
+      // 收集所有備註
+      const remarkInputs = document.querySelectorAll(".remark-field");
+      const remarks = Array.from(remarkInputs).map(i => i.value.trim()).filter(v => v !== "");
+
+      if (!colorVal || !modelVal) return;
+
+      // 若手動輸入新顏色/機型，自動記錄擴充
+      if (!colorList.includes(colorVal)) {
+        push(colorsRef, colorVal);
+      }
+      if (!modelList.includes(modelVal)) {
+        push(modelsRef, modelVal);
+      }
+
+      const now = new Date();
+      const createdAt = `${now.getMonth()+1}/${now.getDate()} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+
+      // 儲存至 Firebase
+      push(dbRef, {
+        seqNo,
+        targetDate,
+        color: colorVal,
+        model: modelVal,
+        remarks,
+        createdAt
+      }).then(() => {
+        // 重置欄位與備註
+        document.getElementById("colorInput").value = "";
+        document.getElementById("modelInput").value = "";
+        document.getElementById("remarkContainer").innerHTML = `
+          <div class="flex gap-2">
+            <input type="text" class="remark-field w-full border border-slate-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="輸入備註事項...">
+          </div>
         `;
-        container.appendChild(div);
+      });
     });
 
-    // 表單送出 (按+號加入下一筆資料)
-    document.getElementById('paintForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
+    // 歷史紀錄查詢過濾功能
+    function filterRecords() {
+      const dateTerm = document.getElementById("filterDate").value.trim().toLowerCase();
+      const colorTerm = document.getElementById("filterColor").value.trim().toLowerCase();
+      const modelTerm = document.getElementById("filterModel").value.trim().toLowerCase();
 
-        // 1. 取得資料
-        const date = document.getElementById('targetDate').value;
-        const color = document.getElementById('colorInput').value.trim().toUpperCase();
-        const model = document.getElementById('modelInput').value.trim().toUpperCase();
-        const remarkInputs = document.querySelectorAll('.remark-input');
-        const remarks = Array.from(remarkInputs).map(i => i.value.trim()).filter(v => v !== "");
-        const serial = currentSerialNum;
+      const filtered = rawRecords.filter(r => {
+        const matchDate = !dateTerm || r.targetDate.toLowerCase().includes(dateTerm);
+        const matchColor = !colorTerm || r.color.toLowerCase().includes(colorTerm);
+        const matchModel = !modelTerm || r.model.toLowerCase().includes(modelTerm);
+        return matchDate && matchColor && matchModel;
+      });
 
-        // 2. 更新資料庫的顏色/機型選單 (自動學習新輸入的值)
-        checkAndAddNewOptions('colors', color);
-        checkAndAddNewOptions('models', model);
-
-        // 3. 準備存入 Firebase
-        const recordData = {
-            serial: serial,
-            date: date,
-            color: color,
-            model: model,
-            remarks: remarks,
-            timestamp: Date.now()
-        };
-
-        const newRecordRef = push(ref(db, 'records'));
-        await set(newRecordRef, recordData);
-
-        // 4. 產生 SQL 並寫入畫面
-        generateSQL(recordData);
-
-        // 5. 序號自動遞增
-        await set(ref(db, 'metadata/currentSerial'), serial + 1);
-
-        // 6. 清空欄位，準備下一筆 (保留日期)
-        document.getElementById('colorInput').value = '';
-        document.getElementById('modelInput').value = '';
-        document.getElementById('remarksContainer').innerHTML = `
-            <div class="remark-row">
-                <input type="text" class="remark-input" placeholder="輸入備註事項...">
-            </div>
-        `;
-        document.getElementById('colorInput').focus();
-    });
-
-    // 檢查並加入新選項到下拉選單
-    async function checkAndAddNewOptions(dbNode, newValue) {
-        if(!newValue) return;
-        const listRef = ref(db, `metadata/${dbNode}`);
-        const snapshot = await get(listRef);
-        let items = snapshot.val() || [];
-        if (!items.includes(newValue)) {
-            items.push(newValue);
-            set(listRef, items);
-        }
+      renderTable(filtered);
     }
 
-    // 產生 SQL 語法
-    function generateSQL(data) {
-        const remarkStr = data.remarks.join('; ');
-        // 自動加入 SQL INSERT 語法
-        const sql = `INSERT INTO paint_schedule (serial_num, paint_date, color, model, remarks, created_at) VALUES (${data.serial}, '${data.date}', '${data.color}', '${data.model}', '${remarkStr}', NOW());`;
-        
-        const sqlOutput = document.getElementById('sqlOutput');
-        if(sqlOutput.innerHTML.includes('當前會話')) sqlOutput.innerHTML = ''; // 清除提示詞
-        sqlOutput.innerHTML += sql + '\n';
-        sqlOutput.scrollTop = sqlOutput.scrollHeight; // 滾動到底部
-    }
+    document.getElementById("filterDate").addEventListener("input", filterRecords);
+    document.getElementById("filterColor").addEventListener("input", filterRecords);
+    document.getElementById("filterModel").addEventListener("input", filterRecords);
 
-    // 搜尋功能
-    document.getElementById('searchBtn').addEventListener('click', () => {
-        const sDate = document.getElementById('searchDate').value.trim();
-        const sColor = document.getElementById('searchColor').value.trim().toUpperCase();
-        const sModel = document.getElementById('searchModel').value.trim().toUpperCase();
-
-        const filtered = allRecords.filter(item => {
-            const matchDate = sDate ? item.date.includes(sDate) : true;
-            const matchColor = sColor ? item.color.includes(sColor) : true;
-            const matchModel = sModel ? item.model.includes(sModel) : true;
-            return matchDate && matchColor && matchModel;
-        });
-        renderTable(filtered);
+    document.getElementById("resetFilterBtn").addEventListener("click", () => {
+      document.getElementById("filterDate").value = "";
+      document.getElementById("filterColor").value = "";
+      document.getElementById("filterModel").value = "";
+      renderTable(rawRecords);
     });
-
-    // 重置搜尋
-    document.getElementById('resetBtn').addEventListener('click', () => {
-        document.getElementById('searchDate').value = '';
-        document.getElementById('searchColor').value = '';
-        document.getElementById('searchModel').value = '';
-        renderTable(allRecords);
-    });
-
-    // 執行初始化
-    init();
-
-</script>
+  </script>
 </body>
 </html>

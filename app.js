@@ -1,397 +1,486 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-import { getDatabase, ref, onValue, push, set, query, orderByChild, equalTo, get } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+import { getDatabase, ref, onValue, set, get, child, update } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
 
-// --- Firebase 配置 ---
+// ==========================================
+// 1. Firebase 初始化配置
+// ==========================================
 const firebaseConfig = {
-    apiKey: "AIzaSyBvx7Ej2h9ZV5S1t_Gag756qop_jcoxy2U",
-    authDomain: "shopee-60a13.firebaseapp.com",
-    databaseURL: "https://shopee-60a13-default-rtdb.firebaseio.com",
-    projectId: "shopee-60a13",
-    storageBucket: "shopee-60a13.firebasestorage.app",
-    messagingSenderId: "18436404849",
-    appId: "1:18436404849:web:f2bdfa4189ff15456fcdd0"
+  apiKey: "AIzaSyBvx7Ej2h9ZV5S1t_Gag756qop_jcoxy2U",
+  authDomain: "shopee-60a13.firebaseapp.com",
+  databaseURL: "https://shopee-60a13-default-rtdb.firebaseio.com",
+  projectId: "shopee-60a13",
+  storageBucket: "shopee-60a13.firebasestorage.app",
+  messagingSenderId: "18436404849",
+  appId: "1:18436404849:web:f2bdfa4189ff15456fcdd0"
 };
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-// --- 多國語言字典 (i18n) ---
+// ==========================================
+// 2. 國際化多語系支援 (i18n)
+// ==========================================
+let currentLang = 'zh'; // 預設語言
+
 const i18n = {
-    'zh-TW': {
-        appTitle: '烤漆順序管理系統',
-        tabToday: '今日作業',
-        tabPlan: '明日排程',
-        tabHistory: '歷史記錄',
-        todayTitle: '今日烤漆作業',
-        planTitle: '安排下一個工作日作業',
-        planListTitle: '已排定之作業',
-        historyTitle: '歷史記錄查詢',
-        targetDateLabel: '目標日期：',
-        nextSeqLabel: '下一筆序號：',
-        labelColor: '顏色 (可選或輸入)',
-        labelMachine: '機型 (可選或輸入)',
-        labelRemarks: '備註',
-        phColor: '請選擇或輸入顏色代碼',
-        phMachine: '請選擇或輸入機型',
-        phRemark: '輸入備註事項',
-        btnSave: '儲存並加入下一筆',
-        colSeq: '序號',
-        colColor: '顏色',
-        colMachine: '機型',
-        colRemarks: '備註',
-        colDate: '日期',
-        filterDate: '日期',
-        filterColor: '顏色',
-        filterMachine: '機型',
-        phSearchColor: '搜尋顏色',
-        phSearchMachine: '搜尋機型',
-        btnSearch: '查詢',
-        btnReset: '重置',
-        weekdays: ['日', '一', '二', '三', '四', '五', '六']
+    zh: {
+        appTitle: "烤漆順序紀錄系統",
+        tabMain: "主控台",
+        tabHistory: "歷史查詢",
+        todayTask: "今日作業資料",
+        noDataToday: "今日尚無排程資料",
+        nextTask: "次日烤漆作業程序建立",
+        targetDate: "目標日期:",
+        colSeq: "序號",
+        colColor: "顏色",
+        colModel: "機型",
+        colRemarks: "備註",
+        addRow: "加入下一筆資料",
+        saveData: "儲存紀錄至雲端",
+        historySearch: "歷史記錄查詢",
+        searchDate: "日期 (Date)",
+        searchBtn: "查詢",
+        noHistoryResult: "請設定條件進行查詢，或無符合資料",
+        placeholderColor: "選擇或手動輸入顏色",
+        placeholderModel: "選擇或手動輸入機型",
+        placeholderRemark: "輸入備註內容...",
+        toastSaveSuccess: "資料已成功同步至 Firebase!",
+        toastSaveFail: "儲存失敗，請檢查網路連線",
+        toastEmptyRow: "無法儲存空資料列",
+        toastSearchDone: "查詢完成"
     },
-    'vi': {
-        appTitle: 'Hệ thống quản lý thứ tự sơn',
-        tabToday: 'Công việc hôm nay',
-        tabPlan: 'Lịch trình ngày mai',
-        tabHistory: 'Lịch sử',
-        todayTitle: 'Công việc sơn hôm nay',
-        planTitle: 'Lên lịch cho ngày làm việc tiếp theo',
-        planListTitle: 'Các công việc đã lên lịch',
-        historyTitle: 'Tra cứu lịch sử',
-        targetDateLabel: 'Ngày mục tiêu:',
-        nextSeqLabel: 'STT tiếp theo:',
-        labelColor: 'Màu sắc (Chọn hoặc nhập)',
-        labelMachine: 'Dòng máy (Chọn hoặc nhập)',
-        labelRemarks: 'Ghi chú',
-        phColor: 'Chọn hoặc nhập mã màu',
-        phMachine: 'Chọn hoặc nhập dòng máy',
-        phRemark: 'Nhập ghi chú',
-        btnSave: 'Lưu & thêm mục mới',
-        colSeq: 'STT',
-        colColor: 'Màu sắc',
-        colMachine: 'Dòng máy',
-        colRemarks: 'Ghi chú',
-        colDate: 'Ngày',
-        filterDate: 'Ngày',
-        filterColor: 'Màu sắc',
-        filterMachine: 'Dòng máy',
-        phSearchColor: 'Tìm màu sắc',
-        phSearchMachine: 'Tìm dòng máy',
-        btnSearch: 'Tìm kiếm',
-        btnReset: 'Làm mới',
-        weekdays: ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7']
+    vi: {
+        appTitle: "Hệ thống Ghi chú Sơn",
+        tabMain: "Bảng điều khiển",
+        tabHistory: "Lịch sử",
+        todayTask: "Dữ liệu làm việc hôm nay",
+        noDataToday: "Không có lịch trình hôm nay",
+        nextTask: "Tạo lịch trình sơn ngày tiếp theo",
+        targetDate: "Ngày mục tiêu:",
+        colSeq: "STT",
+        colColor: "Màu sắc",
+        colModel: "Mô hình",
+        colRemarks: "Ghi chú",
+        addRow: "Thêm dòng mới",
+        saveData: "Lưu lên đám mây",
+        historySearch: "Tìm kiếm lịch sử",
+        searchDate: "Ngày (Date)",
+        searchBtn: "Tìm kiếm",
+        noHistoryResult: "Vui lòng nhập điều kiện hoặc không có dữ liệu",
+        placeholderColor: "Chọn hoặc nhập màu",
+        placeholderModel: "Chọn hoặc nhập mô hình",
+        placeholderRemark: "Nhập ghi chú...",
+        toastSaveSuccess: "Đã lưu thành công lên Firebase!",
+        toastSaveFail: "Lưu thất bại, kiểm tra kết nối mạng",
+        toastEmptyRow: "Không thể lưu dòng trống",
+        toastSearchDone: "Tìm kiếm hoàn tất"
     }
 };
 
-let currentLang = 'zh-TW';
+const weekdays = {
+    zh: ["日", "一", "二", "三", "四", "五", "六"],
+    vi: ["CN", "T2", "T3", "T4", "T5", "T6", "T7"]
+};
 
-// 初始預設顏色清單 (若 Firebase 無資料時使用)
-const defaultColors = ["WE","YW","GYW","YWH","BKEBK","BKH","BKS","BKS1","BKS5","BKSA","BKSA1","OE","GN","FGN","PELBE","BEG","DBE","IG","IGS","DGS","ATG","GAST","PK","RD","SAT2"];
-
-// 國定假日與補班名單設定 (以 2026 年台灣為例，可擴充)
-const holidaysConfig = [
-    '2026-01-01', '2026-02-16', '2026-02-17', '2026-02-18', '2026-02-19', // 元旦, 春節
-    '2026-02-20', '2026-02-28', '2026-04-03', '2026-04-06', '2026-05-01', // 和平紀念, 清明, 勞動
-    '2026-06-19', '2026-09-25', '2026-10-09' // 端午, 中秋, 國慶
+// 國定假日設定 (格式: MM-DD)
+// 包含台灣常見例假與國定假日，可擴充
+const nationalHolidays = [
+    "01-01", // 元旦
+    "02-28", // 和平紀念日
+    "04-04", // 兒童節
+    "04-05", // 清明節
+    "05-01", // 勞動節
+    "10-10"  // 國慶日
 ];
-const makeUpWorkdays = []; // 補班日名單
 
-// --- 日期與時間工具函數 ---
-function getTodayString() {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
+// 初始預設顏色與機型庫 (當 Firebase 無資料時使用)
+const defaultColors = ["WE","YW","GYW","YWH","BKEBK","BKH","BKS","BKS1","BKS5","BKSA","BKSA1","OE","GN","FGN","PELBE","BEG","DBE","IG","IGS","DGS","ATG","GAST","PK","RD","SAT2"];
+let globalColors = [...defaultColors];
+let globalModels = []; // 動態累積
 
-function calculateNextWorkingDay() {
-    let d = new Date();
-    d.setDate(d.getDate() + 1); // 先加一天
-    
-    while (true) {
-        const dateString = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-        const dayOfWeek = d.getDay();
-        
-        const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
-        const isHoliday = holidaysConfig.includes(dateString);
-        const isMakeUpDay = makeUpWorkdays.includes(dateString);
+// ==========================================
+// 3. 核心工具函數
+// ==========================================
 
-        // 如果是 (週末且非補班日) 或 (國定假日)，就跳過
-        if ((isWeekend && !isMakeUpDay) || isHoliday) {
-            d.setDate(d.getDate() + 1);
-        } else {
-            break;
-        }
-    }
-    return d;
-}
-
-function formatDateDisplay(dateObj, lang) {
-    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-    const day = String(dateObj.getDate()).padStart(2, '0');
-    const weekday = i18n[lang].weekdays[dateObj.getDay()];
-    return `${month}/${day} (${weekday})`;
-}
-
-function toDateString(dateObj) {
+// 格式化日期為 YYYY-MM-DD
+function formatDateDB(dateObj) {
     return `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')}`;
 }
 
-// 系統核心變數
-const todayStr = getTodayString();
-const nextWorkingDayObj = calculateNextWorkingDay();
-const nextWorkingDayStr = toDateString(nextWorkingDayObj);
-let nextSeq = 1; // 明日排程的自動遞增序號
+// 取得今日與下一作業日資訊 (自動避開週末與國定假日)
+function getDateContext() {
+    const today = new Date();
+    const todayDB = formatDateDB(today);
+    const todayDisplay = `${today.getMonth() + 1}/${today.getDate()} (${weekdays[currentLang][today.getDay()]})`;
 
-// --- DOM 元素綁定 ---
-const langSwitchBtn = document.getElementById('lang-switch-btn');
-const langDisplay = document.getElementById('current-lang');
-const tabs = document.querySelectorAll('.tab-btn');
-const tabContents = document.querySelectorAll('.tab-content');
-const colorDatalist = document.getElementById('color-datalist');
-const machineDatalist = document.getElementById('machine-datalist');
-const remarksContainer = document.getElementById('remarks-container');
-const addRecordForm = document.getElementById('add-record-form');
+    let nextDate = new Date(today);
+    let foundNextWorkingDay = false;
 
-// --- 語言切換邏輯 ---
-function applyLanguage(lang) {
+    while (!foundNextWorkingDay) {
+        nextDate.setDate(nextDate.getDate() + 1);
+        const dayOfWeek = nextDate.getDay();
+        const mmdd = `${String(nextDate.getMonth() + 1).padStart(2, '0')}-${String(nextDate.getDate()).padStart(2, '0')}`;
+        
+        // 判斷是否為週末 (0=週日, 6=週六) 或國定假日
+        if (dayOfWeek !== 0 && dayOfWeek !== 6 && !nationalHolidays.includes(mmdd)) {
+            foundNextWorkingDay = true;
+        }
+    }
+
+    const nextDB = formatDateDB(nextDate);
+    const nextDisplay = `${nextDate.getMonth() + 1}/${nextDate.getDate()} (${weekdays[currentLang][nextDate.getDay()]})`;
+
+    return { todayDB, todayDisplay, nextDB, nextDisplay };
+}
+
+// 語系切換執行函數
+function applyLanguage() {
     document.querySelectorAll('[data-i18n]').forEach(el => {
         const key = el.getAttribute('data-i18n');
-        if (i18n[lang][key]) el.textContent = i18n[lang][key];
+        if (i18n[currentLang][key]) {
+            el.innerText = i18n[currentLang][key];
+        }
     });
-    
+
     document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
         const key = el.getAttribute('data-i18n-placeholder');
-        if (i18n[lang][key]) el.placeholder = i18n[lang][key];
+        if (i18n[currentLang][key]) {
+            el.placeholder = i18n[currentLang][key];
+        }
     });
 
-    langDisplay.textContent = lang === 'zh-TW' ? '繁體中文' : 'Tiếng Việt';
-    
-    // 更新日期顯示字串 (包含週期的翻譯)
-    document.getElementById('today-date-display').textContent = formatDateDisplay(new Date(), lang);
-    document.getElementById('next-working-day-display').textContent = formatDateDisplay(nextWorkingDayObj, lang);
+    // 更新日期顯示與按鈕文字
+    const dates = getDateContext();
+    document.getElementById('today-date-display').innerText = dates.todayDisplay;
+    document.getElementById('next-date-display').innerText = dates.nextDisplay;
+
+    const langBtnText = document.getElementById('lang-text');
+    langBtnText.innerText = currentLang === 'zh' ? 'Tiếng Việt' : '繁體中文';
 }
 
-langSwitchBtn.addEventListener('click', () => {
-    currentLang = currentLang === 'zh-TW' ? 'vi' : 'zh-TW';
-    applyLanguage(currentLang);
+// 吐司通知 (Toast)
+function showToast(message, type = 'success') {
+    const container = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    const bgColor = type === 'success' ? 'bg-emerald-500' : (type === 'error' ? 'bg-red-500' : 'bg-blue-500');
+    const icon = type === 'success' ? 'fa-check-circle' : (type === 'error' ? 'fa-triangle-exclamation' : 'fa-info-circle');
+    
+    toast.className = `toast flex items-center space-x-3 text-white px-4 py-3 rounded-lg shadow-lg ${bgColor}`;
+    toast.innerHTML = `<i class="fa-solid ${icon}"></i><span>${message}</span>`;
+    
+    container.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.classList.add('fade-out');
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+// 更新 Datalist 下拉選單 (顏色與機型)
+function updateDatalists() {
+    const colorList = document.getElementById('color-options');
+    const modelList = document.getElementById('model-options');
+    const hColorList = document.getElementById('history-color-list');
+    const hModelList = document.getElementById('history-model-list');
+
+    const colorHTML = globalColors.map(c => `<option value="${c}">`).join('');
+    const modelHTML = globalModels.map(m => `<option value="${m}">`).join('');
+
+    colorList.innerHTML = colorHTML;
+    hColorList.innerHTML = colorHTML;
+    modelList.innerHTML = modelHTML;
+    hModelList.innerHTML = modelHTML;
+}
+
+// ==========================================
+// 4. 介面與事件控制
+// ==========================================
+
+let nextSeqNum = 1; // 記錄表單自動遞增序號
+
+// 切換 Tab
+document.getElementById('tab-main').addEventListener('click', (e) => switchTab('main', e.currentTarget));
+document.getElementById('tab-history').addEventListener('click', (e) => switchTab('history', e.currentTarget));
+
+function switchTab(tab, btnElement) {
+    document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
+    
+    document.getElementById(`view-${tab}`).classList.add('active');
+    btnElement.classList.add('active');
+}
+
+// 語言切換事件
+document.getElementById('btn-lang').addEventListener('click', () => {
+    currentLang = currentLang === 'zh' ? 'vi' : 'zh';
+    applyLanguage();
 });
 
-// --- 頁籤切換邏輯 ---
-tabs.forEach(tab => {
-    tab.addEventListener('click', () => {
-        tabs.forEach(t => t.classList.remove('active'));
-        tabContents.forEach(c => c.classList.remove('active'));
-        tab.classList.add('active');
-        document.getElementById(tab.getAttribute('data-target')).classList.add('active');
-    });
+// 新增資料列 (+按鈕)
+document.getElementById('btn-add-row').addEventListener('click', () => {
+    addNextTaskRow();
 });
 
-// --- 動態新增備註欄位 ---
-document.addEventListener('click', function(e) {
-    if (e.target.closest('.btn-add-remark')) {
-        const newRow = document.createElement('div');
-        newRow.className = 'remark-row';
-        newRow.innerHTML = `
-            <input type="text" class="remark-input" placeholder="${i18n[currentLang].phRemark}">
-            <button type="button" class="btn-icon remove" title="移除"><i class="fas fa-minus"></i></button>
+function addNextTaskRow(data = null) {
+    const tbody = document.getElementById('next-task-body');
+    const tr = document.createElement('tr');
+    tr.className = "hover:bg-gray-50 transition-colors record-row";
+    
+    const seq = data ? data.seqNo : nextSeqNum++;
+    const colorVal = data ? data.color : '';
+    const modelVal = data ? data.model : '';
+    const remarks = data && data.remarks ? data.remarks : ['']; // 預設至少一個備註空框
+
+    let remarksHTML = '';
+    remarks.forEach((rmk, idx) => {
+        remarksHTML += `
+            <div class="flex items-center space-x-2 mt-2 remark-wrapper first:mt-0">
+                <input type="text" value="${rmk}" class="remark-input flex-1 p-2 border border-gray-300 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none text-sm" data-i18n-placeholder="placeholderRemark" placeholder="${i18n[currentLang].placeholderRemark}">
+                ${idx === 0 ? `<button type="button" class="btn-add-remark text-blue-500 hover:text-blue-700 bg-blue-50 rounded-full w-7 h-7 flex items-center justify-center focus:outline-none"><i class="fa-solid fa-plus text-xs"></i></button>` : `<button type="button" class="btn-rm-remark text-red-400 hover:text-red-600 w-7 h-7 flex items-center justify-center focus:outline-none"><i class="fa-solid fa-minus text-xs"></i></button>`}
+            </div>
         `;
-        remarksContainer.appendChild(newRow);
-    }
-    if (e.target.closest('.btn-icon.remove')) {
-        e.target.closest('.remark-row').remove();
-    }
-});
-
-// --- 讀取下拉選單資料 (顏色與機型) ---
-function loadOptions() {
-    // 讀取顏色
-    const colorRef = ref(db, 'options/colors');
-    onValue(colorRef, (snapshot) => {
-        colorDatalist.innerHTML = '';
-        let colors = snapshot.exists() ? snapshot.val() : defaultColors;
-        
-        // 若 DB 沒資料，初始化 DB 寫入預設清單
-        if(!snapshot.exists()) set(colorRef, defaultColors);
-
-        colors.forEach(c => {
-            const opt = document.createElement('option');
-            opt.value = c;
-            colorDatalist.appendChild(opt);
-        });
     });
 
-    // 讀取機型
-    const machineRef = ref(db, 'options/machines');
-    onValue(machineRef, (snapshot) => {
-        machineDatalist.innerHTML = '';
-        if (snapshot.exists()) {
-            snapshot.val().forEach(m => {
-                const opt = document.createElement('option');
-                opt.value = m;
-                machineDatalist.appendChild(opt);
-            });
-        }
-    });
-}
-
-// 輔助函數：手動輸入後自動加入資料庫下拉選項
-async function checkAndAddOption(path, val) {
-    if (!val.trim()) return;
-    const uppercaseVal = val.trim().toUpperCase();
-    const listRef = ref(db, path);
-    const snapshot = await get(listRef);
-    let currentList = snapshot.exists() ? snapshot.val() : [];
-    
-    if (!currentList.includes(uppercaseVal)) {
-        currentList.push(uppercaseVal);
-        await set(listRef, currentList);
-    }
-    return uppercaseVal;
-}
-
-// --- 讀取今日與計畫資料 ---
-function listenToRecords() {
-    const recordsRef = ref(db, 'records');
-    
-    onValue(recordsRef, (snapshot) => {
-        const todayTbody = document.getElementById('today-tbody');
-        const planTbody = document.getElementById('plan-tbody');
-        todayTbody.innerHTML = '';
-        planTbody.innerHTML = '';
-        
-        let maxSeqForNextDay = 0;
-        
-        if (snapshot.exists()) {
-            const data = snapshot.val();
-            // 將物件轉陣列並排序 (依日期與序號)
-            const records = Object.keys(data).map(key => ({id: key, ...data[key]}))
-                                  .sort((a, b) => a.seq - b.seq);
-            
-            records.forEach(record => {
-                const rowHTML = `
-                    <tr>
-                        <td>${record.seq}</td>
-                        <td><span style="font-weight:bold; color:var(--primary-color)">${record.color}</span></td>
-                        <td>${record.machine}</td>
-                        <td>${record.remarks.join(' <br> ')}</td>
-                    </tr>
-                `;
-
-                if (record.date === todayStr) {
-                    todayTbody.insertAdjacentHTML('beforeend', rowHTML);
-                } 
-                else if (record.date === nextWorkingDayStr) {
-                    planTbody.insertAdjacentHTML('beforeend', rowHTML);
-                    if (record.seq > maxSeqForNextDay) maxSeqForNextDay = record.seq;
-                }
-            });
-        }
-        
-        // 更新下一筆序號顯示
-        nextSeq = maxSeqForNextDay + 1;
-        document.getElementById('next-seq-display').textContent = nextSeq;
-    });
-}
-
-// --- 提交新增排程 ---
-addRecordForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    const colorVal = document.getElementById('color-input').value;
-    const machineVal = document.getElementById('machine-input').value;
-    
-    // 收集所有備註
-    const remarks = Array.from(document.querySelectorAll('.remark-input'))
-                         .map(input => input.value.trim())
-                         .filter(val => val !== '');
-
-    // 自動轉大寫並加入 DB 下拉清單 (如果不存在)
-    const finalColor = await checkAndAddOption('options/colors', colorVal);
-    const finalMachine = await checkAndAddOption('options/machines', machineVal);
-
-    // 儲存至 Firebase Records
-    const newRecordRef = push(ref(db, 'records'));
-    await set(newRecordRef, {
-        date: nextWorkingDayStr,
-        displayDate: formatDateDisplay(nextWorkingDayObj, 'zh-TW'), // 紀錄格式化日期做備用
-        seq: nextSeq,
-        color: finalColor,
-        machine: finalMachine,
-        remarks: remarks,
-        timestamp: Date.now()
-    });
-
-    // 表單重置，保留一個空備註欄
-    addRecordForm.reset();
-    remarksContainer.innerHTML = `
-        <div class="remark-row">
-            <input type="text" class="remark-input" placeholder="${i18n[currentLang].phRemark}">
-            <button type="button" class="btn-icon btn-add-remark" title="新增備註欄位"><i class="fas fa-plus"></i></button>
-        </div>
+    tr.innerHTML = `
+        <td class="p-3 text-center font-mono font-bold text-gray-600 seq-col">${seq}</td>
+        <td class="p-3">
+            <input type="text" list="color-options" value="${colorVal}" class="color-input w-full p-2 border border-gray-300 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none text-sm uppercase" data-i18n-placeholder="placeholderColor" placeholder="${i18n[currentLang].placeholderColor}">
+        </td>
+        <td class="p-3">
+            <input type="text" list="model-options" value="${modelVal}" class="model-input w-full p-2 border border-gray-300 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none text-sm uppercase" data-i18n-placeholder="placeholderModel" placeholder="${i18n[currentLang].placeholderModel}">
+        </td>
+        <td class="p-3 remarks-cell">
+            ${remarksHTML}
+        </td>
+        <td class="p-3 text-center">
+            <button class="btn-rm-row text-red-500 hover:text-red-700 p-2 rounded hover:bg-red-50 transition-colors" title="刪除此列"><i class="fa-regular fa-trash-can"></i></button>
+        </td>
     `;
-    document.getElementById('color-input').focus(); // 自動聚焦方便連續輸入
-});
 
-// --- 歷史記錄查詢邏輯 ---
-document.getElementById('btn-search').addEventListener('click', async () => {
-    const qDate = document.getElementById('search-date').value;
-    const qColor = document.getElementById('search-color').value.trim().toUpperCase();
-    const qMachine = document.getElementById('search-machine').value.trim().toUpperCase();
-    
-    const historyTbody = document.getElementById('history-tbody');
-    historyTbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">查詢中...</td></tr>';
+    tbody.appendChild(tr);
 
-    const recordsRef = ref(db, 'records');
-    const snapshot = await get(recordsRef);
+    // 綁定動態事件 (新增/移除備註)
+    const btnAddRemark = tr.querySelector('.btn-add-remark');
+    const remarksCell = tr.querySelector('.remarks-cell');
     
-    historyTbody.innerHTML = '';
-    
-    if (snapshot.exists()) {
-        const data = snapshot.val();
-        let results = Object.keys(data).map(key => data[key]);
-
-        // 過濾器
-        if (qDate) results = results.filter(r => r.date === qDate);
-        if (qColor) results = results.filter(r => r.color.includes(qColor));
-        if (qMachine) results = results.filter(r => r.machine.includes(qMachine));
+    btnAddRemark.addEventListener('click', () => {
+        const div = document.createElement('div');
+        div.className = "flex items-center space-x-2 mt-2 remark-wrapper remark-input-wrapper";
+        div.innerHTML = `
+            <input type="text" class="remark-input flex-1 p-2 border border-gray-300 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none text-sm" data-i18n-placeholder="placeholderRemark" placeholder="${i18n[currentLang].placeholderRemark}">
+            <button type="button" class="btn-rm-remark text-red-400 hover:text-red-600 w-7 h-7 flex items-center justify-center focus:outline-none"><i class="fa-solid fa-minus text-xs"></i></button>
+        `;
+        remarksCell.appendChild(div);
         
-        // 排序：日期降冪，序號升冪
-        results.sort((a, b) => {
-            if (a.date !== b.date) return new Date(b.date) - new Date(a.date);
-            return a.seq - b.seq;
+        div.querySelector('.btn-rm-remark').addEventListener('click', function() {
+            div.remove();
         });
+    });
 
-        if (results.length === 0) {
-            historyTbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#999;">查無資料</td></tr>';
-        } else {
-            results.forEach(r => {
-                historyTbody.insertAdjacentHTML('beforeend', `
-                    <tr>
-                        <td>${r.date}</td>
-                        <td>${r.seq}</td>
-                        <td><span style="font-weight:bold; color:var(--primary-color)">${r.color}</span></td>
-                        <td>${r.machine}</td>
-                        <td>${r.remarks.join(' <br> ')}</td>
-                    </tr>
-                `);
-            });
+    // 綁定移除列事件與重新排序
+    tr.querySelector('.btn-rm-row').addEventListener('click', () => {
+        tr.remove();
+        recalculateSeq();
+    });
+}
+
+function recalculateSeq() {
+    const rows = document.querySelectorAll('#next-task-body .record-row');
+    nextSeqNum = 1;
+    rows.forEach(row => {
+        row.querySelector('.seq-col').innerText = nextSeqNum++;
+    });
+}
+
+// 儲存資料到 Firebase
+document.getElementById('btn-save-schedule').addEventListener('click', async () => {
+    const rows = document.querySelectorAll('#next-task-body .record-row');
+    const { nextDB } = getDateContext();
+    
+    let tasks = [];
+    let newColors = new Set();
+    let newModels = new Set();
+
+    rows.forEach(row => {
+        const seqNo = parseInt(row.querySelector('.seq-col').innerText);
+        const color = row.querySelector('.color-input').value.trim().toUpperCase();
+        const model = row.querySelector('.model-input').value.trim().toUpperCase();
+        
+        // 收集所有備註，過濾空白
+        const remarkInputs = row.querySelectorAll('.remark-input');
+        const remarks = Array.from(remarkInputs).map(inp => inp.value.trim()).filter(val => val !== '');
+
+        if (color || model || remarks.length > 0) {
+            tasks.push({ seqNo, color, model, remarks });
+            
+            // 檢查手動輸入是否需要加入下拉選單資料庫
+            if (color && !globalColors.includes(color)) newColors.add(color);
+            if (model && !globalModels.includes(model)) newModels.add(model);
         }
-    } else {
-        historyTbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#999;">查無資料</td></tr>';
+    });
+
+    if (tasks.length === 0) {
+        showToast(i18n[currentLang].toastEmptyRow, 'error');
+        return;
+    }
+
+    try {
+        // 更新日常任務紀錄
+        const dateRef = ref(db, `schedules/${nextDB}`);
+        await set(dateRef, tasks);
+
+        // 更新字典庫 (顏色與機型)
+        if (newColors.size > 0 || newModels.size > 0) {
+            const updates = {};
+            if (newColors.size > 0) {
+                globalColors = [...new Set([...globalColors, ...newColors])];
+                updates['options/colors'] = globalColors;
+            }
+            if (newModels.size > 0) {
+                globalModels = [...new Set([...globalModels, ...newModels])];
+                updates['options/models'] = globalModels;
+            }
+            await update(ref(db), updates);
+        }
+
+        showToast(i18n[currentLang].toastSaveSuccess, 'success');
+    } catch (error) {
+        console.error("Firebase Save Error:", error);
+        showToast(i18n[currentLang].toastSaveFail, 'error');
     }
 });
 
-document.getElementById('btn-reset').addEventListener('click', () => {
-    document.getElementById('search-date').value = '';
-    document.getElementById('search-color').value = '';
-    document.getElementById('search-machine').value = '';
-    document.getElementById('history-tbody').innerHTML = '';
-});
 
-// --- 系統初始化 ---
-function init() {
-    applyLanguage(currentLang);
-    loadOptions();
-    listenToRecords();
+// ==========================================
+// 5. Firebase 資料讀取與實時監聽
+// ==========================================
+
+function listenToDatabase() {
+    const { todayDB, nextDB } = getDateContext();
+
+    // 1. 監聽全域下拉選單資料
+    onValue(ref(db, 'options/colors'), (snapshot) => {
+        if (snapshot.exists()) globalColors = snapshot.val();
+        updateDatalists();
+    });
+
+    onValue(ref(db, 'options/models'), (snapshot) => {
+        if (snapshot.exists()) globalModels = snapshot.val();
+        updateDatalists();
+    });
+
+    // 2. 監聽今日作業 (唯讀看板)
+    onValue(ref(db, `schedules/${todayDB}`), (snapshot) => {
+        const tbody = document.getElementById('today-task-body');
+        const emptyState = document.getElementById('today-empty-state');
+        tbody.innerHTML = '';
+        
+        if (snapshot.exists() && snapshot.val().length > 0) {
+            emptyState.classList.add('hidden');
+            const data = snapshot.val();
+            data.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-emerald-50 transition-colors";
+                const remarksStr = item.remarks ? item.remarks.join('<br>') : '';
+                tr.innerHTML = `
+                    <td class="p-3 text-center font-mono text-emerald-700">${item.seqNo}</td>
+                    <td class="p-3 font-semibold text-gray-700">${item.color || '-'}</td>
+                    <td class="p-3 font-semibold text-gray-700">${item.model || '-'}</td>
+                    <td class="p-3 text-sm text-gray-600">${remarksStr || '-'}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        } else {
+            emptyState.classList.remove('hidden');
+        }
+    });
+
+    // 3. 初始載入次日草稿 (若該日已有排程則載入，否則給予一筆空白列)
+    get(ref(db, `schedules/${nextDB}`)).then((snapshot) => {
+        document.getElementById('next-task-body').innerHTML = '';
+        nextSeqNum = 1;
+        if (snapshot.exists() && snapshot.val().length > 0) {
+            snapshot.val().forEach(item => addNextTaskRow(item));
+        } else {
+            addNextTaskRow(); // 預設空白一列
+        }
+    }).catch(err => console.error("Load Draft Error", err));
 }
 
-init();
+// ==========================================
+// 6. 歷史紀錄查詢邏輯
+// ==========================================
+document.getElementById('search-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const sDate = document.getElementById('search-date').value;
+    const sColor = document.getElementById('search-color').value.trim().toUpperCase();
+    const sModel = document.getElementById('search-model').value.trim().toUpperCase();
+
+    const tbody = document.getElementById('history-result-body');
+    const emptyState = document.getElementById('history-empty-state');
+    tbody.innerHTML = '';
+
+    try {
+        let results = [];
+        
+        // 若有指定日期，僅抓該日；若無，則抓取全庫進行比對
+        if (sDate) {
+            const snapshot = await get(ref(db, `schedules/${sDate}`));
+            if (snapshot.exists()) {
+                snapshot.val().forEach(item => {
+                    results.push({ date: sDate, ...item });
+                });
+            }
+        } else {
+            const snapshot = await get(ref(db, `schedules`));
+            if (snapshot.exists()) {
+                const allData = snapshot.val();
+                for (let dateKey in allData) {
+                    allData[dateKey].forEach(item => {
+                        results.push({ date: dateKey, ...item });
+                    });
+                }
+            }
+        }
+
+        // 依顏色與機型二次過濾
+        if (sColor) results = results.filter(r => r.color && r.color.includes(sColor));
+        if (sModel) results = results.filter(r => r.model && r.model.includes(sModel));
+
+        // 渲染結果
+        if (results.length > 0) {
+            emptyState.classList.add('hidden');
+            // 按日期倒序，序號正序排列
+            results.sort((a, b) => b.date.localeCompare(a.date) || a.seqNo - b.seqNo);
+
+            results.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-indigo-50 transition-colors";
+                const remarksStr = item.remarks ? item.remarks.join('; ') : '';
+                tr.innerHTML = `
+                    <td class="p-3 font-mono text-sm text-indigo-700">${item.date}</td>
+                    <td class="p-3 text-center text-gray-500">${item.seqNo}</td>
+                    <td class="p-3 font-semibold">${item.color || '-'}</td>
+                    <td class="p-3 font-semibold">${item.model || '-'}</td>
+                    <td class="p-3 text-sm text-gray-600">${remarksStr || '-'}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        } else {
+            emptyState.classList.remove('hidden');
+        }
+
+        showToast(i18n[currentLang].toastSearchDone, 'success');
+
+    } catch (err) {
+        console.error("Search Error", err);
+        showToast("查詢過程發生錯誤", "error");
+    }
+});
+
+// 初始化啟動
+document.addEventListener('DOMContentLoaded', () => {
+    applyLanguage();
+    updateDatalists();
+    listenToDatabase();
+});

@@ -2,158 +2,246 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>烤漆作業程序 / Quy trình sơn</title>
-<style>
-    :root { --primary: #007acc; --bg: #f4f6f8; --text: #333; --border: #ccc; }
-    * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-    body { background-color: var(--bg); color: var(--text); padding: 20px; margin: 0; }
-    /* 不使用滾輪軸，讓資料直接向下延伸 */
-    html, body { height: auto; overflow-y: visible; }
-    .container { max-width: 1200px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
-    button { background: var(--primary); color: #fff; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; white-space: nowrap; }
-    button:hover { background: #005f9e; }
-    .btn-danger { background: #da3633; }
-    .btn-add { font-weight: bold; background: #2ea043; }
-    
-    .form-group { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; align-items: flex-end; background: #f9f9f9; padding: 15px; border-radius: 6px; }
-    .input-field { display: flex; flex-direction: column; flex: 1; min-width: 120px; }
-    .input-field label { font-size: 13px; margin-bottom: 5px; font-weight: bold; }
-    .input-field input, .input-field select { padding: 8px; border: 1px solid var(--border); border-radius: 4px; width: 100%; }
-    
-    .dynamic-remarks { display: flex; flex-direction: column; gap: 5px; flex: 2; min-width: 200px; }
-    .remark-row { display: flex; gap: 5px; }
-    
-    table { width: 100%; border-collapse: collapse; margin-top: 20px; table-layout: auto; }
-    th, td { border: 1px solid var(--border); padding: 10px; text-align: left; word-break: break-all; }
-    th { background: #eee; font-weight: bold; }
-    
-    .search-bar { background: #eef5fb; padding: 15px; border-radius: 6px; margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap; }
-</style>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title data-i18n="title">烤漆順序作業系統</title>
+<!-- 引入 Firebase v8 Compat SDK -->
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<style>
+    :root {
+        --primary: #007acc;
+        --bg-color: #f5f5f5;
+        --card-bg: #ffffff;
+        --text-main: #333333;
+        --border-color: #dddddd;
+        --success: #2ea043;
+        --danger: #da3633;
+    }
+    
+    * {
+        box-sizing: border-box;
+        font-family: 'Segoe UI', 'Microsoft JhengHei', sans-serif;
+    }
+    
+    body {
+        margin: 0;
+        padding: 20px;
+        background-color: var(--bg-color);
+        color: var(--text-main);
+        /* 強制資料向下延伸，不使用固定高度與內部滾動軸 */
+        height: auto;
+        overflow-y: visible; 
+    }
+
+    .header-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    h2 { margin: 0; color: var(--primary); }
+
+    .btn {
+        padding: 8px 16px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+        transition: 0.2s;
+        font-size: 14px;
+    }
+    .btn-primary { background-color: var(--primary); color: white; }
+    .btn-success { background-color: var(--success); color: white; }
+    .btn-lang { background-color: #444; color: white; }
+    .btn-icon { padding: 4px 8px; font-size: 16px; }
+
+    .card {
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        height: auto;
+        overflow: visible;
+    }
+
+    .form-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+        align-items: flex-start;
+        margin-bottom: 15px;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        flex-grow: 1;
+        min-width: 120px;
+    }
+
+    label { font-size: 13px; font-weight: bold; margin-bottom: 5px; color: #555; }
+    input, select {
+        padding: 8px 10px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-size: 14px;
+        width: 100%;
+    }
+    
+    .remarks-container {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    .remark-row {
+        display: flex;
+        gap: 5px;
+    }
+
+    /* 表格設計：自適應寬度，文字自動換行 */
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: auto;
+    }
+    th, td {
+        border: 1px solid var(--border-color);
+        padding: 10px;
+        text-align: left;
+        font-size: 14px;
+        word-break: break-all;
+    }
+    th { background-color: #eeeeee; font-weight: bold; }
+    tr:nth-child(even) { background-color: #fafafa; }
+
+    .system-msg {
+        margin-top: 10px;
+        font-size: 13px;
+        font-weight: bold;
+    }
+
+    @media (max-width: 768px) {
+        .form-row { flex-direction: column; }
+        .form-group { width: 100%; }
+        table, thead, tbody, th, td, tr { display: block; }
+        thead tr { position: absolute; top: -9999px; left: -9999px; }
+        tr { margin-bottom: 15px; border: 1px solid #ccc; border-radius: 6px; }
+        td { border: none; border-bottom: 1px solid #eee; position: relative; padding-left: 40%; }
+        td::before {
+            content: attr(data-label);
+            position: absolute;
+            left: 10px;
+            width: 35%;
+            white-space: nowrap;
+            font-weight: bold;
+        }
+    }
+</style>
 </head>
 <body>
 
-<div class="container">
-    <div class="header">
-        <h2 id="t-title">烤漆作業程序</h2>
-        <button onclick="toggleLang()">🇹🇼 中文 / 🇻🇳 Tiếng Việt</button>
-    </div>
+<div class="header-bar">
+    <h2 data-i18n="title">烤漆順序作業系統</h2>
+    <button class="btn btn-lang" onclick="toggleLanguage()" id="lang-btn">🇻🇳 切換至越南文</button>
+</div>
 
-    <!-- 查詢區塊 -->
-    <div class="search-bar">
-        <div class="input-field">
-            <label id="t-search-date">查詢日期</label>
-            <input type="date" id="search-date">
+<!-- 當天與排程輸入區 -->
+<div class="card">
+    <h3 style="margin-top:0;" data-i18n="scheduleTitle">新增烤漆作業程序</h3>
+    <div class="form-row">
+        <div class="form-group" style="max-width: 80px;">
+            <label data-i18n="serial">序號</label>
+            <input type="number" id="input-serial" readonly>
         </div>
-        <div class="input-field">
-            <label id="t-search-color">查詢顏色</label>
-            <input type="text" id="search-color" list="color-list">
+        <div class="form-group">
+            <label data-i18n="date">日期</label>
+            <input type="text" id="input-date" readonly placeholder="自動計算隔天工作日">
         </div>
-        <div class="input-field">
-            <label id="t-search-model">查詢機型</label>
-            <input type="text" id="search-model" list="model-list">
-        </div>
-        <button onclick="queryRecords()" style="align-self: flex-end;" id="t-btn-search">🔍 查詢紀錄</button>
-        <button class="btn-danger" onclick="loadTodayRecords()" style="align-self: flex-end;" id="t-btn-today">📅 載入今日</button>
-    </div>
-
-    <!-- 新增紀錄區塊 -->
-    <form id="record-form" class="form-group" onsubmit="addRecord(event)">
-        <div class="input-field">
-            <label id="t-seq">序號</label>
-            <input type="number" id="seq-num" readonly style="background:#e9ecef;">
-        </div>
-        <div class="input-field">
-            <label id="t-next-date">隔天日期 (自動避開假日)</label>
-            <input type="text" id="next-date" readonly style="background:#e9ecef; font-weight:bold;">
-        </div>
-        <div class="input-field">
-            <label id="t-color">顏色</label>
-            <input type="text" id="color-input" list="color-list" required autocomplete="off">
+        <div class="form-group">
+            <label data-i18n="color">顏色</label>
+            <input type="text" id="input-color" list="color-list" placeholder="選擇或手動輸入">
             <datalist id="color-list"></datalist>
         </div>
-        <div class="input-field">
-            <label id="t-model">機型</label>
-            <input type="text" id="model-input" list="model-list" required autocomplete="off">
+        <div class="form-group">
+            <label data-i18n="model">機型</label>
+            <input type="text" id="input-model" list="model-list" placeholder="選擇或手動輸入">
             <datalist id="model-list"></datalist>
         </div>
-        <div class="dynamic-remarks" id="remarks-container">
-            <label><span id="t-remarks">備註</span> <button type="button" onclick="addRemarkField()" style="padding:2px 6px; margin-left:5px;">+</button></label>
-            <div class="remark-row"><input type="text" class="remark-input"></div>
+        <div class="form-group" style="flex-grow: 2;">
+            <label data-i18n="remarks">備註 <button class="btn btn-primary btn-icon" onclick="addRemarkField()">+</button></label>
+            <div id="remarks-container" class="remarks-container">
+                <div class="remark-row"><input type="text" class="remark-input"></div>
+            </div>
         </div>
-        <button type="submit" class="btn-add" id="t-btn-add">➕ 加入下一筆</button>
-    </form>
+    </div>
+    <div class="form-row" style="justify-content: flex-end; align-items: center;">
+        <span id="save-msg" class="system-msg"></span>
+        <button class="btn btn-success" style="margin-left: 15px;" onclick="saveRecord()" data-i18n="addRecord">➕ 加入下一筆資料</button>
+    </div>
+</div>
 
-    <!-- 列表展示區塊 (不使用卷軸，自動向下延伸) -->
+<!-- 當天作業資料顯示 -->
+<div class="card">
+    <h3 style="margin-top:0;" data-i18n="todayData">當天日期作業資料</h3>
     <table>
         <thead>
             <tr>
-                <th id="th-seq" style="width: 80px;">序號</th>
-                <th id="th-date" style="width: 150px;">作業日期</th>
-                <th id="th-color" style="width: 150px;">顏色</th>
-                <th id="th-model" style="width: 150px;">機型</th>
-                <th id="th-remarks">備註</th>
+                <th data-i18n="serial">序號</th>
+                <th data-i18n="date">日期</th>
+                <th data-i18n="color">顏色</th>
+                <th data-i18n="model">機型</th>
+                <th data-i18n="remarks">備註</th>
             </tr>
         </thead>
-        <tbody id="record-table-body">
-            <!-- 資料注入點 -->
+        <tbody id="today-table-body">
+            <tr><td colspan="5" style="text-align:center;" data-i18n="loading">載入中...</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- 歷史記錄查詢 -->
+<div class="card">
+    <h3 style="margin-top:0;" data-i18n="historyTitle">歷史記錄查詢</h3>
+    <div class="form-row">
+        <div class="form-group">
+            <label data-i18n="searchDate">查詢日期 (YYYY-MM-DD)</label>
+            <input type="date" id="search-date">
+        </div>
+        <div class="form-group">
+            <label data-i18n="searchColor">查詢顏色</label>
+            <input type="text" id="search-color">
+        </div>
+        <div class="form-group">
+            <label data-i18n="searchModel">查詢機型</label>
+            <input type="text" id="search-model">
+        </div>
+        <div class="form-group" style="justify-content: flex-end;">
+            <button class="btn btn-primary" onclick="queryHistory()" data-i18n="searchBtn">🔍 查詢</button>
+        </div>
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th data-i18n="serial">序號</th>
+                <th data-i18n="date">日期</th>
+                <th data-i18n="color">顏色</th>
+                <th data-i18n="model">機型</th>
+                <th data-i18n="remarks">備註</th>
+            </tr>
+        </thead>
+        <tbody id="history-table-body">
+            <tr><td colspan="5" style="text-align:center;" data-i18n="noData">尚無資料</td></tr>
         </tbody>
     </table>
 </div>
 
 <script>
-// --- 語言字典檔 ---
-const i18n = {
-    "zh-TW": {
-        "t-title": "烤漆作業程序",
-        "t-search-date": "查詢日期",
-        "t-search-color": "查詢顏色",
-        "t-search-model": "查詢機型",
-        "t-btn-search": "🔍 查詢紀錄",
-        "t-btn-today": "📅 載入今日",
-        "t-seq": "序號",
-        "t-next-date": "隔天日期 (自動避開假日)",
-        "t-color": "顏色",
-        "t-model": "機型",
-        "t-remarks": "備註",
-        "t-btn-add": "➕ 加入下一筆",
-        "th-seq": "序號",
-        "th-date": "作業日期",
-        "th-color": "顏色",
-        "th-model": "機型",
-        "th-remarks": "備註",
-        "msg_saved": "紀錄已儲存！",
-        "msg_no_data": "無符合條件的資料"
-    },
-    "vi": {
-        "t-title": "Quy trình sơn",
-        "t-search-date": "Ngày tìm kiếm",
-        "t-search-color": "Màu sắc tìm kiếm",
-        "t-search-model": "Mô hình tìm kiếm",
-        "t-btn-search": "🔍 Tìm kiếm",
-        "t-btn-today": "📅 Tải hôm nay",
-        "t-seq": "Số thứ tự",
-        "t-next-date": "Ngày làm việc tiếp theo",
-        "t-color": "Màu sắc",
-        "t-model": "Mô hình",
-        "t-remarks": "Ghi chú",
-        "t-btn-add": "➕ Thêm bản ghi tiếp",
-        "th-seq": "Số TT",
-        "th-date": "Ngày làm việc",
-        "th-color": "Màu sắc",
-        "th-model": "Mô hình",
-        "th-remarks": "Ghi chú",
-        "msg_saved": "Đã lưu bản ghi!",
-        "msg_no_data": "Không có dữ liệu"
-    }
-};
-
-let currentLang = "zh-TW";
-
-// --- Firebase 初始化 ---
+/* ==================== 1. Firebase 核心初始化 ==================== */
 const firebaseConfig = {
     apiKey: "AIzaSyBvx7Ej2h9ZV5S1t_Gag756qop_jcoxy2U",
     authDomain: "shopee-60a13.firebaseapp.com",
@@ -166,200 +254,360 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-// 預設資料
-const defaultColors = ['WE','YW','GYW','YWH','BKEBK','BKH','BKS','BKS1','BKS5','BKSA','BKSA1','OE','GN','FGN','PELBE','BEG','DBE','IG','IGS','DGS','ATG','GAST','PK','RD','SAT2'];
-const holidays = ['2026-01-01', '2026-02-28', '2026-04-04', '2026-04-05', '2026-05-01', '2026-06-19', '2026-09-25', '2026-10-10']; // 可於此手動擴充國定假日陣列
-
-// --- 初始掛載 ---
-window.onload = async () => {
-    updateI18n();
-    await initOptions('colors', defaultColors, 'color-list');
-    await initOptions('models', [], 'model-list');
-    setNextWorkingDate();
-    loadTodayRecords();
+/* ==================== 2. 多國語言 (i18n) 字典 ==================== */
+let currentLang = 'zh';
+const i18n = {
+    'zh': {
+        title: '烤漆順序作業系統',
+        scheduleTitle: '新增烤漆作業程序',
+        todayData: '當天日期作業資料',
+        addRecord: '➕ 加入下一筆資料',
+        serial: '序號',
+        date: '日期',
+        color: '顏色',
+        model: '機型',
+        remarks: '備註',
+        saveSuccess: '✅ 儲存成功並同步至雲端',
+        saveFail: '❌ 儲存失敗：',
+        historyTitle: '歷史記錄查詢',
+        searchDate: '查詢日期',
+        searchColor: '查詢顏色',
+        searchModel: '查詢機型',
+        searchBtn: '🔍 查詢',
+        loading: '載入中...',
+        noData: '尚無資料',
+        colorPlaceholder: '選擇或手動輸入',
+        modelPlaceholder: '選擇或手動輸入',
+        datePlaceholder: '自動計算隔天工作日',
+        toggleBtn: '🇻🇳 切換至越南文'
+    },
+    'vi': {
+        title: 'Hệ thống quy trình sơn',
+        scheduleTitle: 'Thêm quy trình sơn',
+        todayData: 'Dữ liệu công việc hôm nay',
+        addRecord: '➕ Thêm bản ghi tiếp theo',
+        serial: 'STT',
+        date: 'Ngày',
+        color: 'Màu sắc',
+        model: 'Mẫu máy',
+        remarks: 'Ghi chú',
+        saveSuccess: '✅ Lưu và đồng bộ thành công',
+        saveFail: '❌ Lưu thất bại: ',
+        historyTitle: 'Truy vấn lịch sử',
+        searchDate: 'Tìm theo ngày',
+        searchColor: 'Tìm theo màu',
+        searchModel: 'Tìm theo mẫu máy',
+        searchBtn: '🔍 Tìm kiếm',
+        loading: 'Đang tải...',
+        noData: 'Không có dữ liệu',
+        colorPlaceholder: 'Chọn hoặc nhập thủ công',
+        modelPlaceholder: 'Chọn hoặc nhập thủ công',
+        datePlaceholder: 'Tự động tính ngày làm việc tiếp',
+        toggleBtn: '🇹🇼 切換至繁體中文'
+    }
 };
 
-// --- 切換語言 ---
-function toggleLang() {
-    currentLang = currentLang === "zh-TW" ? "vi" : "zh-TW";
-    updateI18n();
-}
-
-function updateI18n() {
-    const dict = i18n[currentLang];
-    for (const key in dict) {
-        const el = document.getElementById(key);
-        if (el) el.innerText = dict[key];
-    }
-}
-function t(key) { return i18n[currentLang][key] || key; }
-
-// --- 日期推算 (跳過週六、週日與國定假日) ---
-function setNextWorkingDate() {
-    let date = new Date(); // 當天
-    let daysAdded = 0;
-    while (daysAdded < 1) {
-        date.setDate(date.getDate() + 1);
-        let dayOfWeek = date.getDay();
-        let dateStr = date.toISOString().split('T')[0];
-        
-        // 0=週日, 6=週六
-        if (dayOfWeek !== 0 && dayOfWeek !== 6 && !holidays.includes(dateStr)) {
-            daysAdded++;
-        }
-    }
+function toggleLanguage() {
+    currentLang = currentLang === 'zh' ? 'vi' : 'zh';
+    document.getElementById('lang-btn').innerText = i18n[currentLang].toggleBtn;
     
-    const weekdaysTW = ["週日", "週一", "週二", "週三", "週四", "週五", "週六"];
-    const weekdaysVI = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
-    const wd = currentLang === "zh-TW" ? weekdaysTW[date.getDay()] : weekdaysVI[date.getDay()];
-    
-    const formattedDate = `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getDate()).padStart(2, '0')} (${wd})`;
-    document.getElementById('next-date').value = formattedDate;
-    document.getElementById('next-date').dataset.iso = date.toISOString().split('T')[0];
+    // 替換所有具備 data-i18n 屬性的標籤內容
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (i18n[currentLang][key]) {
+            if(el.tagName.toLowerCase() === 'input' && el.type !== 'button') {
+                // 不動 value，僅動態結構
+            } else {
+                // 保留內部包含的按鈕 (如備註旁邊的 + 號)
+                if(el.querySelector('button')) {
+                    const btnHtml = el.querySelector('button').outerHTML;
+                    el.innerHTML = i18n[currentLang][key] + ' ' + btnHtml;
+                } else {
+                    el.innerText = i18n[currentLang][key];
+                }
+            }
+        }
+    });
+
+    // 替換 Placeholders
+    document.getElementById('input-color').placeholder = i18n[currentLang].colorPlaceholder;
+    document.getElementById('input-model').placeholder = i18n[currentLang].modelPlaceholder;
+    document.getElementById('input-date').placeholder = i18n[currentLang].datePlaceholder;
+
+    renderTodayTable(); // 重新渲染表格的 data-label (RWD 用)
 }
 
-// --- 選單資料同步 (查詢與自動加入) ---
-async function initOptions(dbNode, defaultArray, datalistId) {
-    const ref = db.ref(dbNode);
-    ref.on('value', (snapshot) => {
-        let items = snapshot.val() || [];
-        if (items.length === 0 && defaultArray.length > 0) {
-            items = defaultArray;
-            ref.set(items);
+/* ==================== 3. 智能日期運算引擎 ==================== */
+// 2026 國定假日與休假日陣列 (可擴充)
+const holidays2026 = [
+    "2026-01-01", "2026-02-16", "2026-02-17", "2026-02-18", 
+    "2026-02-19", "2026-02-20", "2026-02-28", "2026-04-03", 
+    "2026-04-06", "2026-05-01", "2026-06-19", "2026-09-25", "2026-10-09"
+];
+
+function isHoliday(dateObj) {
+    const day = dateObj.getDay();
+    if (day === 0 || day === 6) return true; // 週末休假
+    const iso = dateObj.getFullYear() + "-" + String(dateObj.getMonth() + 1).padStart(2, '0') + "-" + String(dateObj.getDate()).padStart(2, '0');
+    return holidays2026.includes(iso);
+}
+
+function getNextWorkingDayObj(baseDateObj) {
+    let d = new Date(baseDateObj);
+    do {
+        d.setDate(d.getDate() + 1);
+    } while (isHoliday(d));
+    return d;
+}
+
+function formatDisplayDate(dateObj) {
+    const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const d = String(dateObj.getDate()).padStart(2, '0');
+    const wd = dateObj.getDay();
+    const weekdaysZH = ['日', '一', '二', '三', '四', '五', '六'];
+    const weekdaysVI = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+    const wStr = currentLang === 'vi' ? weekdaysVI[wd] : weekdaysZH[wd];
+    return `${m}/${d}(${wStr})`;
+}
+
+function getIsoDate(dateObj) {
+    return dateObj.getFullYear() + "-" + String(dateObj.getMonth() + 1).padStart(2, '0') + "-" + String(dateObj.getDate()).padStart(2, '0');
+}
+
+// 系統核心狀態變數
+let globalLatestDateObj = new Date();
+let todayIso = getIsoDate(new Date());
+let nextSerialNumber = 1;
+let todayRecords = [];
+let cachedColors = [];
+let cachedModels = [];
+
+/* ==================== 4. 系統初始化與動態選單綁定 ==================== */
+const defaultColors = ["WE","YW","GYW","YWH","BKEBK","BKH","BKS","BKS1","BKS5","BKSA","BKSA1","OE","GN","FGN","PELBE","BEG","DBE","IG","IGS","DGS","ATG","GAST","PK","RD","SAT2"];
+
+function initSettings() {
+    // 初始化顏色
+    db.ref('settings/colors').on('value', snap => {
+        let colors = snap.val();
+        if (!colors) {
+            colors = defaultColors;
+            db.ref('settings/colors').set(colors);
         }
-        const datalist = document.getElementById(datalistId);
+        cachedColors = colors;
+        const datalist = document.getElementById('color-list');
         datalist.innerHTML = '';
-        items.forEach(item => {
-            let option = document.createElement('option');
-            option.value = item;
-            datalist.appendChild(option);
+        colors.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c;
+            datalist.appendChild(opt);
+        });
+    });
+
+    // 初始化機型
+    db.ref('settings/models').on('value', snap => {
+        let models = snap.val() || [];
+        cachedModels = models;
+        const datalist = document.getElementById('model-list');
+        datalist.innerHTML = '';
+        models.forEach(m => {
+            const opt = document.createElement('option');
+            opt.value = m;
+            datalist.appendChild(opt);
         });
     });
 }
 
-async function checkAndAddOption(dbNode, newValue, datalistId) {
-    if (!newValue.trim()) return;
-    const datalist = document.getElementById(datalistId);
-    const options = Array.from(datalist.options).map(opt => opt.value);
-    
-    if (!options.includes(newValue)) {
-        const snapshot = await db.ref(dbNode).once('value');
-        let items = snapshot.val() || [];
-        items.push(newValue);
-        await db.ref(dbNode).set(items);
-    }
+function calculateNextFormState() {
+    const nextDateObj = getNextWorkingDayObj(globalLatestDateObj);
+    document.getElementById('input-date').value = formatDisplayDate(nextDateObj);
+    document.getElementById('input-date').dataset.iso = getIsoDate(nextDateObj);
+    document.getElementById('input-serial').value = nextSerialNumber;
 }
 
-// --- 備註動態新增欄位 ---
+/* ==================== 5. 動態備註欄位 ==================== */
 function addRemarkField() {
     const container = document.getElementById('remarks-container');
     const div = document.createElement('div');
     div.className = 'remark-row';
-    div.innerHTML = `<input type="text" class="remark-input"> <button type="button" class="btn-danger" onclick="this.parentElement.remove()">-</button>`;
+    div.innerHTML = `<input type="text" class="remark-input">`;
     container.appendChild(div);
 }
 
-// --- 寫入與讀取邏輯 ---
-async function addRecord(e) {
-    e.preventDefault();
-    const isoDate = document.getElementById('next-date').dataset.iso;
-    const dateStr = document.getElementById('next-date').value;
-    const color = document.getElementById('color-input').value.trim();
-    const model = document.getElementById('model-input').value.trim();
+/* ==================== 6. 雲端資料同步寫入 ==================== */
+function saveRecord() {
+    const serial = parseInt(document.getElementById('input-serial').value);
+    const dateDisp = document.getElementById('input-date').value;
+    const dateIso = document.getElementById('input-date').dataset.iso;
+    const color = document.getElementById('input-color').value.trim().toUpperCase();
+    const model = document.getElementById('input-model').value.trim().toUpperCase();
     
-    const remarkInputs = document.querySelectorAll('.remark-input');
-    const remarks = Array.from(remarkInputs).map(i => i.value.trim()).filter(v => v);
+    // 收集備註
+    const remarks = [];
+    document.querySelectorAll('.remark-input').forEach(input => {
+        if(input.value.trim() !== '') remarks.push(input.value.trim());
+    });
 
-    const currentSeq = parseInt(document.getElementById('seq-num').value || "0");
-    const nextSeq = currentSeq + 1;
-
-    const record = { seq: nextSeq, dateIso: isoDate, dateDisplay: dateStr, color, model, remarks, timestamp: Date.now() };
-
-    // 儲存至 Firebase
-    await db.ref('paint_records').push(record);
-    
-    // 檢查並加入新選單值
-    await checkAndAddOption('colors', color, 'color-list');
-    await checkAndAddOption('models', model, 'model-list');
-
-    alert(t('msg_saved'));
-    document.getElementById('color-input').value = '';
-    document.getElementById('model-input').value = '';
-    document.querySelectorAll('.remark-row:not(:first-child)').forEach(r => r.remove());
-    document.querySelector('.remark-input').value = '';
-    
-    setNextWorkingDate();
-    loadRecordsByDate(isoDate); // 加入後直接顯示目標日的紀錄
-}
-
-function renderTable(dataObj) {
-    const tbody = document.getElementById('record-table-body');
-    tbody.innerHTML = '';
-    let maxSeq = 0;
-    
-    if (!dataObj) {
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">${t('msg_no_data')}</td></tr>`;
-        document.getElementById('seq-num').value = 0;
+    if(!color) {
+        alert(currentLang === 'vi' ? 'Vui lòng nhập màu sắc!' : '請輸入顏色！');
         return;
     }
 
-    const records = Object.values(dataObj).sort((a, b) => a.seq - b.seq);
-    records.forEach(r => {
-        if (r.seq > maxSeq) maxSeq = r.seq;
-        const tr = document.createElement('tr');
-        const remarkText = r.remarks ? r.remarks.join('<br>') : '';
-        tr.innerHTML = `
-            <td>${r.seq}</td>
-            <td>${r.dateDisplay}</td>
-            <td>${r.color}</td>
-            <td>${r.model}</td>
-            <td>${remarkText}</td>
-        `;
-        tbody.appendChild(tr);
-    });
-    
-    document.getElementById('seq-num').value = maxSeq;
-}
+    const recordData = {
+        serial: serial,
+        dateDisplay: dateDisp,
+        dateIso: dateIso,
+        color: color,
+        model: model,
+        remarks: remarks,
+        timestamp: firebase.database.ServerValue.TIMESTAMP
+    };
 
-function loadTodayRecords() {
-    const todayIso = new Date().toISOString().split('T')[0];
-    loadRecordsByDate(todayIso);
-}
+    // 寫入 Firebase
+    const newRef = db.ref('paint_jobs/' + dateIso).push();
+    newRef.set(recordData).then(() => {
+        const msgEl = document.getElementById('save-msg');
+        msgEl.innerText = i18n[currentLang].saveSuccess;
+        msgEl.style.color = 'var(--success)';
+        setTimeout(() => { msgEl.innerText = ''; }, 3000);
 
-function loadRecordsByDate(targetIso) {
-    db.ref('paint_records').orderByChild('dateIso').equalTo(targetIso).on('value', (snapshot) => {
-        renderTable(snapshot.val());
-    });
-}
-
-// --- 歷史紀錄多條件查詢 ---
-function queryRecords() {
-    const qDate = document.getElementById('search-date').value;
-    const qColor = document.getElementById('search-color').value.trim().toLowerCase();
-    const qModel = document.getElementById('search-model').value.trim().toLowerCase();
-    
-    // Firebase 無法做複雜多重查詢，改由抓取所有資料在前端過濾
-    db.ref('paint_records').once('value', (snapshot) => {
-        let allData = snapshot.val();
-        if (!allData) return renderTable(null);
-        
-        let filtered = Object.values(allData).filter(r => {
-            let matchDate = qDate ? r.dateIso === qDate : true;
-            let matchColor = qColor ? r.color.toLowerCase().includes(qColor) : true;
-            let matchModel = qModel ? r.model.toLowerCase().includes(qModel) : true;
-            return matchDate && matchColor && matchModel;
-        });
-        
-        if (filtered.length === 0) {
-            renderTable(null);
-        } else {
-            // 轉回 Object 格式供 renderTable 使用
-            let resultObj = {};
-            filtered.forEach((r, idx) => resultObj[idx] = r);
-            renderTable(resultObj);
+        // 自動學習新顏色與機型
+        if (color && !cachedColors.includes(color)) {
+            cachedColors.push(color);
+            db.ref('settings/colors').set(cachedColors);
         }
+        if (model && !cachedModels.includes(model)) {
+            cachedModels.push(model);
+            db.ref('settings/models').set(cachedModels);
+        }
+
+        // 更新狀態，推進至下一天工作日
+        globalLatestDateObj = new Date(dateIso);
+        nextSerialNumber++;
+        
+        // 重置表單
+        document.getElementById('input-color').value = '';
+        document.getElementById('input-model').value = '';
+        document.getElementById('remarks-container').innerHTML = `<div class="remark-row"><input type="text" class="remark-input"></div>`;
+        calculateNextFormState();
+
+    }).catch(err => {
+        const msgEl = document.getElementById('save-msg');
+        msgEl.innerText = i18n[currentLang].saveFail + err.message;
+        msgEl.style.color = 'var(--danger)';
     });
 }
+
+/* ==================== 7. 讀取當日作業資料 ==================== */
+function listenTodayData() {
+    db.ref('paint_jobs/' + todayIso).on('value', snap => {
+        todayRecords = [];
+        const data = snap.val();
+        if (data) {
+            let maxSerial = 0;
+            Object.keys(data).forEach(key => {
+                const item = data[key];
+                todayRecords.push(item);
+                if(item.serial > maxSerial) maxSerial = item.serial;
+            });
+            // 確保系統一啟動時序號接續當日最大值
+            if (nextSerialNumber === 1 && maxSerial > 0) {
+                nextSerialNumber = maxSerial + 1;
+                document.getElementById('input-serial').value = nextSerialNumber;
+            }
+            // 依照序號排序
+            todayRecords.sort((a,b) => a.serial - b.serial);
+        }
+        renderTodayTable();
+    });
+}
+
+function renderTodayTable() {
+    const tbody = document.getElementById('today-table-body');
+    if (todayRecords.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">${i18n[currentLang].noData}</td></tr>`;
+        return;
+    }
+    
+    let html = '';
+    todayRecords.forEach(r => {
+        html += `<tr>
+            <td data-label="${i18n[currentLang].serial}">${r.serial}</td>
+            <td data-label="${i18n[currentLang].date}">${r.dateDisplay}</td>
+            <td data-label="${i18n[currentLang].color}">${r.color}</td>
+            <td data-label="${i18n[currentLang].model}">${r.model}</td>
+            <td data-label="${i18n[currentLang].remarks}">${(r.remarks || []).join('<br>')}</td>
+        </tr>`;
+    });
+    tbody.innerHTML = html;
+}
+
+/* ==================== 8. 歷史記錄查詢 ==================== */
+function queryHistory() {
+    const qDate = document.getElementById('search-date').value; // YYYY-MM-DD
+    const qColor = document.getElementById('search-color').value.trim().toUpperCase();
+    const qModel = document.getElementById('search-model').value.trim().toUpperCase();
+    const tbody = document.getElementById('history-table-body');
+    
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">${i18n[currentLang].loading}</td></tr>`;
+
+    // 針對節點進行資料擷取
+    let ref = db.ref('paint_jobs');
+    if (qDate) {
+        ref = db.ref('paint_jobs/' + qDate);
+    }
+
+    ref.once('value').then(snap => {
+        const data = snap.val();
+        let results = [];
+        if (data) {
+            if (qDate) {
+                // 單日結構
+                Object.values(data).forEach(item => results.push(item));
+            } else {
+                // 跨日結構
+                Object.values(data).forEach(dayData => {
+                    Object.values(dayData).forEach(item => results.push(item));
+                });
+            }
+        }
+
+        // 客戶端二次過濾
+        if (qColor) results = results.filter(r => r.color && r.color.includes(qColor));
+        if (qModel) results = results.filter(r => r.model && r.model.includes(qModel));
+
+        // 排序：日期降冪，序號降冪
+        results.sort((a, b) => {
+            if(a.dateIso !== b.dateIso) return b.dateIso.localeCompare(a.dateIso);
+            return b.serial - a.serial;
+        });
+
+        if (results.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">${i18n[currentLang].noData}</td></tr>`;
+            return;
+        }
+
+        let html = '';
+        results.forEach(r => {
+            html += `<tr>
+                <td data-label="${i18n[currentLang].serial}">${r.serial}</td>
+                <td data-label="${i18n[currentLang].date}">${r.dateDisplay}</td>
+                <td data-label="${i18n[currentLang].color}">${r.color}</td>
+                <td data-label="${i18n[currentLang].model}">${r.model}</td>
+                <td data-label="${i18n[currentLang].remarks}">${(r.remarks || []).join('<br>')}</td>
+            </tr>`;
+        });
+        tbody.innerHTML = html;
+    }).catch(err => {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:red;">查詢失敗: ${err.message}</td></tr>`;
+    });
+}
+
+/* ==================== 9. 啟動生命週期 ==================== */
+window.onload = function() {
+    initSettings();
+    listenTodayData();
+    calculateNextFormState();
+};
 </script>
 </body>
 </html>

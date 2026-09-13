@@ -3,14 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>烤漆作業排程系統</title>
-    <!-- 引入 Tailwind CSS 處理自適應與排版 -->
+    <title>烤漆作業排程 - 建立紀錄</title>
+    <!-- 引入 Tailwind CSS 與 FontAwesome -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- 引入 FontAwesome 圖示 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
-        /* 基礎樣式：強制表格無內部捲軸，直接向下延伸 */
         body { background-color: #1e1e1e; color: #d4d4d4; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         .card { background-color: #252526; border: 1px solid #333; border-radius: 0.5rem; padding: 1.25rem; margin-bottom: 1.5rem; }
         
@@ -18,10 +16,9 @@
         th, td { border: 1px solid #3c3c3c; padding: 0.75rem; vertical-align: top; }
         th { background-color: #2d2d2d; color: #fff; white-space: nowrap; font-weight: 600; text-align: left; }
         
-        /* 欄寬設定 */
         .w-seq { width: 60px; text-align: center; }
-        .w-color { width: 200px; }
-        .w-model { width: 200px; }
+        .w-color { width: 220px; }
+        .w-model { width: 220px; }
         .w-action { width: 80px; text-align: center; }
 
         input, select { background-color: #1e1e1e; color: #fff; border: 1px solid #444; border-radius: 0.25rem; padding: 0.5rem; width: 100%; outline: none; }
@@ -30,19 +27,20 @@
         button { cursor: pointer; transition: background-color 0.2s; }
         button:disabled { opacity: 0.5; cursor: not-allowed; }
 
-        /* 抓蟲框樣式 */
-        #debug-console { height: 150px; overflow-y: auto; background-color: #000; color: #0f0; font-family: monospace; font-size: 12px; padding: 10px; border: 1px solid #444; }
+        #debug-console { height: 120px; overflow-y: auto; background-color: #000; color: #0f0; font-family: monospace; font-size: 12px; padding: 10px; border: 1px solid #444; }
         .log-error { color: #ff5555; }
         .log-success { color: #55ff55; }
-        .log-warn { color: #ffff55; }
     </style>
 </head>
 <body class="min-h-screen p-4 md:p-8">
 
     <!-- 頂部導覽列 -->
     <div class="flex justify-between items-center mb-6 pb-4 border-b border-gray-700">
-        <h1 class="text-2xl font-bold text-white flex items-center gap-2" data-i18n="appTitle">🎨 烤漆作業排程系統</h1>
+        <h1 class="text-2xl font-bold text-white flex items-center gap-2" data-i18n="appTitle">📝 建立烤漆排程紀錄</h1>
         <div class="flex items-center gap-3">
+            <a href="烤漆順序看板.html" class="text-sm bg-gray-700 hover:bg-gray-600 text-blue-300 px-3 py-1 rounded flex items-center gap-1">
+                <i class="fa-solid fa-tv"></i> 切換至順序看板
+            </a>
             <span class="text-sm text-gray-400" data-i18n="langLabel">語言 / Ngôn ngữ:</span>
             <select id="lang-switch" class="w-auto cursor-pointer">
                 <option value="zh">繁體中文</option>
@@ -51,79 +49,16 @@
         </div>
     </div>
 
-    <!-- Datalist 用於下拉與手動輸入混合 (顏色與機型) -->
+    <!-- Datalist 用於下拉與手動輸入混合 -->
     <datalist id="color-list"></datalist>
     <datalist id="model-list"></datalist>
 
     <div class="grid grid-cols-1 gap-6">
 
-        <!-- 區塊 1: 歷史記錄查詢 -->
-        <div class="card">
-            <h2 class="text-lg font-bold text-blue-400 mb-4" data-i18n="searchTitle">🔍 歷史記錄查詢</h2>
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-                <div>
-                    <label class="block text-xs text-gray-400 mb-1" data-i18n="lblDate">日期 (Ngày)</label>
-                    <input type="date" id="search-date">
-                </div>
-                <div>
-                    <label class="block text-xs text-gray-400 mb-1" data-i18n="lblColor">顏色 (Màu sắc)</label>
-                    <input type="text" id="search-color" data-i18n-ph="phSearchColor" placeholder="輸入顏色查詢...">
-                </div>
-                <div>
-                    <label class="block text-xs text-gray-400 mb-1" data-i18n="lblModel">機型 (Model)</label>
-                    <input type="text" id="search-model" data-i18n-ph="phSearchModel" placeholder="輸入機型查詢...">
-                </div>
-                <div class="flex gap-2">
-                    <button id="btn-search" class="w-full bg-blue-600 hover:bg-blue-700 text-white p-2 rounded" data-i18n="btnSearch">查詢</button>
-                    <button id="btn-reset-search" class="w-full bg-gray-600 hover:bg-gray-700 text-white p-2 rounded" data-i18n="btnReset">重設</button>
-                </div>
-            </div>
-            <!-- 查詢結果表格 -->
-            <div class="mt-4 overflow-x-auto">
-                <table>
-                    <thead>
-                        <tr>
-                            <th data-i18n="thDate">日期</th>
-                            <th class="w-seq" data-i18n="thNo">序號</th>
-                            <th class="w-color" data-i18n="thColor">顏色</th>
-                            <th class="w-model" data-i18n="thModel">機型</th>
-                            <th data-i18n="thRemark">備註</th>
-                        </tr>
-                    </thead>
-                    <tbody id="history-tbody">
-                        <tr><td colspan="5" class="text-center text-gray-500 py-4" data-i18n="msgNoData">尚無資料</td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- 區塊 2: 當天作業資料 (唯讀) -->
-        <div class="card border-l-4 border-l-green-500">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-lg font-bold text-green-400">
-                    <i class="fa-solid fa-calendar-day mr-2"></i><span data-i18n="todayTitle">今日作業資料</span>
-                    <span id="today-date-display" class="ml-2 text-white bg-gray-700 px-2 py-1 rounded text-sm"></span>
-                </h2>
-            </div>
-            <table>
-                <thead>
-                    <tr>
-                        <th class="w-seq" data-i18n="thNo">序號</th>
-                        <th class="w-color" data-i18n="thColor">顏色</th>
-                        <th class="w-model" data-i18n="thModel">機型</th>
-                        <th data-i18n="thRemark">備註</th>
-                    </tr>
-                </thead>
-                <tbody id="today-tbody">
-                    <tr><td colspan="4" class="text-center text-gray-500 py-4" data-i18n="msgLoading">載入中...</td></tr>
-                </tbody>
-            </table>
-        </div>
-
-        <!-- 區塊 3: 隔天排程作業 (可編輯) -->
+        <!-- 建立次日排程作業 (編輯區塊) -->
         <div class="card border-l-4 border-l-orange-500">
             <div class="flex flex-wrap justify-between items-center mb-4 gap-4">
-                <h2 class="text-lg font-bold text-orange-400">
+                <h2 class="text-lg font-bold text-orange-400 flex items-center">
                     <i class="fa-solid fa-calendar-plus mr-2"></i><span data-i18n="nextTitle">建立次日烤漆排程</span>
                     <span id="next-date-display" class="ml-2 text-white bg-gray-700 px-2 py-1 rounded text-sm"></span>
                 </h2>
@@ -143,7 +78,7 @@
                         <th class="w-seq" data-i18n="thNo">序號</th>
                         <th class="w-color" data-i18n="thColor">顏色</th>
                         <th class="w-model" data-i18n="thModel">機型</th>
-                        <th data-i18n="thRemark">備註欄 (按+號新增)</th>
+                        <th data-i18n="thRemark">備註欄 (按 + 號可新增多條備註)</th>
                         <th class="w-action" data-i18n="thAction">操作</th>
                     </tr>
                 </thead>
@@ -153,7 +88,7 @@
             </table>
         </div>
 
-        <!-- 區塊 4: 系統成功失敗訊息抓蟲框 -->
+        <!-- 系統狀態日誌 -->
         <div class="card p-0 overflow-hidden">
             <div class="bg-gray-800 px-4 py-2 border-b border-gray-700 flex justify-between items-center">
                 <span class="text-sm font-bold text-gray-300"><i class="fa-solid fa-terminal mr-2"></i>系統訊息日誌 (Console)</span>
@@ -164,12 +99,11 @@
 
     </div>
 
-    <!-- Firebase v10 模組化引入與邏輯 -->
+    <!-- Firebase 腳本與邏輯 -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getDatabase, ref, onValue, set, get, child, update } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+        import { getDatabase, ref, onValue, set, get, update } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
 
-        // 1. Firebase 配置
         const firebaseConfig = {
             apiKey: "AIzaSyBvx7Ej2h9ZV5S1t_Gag756qop_jcoxy2U",
             authDomain: "shopee-60a13.firebaseapp.com",
@@ -182,41 +116,30 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        // 2. 系統變數與預設資料
         const defaultColors = ["WE","YW","GYW","YWH","BKEBK","BKH","BKS","BKS1","BKS5","BKSA","BKSA1","OE","GN","FGN","PELBE","BEG","DBE","IG","IGS","DGS","ATG","GAST","PK","RD","SAT2"];
         let dbColors = [...defaultColors];
         let dbModels = [];
         let currentLang = 'zh';
 
-        // 2026年台灣國定假日 (YYYY-MM-DD 格式，自動避開)
         const holidays = new Set([
             "2026-01-01", "2026-02-16", "2026-02-17", "2026-02-18", "2026-02-19", "2026-02-20", 
             "2026-02-28", "2026-04-03", "2026-04-06", "2026-05-01", "2026-06-19", "2026-09-25", "2026-10-09"
         ]);
 
-        // 3. 多國語系字典 (i18n)
         const i18n = {
             zh: {
-                appTitle: "🎨 烤漆作業排程系統", langLabel: "語言 / Ngôn ngữ:", searchTitle: "🔍 歷史記錄查詢",
-                lblDate: "日期 (Ngày)", lblColor: "顏色 (Màu sắc)", lblModel: "機型 (Model)",
-                btnSearch: "查詢", btnReset: "重設", msgNoData: "尚無符合條件的資料", msgLoading: "載入中...",
-                todayTitle: "今日作業資料", nextTitle: "建立次日烤漆排程", btnAdd: "新增下一筆", btnSave: "儲存至雲端",
-                thDate: "日期", thNo: "序號", thColor: "顏色", thModel: "機型", thRemark: "備註", thAction: "操作",
-                phSearchColor: "輸入顏色查詢...", phSearchModel: "輸入機型查詢...",
-                phColor: "選擇或輸入顏色", phModel: "選擇或輸入機型", phRemark: "輸入備註...",
-                promptConfirmDel: "確定要刪除此筆記錄嗎？", sysReady: "系統初始化完成。", 
-                sysSaveOk: "儲存成功！", sysSaveErr: "儲存失敗：", sysSearchOk: "查詢完成。"
+                appTitle: "📝 建立烤漆排程紀錄", langLabel: "語言 / Ngôn ngữ:", nextTitle: "建立次日烤漆排程", 
+                btnAdd: "新增下一筆", btnSave: "儲存至雲端", thNo: "序號", thColor: "顏色", thModel: "機型", 
+                thRemark: "備註欄 (按 + 號新增多條備註)", thAction: "操作", phColor: "選擇或輸入顏色", 
+                phModel: "選擇或輸入機型", phRemark: "輸入備註...", promptConfirmDel: "確定要刪除此筆記錄嗎？", 
+                sysReady: "系統初始化完成。", sysSaveOk: "儲存成功！", sysSaveErr: "儲存失敗："
             },
             vi: {
-                appTitle: "🎨 Hệ thống Lịch trình Sơn", langLabel: "Ngôn ngữ / 語言:", searchTitle: "🔍 Tra cứu lịch sử",
-                lblDate: "Ngày (日期)", lblColor: "Màu sắc (顏色)", lblModel: "Model (機型)",
-                btnSearch: "Tìm kiếm", btnReset: "Đặt lại", msgNoData: "Không có dữ liệu", msgLoading: "Đang tải...",
-                todayTitle: "Dữ liệu làm việc hôm nay", nextTitle: "Lịch trình sơn ngày mai", btnAdd: "Thêm dòng mới", btnSave: "Lưu lên Cloud",
-                thDate: "Ngày", thNo: "STT", thColor: "Màu sắc", thModel: "Model", thRemark: "Ghi chú", thAction: "Thao tác",
-                phSearchColor: "Nhập màu sắc...", phSearchModel: "Nhập model...",
-                phColor: "Chọn/Nhập màu", phModel: "Chọn/Nhập model", phRemark: "Nhập ghi chú...",
-                promptConfirmDel: "Bạn có chắc chắn muốn xóa bản ghi này không?", sysReady: "Khởi tạo hệ thống thành công.",
-                sysSaveOk: "Lưu thành công!", sysSaveErr: "Lưu thất bại: ", sysSearchOk: "Tìm kiếm hoàn tất."
+                appTitle: "📝 Tạo Lịch trình Sơn", langLabel: "Ngôn ngữ / 語言:", nextTitle: "Lịch trình sơn ngày mai", 
+                btnAdd: "Thêm dòng mới", btnSave: "Lưu lên Cloud", thNo: "STT", thColor: "Màu sắc", thModel: "Model", 
+                thRemark: "Ghi chú (Bấm + để thêm dòng)", thAction: "Thao tác", phColor: "Chọn/Nhập màu", 
+                phModel: "Chọn/Nhập model", phRemark: "Nhập ghi chú...", promptConfirmDel: "Bạn có chắc chắn muốn xóa bản ghi này không?", 
+                sysReady: "Khởi tạo hệ thống thành công.", sysSaveOk: "Lưu thành công!", sysSaveErr: "Lưu thất bại: "
             }
         };
 
@@ -225,7 +148,6 @@
             vi: ["CN", "T2", "T3", "T4", "T5", "T6", "T7"]
         };
 
-        // 4. 核心功能：抓蟲框與日期計算
         window.logMsg = function(msg, type = 'info') {
             const consoleBox = document.getElementById('debug-console');
             const time = new Date().toLocaleTimeString('zh-TW', { hour12: false });
@@ -238,58 +160,38 @@
             return `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')}`;
         }
 
-        // 計算日期（跳過六日與國定假日）
-        function getWorkingDates() {
-            const today = new Date();
-            const todayDB = getDBDateFormat(today);
-            const todayDisplay = `${today.getMonth() + 1}/${today.getDate()} (${currentLang === 'vi' ? 'Thứ ' : '週'}${weekdays[currentLang][today.getDay()]})`;
-
-            let nextDate = new Date(today);
+        function getNextWorkingDate() {
+            let nextDate = new Date();
             while (true) {
                 nextDate.setDate(nextDate.getDate() + 1);
                 let day = nextDate.getDay();
                 let isoStr = getDBDateFormat(nextDate);
-                // 略過六(6)、日(0) 以及 國定假日清單
-                if (day !== 0 && day !== 6 && !holidays.has(isoStr)) {
-                    break;
-                }
+                if (day !== 0 && day !== 6 && !holidays.has(isoStr)) break;
             }
-            
             const nextDB = getDBDateFormat(nextDate);
             const nextDisplay = `${nextDate.getMonth() + 1}/${nextDate.getDate()} (${currentLang === 'vi' ? 'Thứ ' : '週'}${weekdays[currentLang][nextDate.getDay()]})`;
-
-            return { todayDB, todayDisplay, nextDB, nextDisplay };
+            return { nextDB, nextDisplay };
         }
 
-        // 5. 語系與畫面更新
         function applyLanguage() {
             const t = i18n[currentLang];
             document.querySelectorAll('[data-i18n]').forEach(el => { el.innerText = t[el.getAttribute('data-i18n')]; });
-            document.querySelectorAll('[data-i18n-ph]').forEach(el => { el.placeholder = t[el.getAttribute('data-i18n-ph')]; });
-            
-            const dates = getWorkingDates();
-            document.getElementById('today-date-display').innerText = dates.todayDisplay;
+            const dates = getNextWorkingDate();
             document.getElementById('next-date-display').innerText = dates.nextDisplay;
-            
-            updateDatalists(); // 重新渲染下拉選單防錯
-            renderNextTable(); // 重新渲染次日排程以更新 Placeholder
+            updateDatalists();
+            renderNextTable();
         }
 
         document.getElementById('lang-switch').addEventListener('change', (e) => {
             currentLang = e.target.value;
             applyLanguage();
-            logMsg(`Language switched to ${currentLang}`, 'info');
         });
 
-        // 6. 下拉選單同步 (包含自動學習新輸入的顏色/機型)
         function updateDatalists() {
-            const colorList = document.getElementById('color-list');
-            const modelList = document.getElementById('model-list');
-            colorList.innerHTML = dbColors.map(c => `<option value="${c}">`).join('');
-            modelList.innerHTML = dbModels.map(m => `<option value="${m}">`).join('');
+            document.getElementById('color-list').innerHTML = dbColors.map(c => `<option value="${c}">`).join('');
+            document.getElementById('model-list').innerHTML = dbModels.map(m => `<option value="${m}">`).join('');
         }
 
-        // 監聽 Firebase 全域設定以同步選單
         onValue(ref(db, 'settings/colors'), (snapshot) => {
             if (snapshot.exists()) dbColors = snapshot.val();
             updateDatalists();
@@ -299,8 +201,7 @@
             updateDatalists();
         });
 
-        // 7. 隔日排程操作 (DOM 建立與管理)
-        let nextDayData = []; // 暫存次日草稿
+        let nextDayData = [];
 
         window.addNextRow = function(data = null) {
             nextDayData.push(data ? data : { color: '', model: '', remarks: [''] });
@@ -332,10 +233,7 @@
             tbody.innerHTML = '';
             const t = i18n[currentLang];
 
-            if(nextDayData.length === 0) {
-                // 如果空了自動加一筆
-                nextDayData.push({ color: '', model: '', remarks: [''] });
-            }
+            if(nextDayData.length === 0) nextDayData.push({ color: '', model: '', remarks: [''] });
 
             nextDayData.forEach((item, idx) => {
                 const tr = document.createElement('tr');
@@ -367,18 +265,16 @@
 
         document.getElementById('btn-add-row').addEventListener('click', () => addNextRow());
 
-        // 8. 儲存機制 (包含智慧更新字典)
         document.getElementById('btn-save').addEventListener('click', async () => {
             const btn = document.getElementById('btn-save');
             btn.disabled = true;
             btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Saving...`;
             
-            const { nextDB } = getWorkingDates();
+            const { nextDB } = getNextWorkingDate();
             let validTasks = [];
             let newColors = new Set();
             let newModels = new Set();
 
-            // 清洗與驗證資料
             nextDayData.forEach((item, idx) => {
                 let cleanColor = item.color.trim().toUpperCase();
                 let cleanModel = item.model.trim().toUpperCase();
@@ -386,25 +282,19 @@
 
                 if (cleanColor || cleanModel || cleanRemarks.length > 0) {
                     validTasks.push({ seqNo: idx + 1, color: cleanColor, model: cleanModel, remarks: cleanRemarks });
-                    // 收集手動輸入的新選項
                     if (cleanColor && !dbColors.includes(cleanColor)) newColors.add(cleanColor);
                     if (cleanModel && !dbModels.includes(cleanModel)) newModels.add(cleanModel);
                 }
             });
 
             try {
-                // 儲存至隔日節點
                 await set(ref(db, `schedules/${nextDB}`), validTasks);
-                
-                // 自動將手動輸入的新選項加入資料庫字典
                 if (newColors.size > 0 || newModels.size > 0) {
                     const updates = {};
                     if (newColors.size > 0) updates['settings/colors'] = [...new Set([...dbColors, ...newColors])];
                     if (newModels.size > 0) updates['settings/models'] = [...new Set([...dbModels, ...newModels])];
                     await update(ref(db), updates);
-                    logMsg(`字典已自動更新 (新增了 ${newColors.size} 色, ${newModels.size} 機型)`, 'success');
                 }
-
                 logMsg(`${i18n[currentLang].sysSaveOk} (日期: ${nextDB})`, 'success');
                 alert(i18n[currentLang].sysSaveOk);
             } catch (err) {
@@ -415,113 +305,20 @@
             }
         });
 
-        // 9. 即時監聽與初始化讀取
-        function initDataLoad() {
-            const { todayDB, nextDB } = getWorkingDates();
-
-            // 讀取當天資料 (唯讀)
-            onValue(ref(db, `schedules/${todayDB}`), (snapshot) => {
-                const tbody = document.getElementById('today-tbody');
-                tbody.innerHTML = '';
-                if (snapshot.exists() && snapshot.val().length > 0) {
-                    snapshot.val().forEach(item => {
-                        const tr = document.createElement('tr');
-                        const rmkStr = item.remarks ? item.remarks.join('<br>') : '';
-                        tr.innerHTML = `
-                            <td class="text-center font-bold">${item.seqNo}</td>
-                            <td class="text-green-300">${item.color || ''}</td>
-                            <td class="text-green-300">${item.model || ''}</td>
-                            <td class="text-gray-300">${rmkStr}</td>
-                        `;
-                        tbody.appendChild(tr);
-                    });
-                    logMsg(`已載入當日 (${todayDB}) 排程`, 'success');
-                } else {
-                    tbody.innerHTML = `<tr><td colspan="4" class="text-center text-gray-500 py-4">${i18n[currentLang].msgNoData}</td></tr>`;
-                    logMsg(`當日 (${todayDB}) 無排程資料`, 'info');
-                }
-            });
-
-            // 讀取隔天草稿
+        document.addEventListener('DOMContentLoaded', () => {
+            applyLanguage();
+            const { nextDB } = getNextWorkingDate();
             get(ref(db, `schedules/${nextDB}`)).then((snapshot) => {
                 nextDayData = [];
                 if (snapshot.exists() && snapshot.val().length > 0) {
                     snapshot.val().forEach(item => {
                         nextDayData.push({ color: item.color||'', model: item.model||'', remarks: item.remarks && item.remarks.length > 0 ? item.remarks : [''] });
                     });
-                    logMsg(`已回復隔日 (${nextDB}) 編輯進度`, 'success');
                 } else {
                     addNextRow();
                 }
                 renderNextTable();
             });
-        }
-
-        // 10. 歷史查詢
-        document.getElementById('btn-search').addEventListener('click', async () => {
-            const sDate = document.getElementById('search-date').value;
-            const sColor = document.getElementById('search-color').value.trim().toUpperCase();
-            const sModel = document.getElementById('search-model').value.trim().toUpperCase();
-            const tbody = document.getElementById('history-tbody');
-            
-            tbody.innerHTML = `<tr><td colspan="5" class="text-center text-blue-400 py-4"><i class="fa-solid fa-spinner fa-spin"></i> ${i18n[currentLang].msgLoading}</td></tr>`;
-            
-            try {
-                let results = [];
-                if (sDate) {
-                    const snap = await get(ref(db, `schedules/${sDate}`));
-                    if(snap.exists()) snap.val().forEach(i => results.push({date: sDate, ...i}));
-                } else {
-                    const snap = await get(ref(db, `schedules`));
-                    if(snap.exists()) {
-                        const allData = snap.val();
-                        Object.keys(allData).forEach(d => {
-                            allData[d].forEach(i => results.push({date: d, ...i}));
-                        });
-                    }
-                }
-
-                // 過濾條件
-                if (sColor) results = results.filter(r => r.color && r.color.includes(sColor));
-                if (sModel) results = results.filter(r => r.model && r.model.includes(sModel));
-
-                // 排序 (日期大至小，序號小至大)
-                results.sort((a, b) => b.date.localeCompare(a.date) || a.seqNo - b.seqNo);
-
-                tbody.innerHTML = '';
-                if (results.length > 0) {
-                    results.forEach(r => {
-                        const tr = document.createElement('tr');
-                        tr.className = "hover:bg-gray-700 transition-colors";
-                        tr.innerHTML = `
-                            <td class="text-blue-300 font-mono">${r.date}</td>
-                            <td class="text-center">${r.seqNo}</td>
-                            <td>${r.color||''}</td>
-                            <td>${r.model||''}</td>
-                            <td>${r.remarks ? r.remarks.join(' / ') : ''}</td>
-                        `;
-                        tbody.appendChild(tr);
-                    });
-                } else {
-                    tbody.innerHTML = `<tr><td colspan="5" class="text-center text-gray-500 py-4">${i18n[currentLang].msgNoData}</td></tr>`;
-                }
-                logMsg(`${i18n[currentLang].sysSearchOk} 找到 ${results.length} 筆資料`, 'info');
-            } catch (err) {
-                logMsg(`搜尋失敗: ${err.message}`, 'error');
-            }
-        });
-
-        document.getElementById('btn-reset-search').addEventListener('click', () => {
-            document.getElementById('search-date').value = '';
-            document.getElementById('search-color').value = '';
-            document.getElementById('search-model').value = '';
-            document.getElementById('history-tbody').innerHTML = `<tr><td colspan="5" class="text-center text-gray-500 py-4">${i18n[currentLang].msgNoData}</td></tr>`;
-        });
-
-        // 啟動系統
-        document.addEventListener('DOMContentLoaded', () => {
-            applyLanguage();
-            initDataLoad();
             logMsg(i18n[currentLang].sysReady, 'success');
         });
     </script>

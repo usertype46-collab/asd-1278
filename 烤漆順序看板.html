@@ -9,63 +9,66 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
-        body { background-color: #1e1e1e; color: #d4d4d4; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .card { background-color: #252526; border: 1px solid #333; border-radius: 0.5rem; padding: 1.25rem; margin-bottom: 1.5rem; }
+        body { background-color: #1a1a1a; color: #e5e5e5; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 16px; }
+        .card { background-color: #252526; border: 1px solid #333; border-radius: 0.75rem; padding: 1.5rem; margin-bottom: 2rem; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
         
         table { width: 100%; border-collapse: collapse; table-layout: auto; }
-        th, td { border: 1px solid #3c3c3c; padding: 0.75rem; vertical-align: top; }
-        th { background-color: #2d2d2d; color: #fff; white-space: nowrap; font-weight: 600; text-align: left; }
+        th, td { border: 1px solid #3c3c3c; padding: 1rem; vertical-align: middle; }
+        th { background-color: #2d2d2d; color: #fff; white-space: nowrap; font-weight: 600; text-align: left; font-size: 1.15rem; }
         
-        .w-seq { width: 60px; text-align: center; }
-        .w-color { width: 200px; }
-        .w-model { width: 200px; }
+        .w-seq { width: 80px; text-align: center; }
+        .w-color { width: 220px; }
+        .w-model { width: 220px; }
 
-        input, select { background-color: #1e1e1e; color: #fff; border: 1px solid #444; border-radius: 0.25rem; padding: 0.5rem; width: 100%; outline: none; }
-        input:focus, select:focus { border-color: #3b82f6; }
+        input, select { background-color: #1e1e1e; color: #fff; border: 1px solid #555; border-radius: 0.375rem; padding: 0.75rem; width: 100%; outline: none; font-size: 1rem; transition: border-color 0.2s; }
+        input:focus, select:focus { border-color: #3b82f6; box-shadow: 0 0 0 1px #3b82f6; }
         
-        button { cursor: pointer; transition: background-color 0.2s; }
+        button { cursor: pointer; transition: all 0.2s; }
     </style>
 </head>
 <body class="min-h-screen p-4 md:p-8">
 
     <!-- 頂部導覽列 -->
-    <div class="flex justify-between items-center mb-6 pb-4 border-b border-gray-700">
-        <h1 class="text-2xl font-bold text-white flex items-center gap-2" data-i18n="appTitle">📊 烤漆作業順序看板</h1>
-        <div class="flex items-center gap-3">
-            <a href="烤漆順序管理.html" class="text-sm bg-gray-700 hover:bg-gray-600 text-green-400 px-3 py-1 rounded flex items-center gap-1">
+    <div class="flex justify-between items-center mb-8 pb-4 border-b border-gray-700">
+        <h1 class="text-3xl font-bold text-white flex items-center gap-3" data-i18n="appTitle">📊 烤漆作業順序看板</h1>
+        <div class="flex items-center gap-4">
+            <a href="烤漆順序管理_2.html" class="text-base bg-gray-700 hover:bg-gray-600 text-green-400 px-4 py-2 rounded-md flex items-center gap-2 shadow">
                 <i class="fa-solid fa-pen-to-square"></i> 切換至建立紀錄
             </a>
-            <span class="text-sm text-gray-400" data-i18n="langLabel">語言 / Ngôn ngữ:</span>
-            <select id="lang-switch" class="w-auto cursor-pointer">
-                <option value="zh">繁體中文</option>
-                <option value="vi">Tiếng Việt</option>
-            </select>
+            <div class="flex items-center gap-2">
+                <span class="text-sm text-gray-400" data-i18n="langLabel">語言 / Ngôn ngữ:</span>
+                <select id="lang-switch" class="w-auto cursor-pointer py-1.5 px-3 text-sm">
+                    <option value="zh">繁體中文</option>
+                    <option value="vi">Tiếng Việt</option>
+                </select>
+            </div>
         </div>
     </div>
 
-    <div class="grid grid-cols-1 gap-6">
+    <div class="grid grid-cols-1 gap-8">
 
         <!-- 區塊 1: 今日作業資料 (即時讀取看板) -->
-        <div class="card border-l-4 border-l-green-500 shadow-lg">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-xl font-bold text-green-400 flex items-center">
-                    <i class="fa-solid fa-calendar-day mr-2"></i><span data-i18n="todayTitle">今日作業資料</span>
-                    <span id="today-date-display" class="ml-2 text-white bg-gray-700 px-3 py-1 rounded text-base font-normal"></span>
+        <div class="card border-l-8 border-l-green-500 shadow-xl">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-green-400 flex items-center">
+                    <i class="fa-solid fa-calendar-day mr-3"></i><span data-i18n="todayTitle">今日作業資料</span>
+                    <span id="today-date-display" class="ml-4 text-white bg-gray-700 px-4 py-1.5 rounded-md text-xl font-medium tracking-wide"></span>
                 </h2>
-                <span class="text-xs text-gray-400"><i class="fa-solid fa-rotate animate-spin mr-1"></i>實時雲端同步中</span>
+                <span class="text-sm text-gray-400 bg-gray-800 px-3 py-1 rounded-full"><i class="fa-solid fa-rotate animate-spin mr-2"></i>實時雲端同步中</span>
             </div>
-            <div class="overflow-x-auto">
+            <div class="overflow-x-auto rounded-lg border border-gray-700">
+                <!-- 看板主體：字體加大，方便遠距離觀看 -->
                 <table>
                     <thead>
                         <tr>
-                            <th class="w-seq" data-i18n="thNo">序號</th>
-                            <th class="w-color" data-i18n="thColor">顏色</th>
-                            <th class="w-model" data-i18n="thModel">機型</th>
-                            <th data-i18n="thRemark">備註</th>
+                            <th class="w-seq py-4" data-i18n="thNo">序號</th>
+                            <th class="w-color py-4" data-i18n="thColor">顏色</th>
+                            <th class="w-model py-4" data-i18n="thModel">機型</th>
+                            <th class="py-4" data-i18n="thRemark">備註</th>
                         </tr>
                     </thead>
-                    <tbody id="today-tbody" class="text-base">
-                        <tr><td colspan="4" class="text-center text-gray-500 py-6" data-i18n="msgLoading">載入中...</td></tr>
+                    <tbody id="today-tbody" class="bg-[#1e1e1e]">
+                        <tr><td colspan="4" class="text-center text-gray-500 py-10 text-xl" data-i18n="msgLoading">載入中...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -73,28 +76,28 @@
 
         <!-- 區塊 2: 歷史記錄查詢 -->
         <div class="card border-l-4 border-l-blue-500">
-            <h2 class="text-lg font-bold text-blue-400 mb-4" data-i18n="searchTitle">🔍 歷史記錄查詢</h2>
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end mb-4">
+            <h2 class="text-xl font-bold text-blue-400 mb-6" data-i18n="searchTitle">🔍 歷史記錄查詢</h2>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-5 items-end mb-6">
                 <div>
-                    <label class="block text-xs text-gray-400 mb-1" data-i18n="lblDate">日期 (Ngày)</label>
+                    <label class="block text-sm text-gray-400 mb-2 font-medium" data-i18n="lblDate">日期 (Ngày)</label>
                     <input type="date" id="search-date">
                 </div>
                 <div>
-                    <label class="block text-xs text-gray-400 mb-1" data-i18n="lblColor">顏色 (Màu sắc)</label>
+                    <label class="block text-sm text-gray-400 mb-2 font-medium" data-i18n="lblColor">顏色 (Màu sắc)</label>
                     <input type="text" id="search-color" data-i18n-ph="phSearchColor" placeholder="輸入顏色查詢...">
                 </div>
                 <div>
-                    <label class="block text-xs text-gray-400 mb-1" data-i18n="lblModel">機型 (Model)</label>
+                    <label class="block text-sm text-gray-400 mb-2 font-medium" data-i18n="lblModel">機型 (Model)</label>
                     <input type="text" id="search-model" data-i18n-ph="phSearchModel" placeholder="輸入機型查詢...">
                 </div>
-                <div class="flex gap-2">
-                    <button id="btn-search" class="w-full bg-blue-600 hover:bg-blue-700 text-white p-2 rounded font-bold" data-i18n="btnSearch">查詢</button>
-                    <button id="btn-reset-search" class="w-full bg-gray-600 hover:bg-gray-700 text-white p-2 rounded" data-i18n="btnReset">重設</button>
+                <div class="flex gap-3">
+                    <button id="btn-search" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-md font-bold shadow-md text-lg" data-i18n="btnSearch">查詢</button>
+                    <button id="btn-reset-search" class="flex-1 bg-gray-600 hover:bg-gray-700 text-white p-3 rounded-md font-bold shadow-md text-lg" data-i18n="btnReset">重設</button>
                 </div>
             </div>
 
             <!-- 查詢結果表格 -->
-            <div class="overflow-x-auto">
+            <div class="overflow-x-auto rounded-lg border border-gray-700">
                 <table>
                     <thead>
                         <tr>
@@ -105,8 +108,8 @@
                             <th data-i18n="thRemark">備註</th>
                         </tr>
                     </thead>
-                    <tbody id="history-tbody">
-                        <tr><td colspan="5" class="text-center text-gray-500 py-4" data-i18n="msgNoData">請設定條件進行查詢</td></tr>
+                    <tbody id="history-tbody" class="bg-[#1e1e1e]">
+                        <tr><td colspan="5" class="text-center text-gray-500 py-8 text-lg" data-i18n="msgNoData">請設定條件進行查詢</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -188,18 +191,21 @@
                 if (snapshot.exists() && snapshot.val().length > 0) {
                     snapshot.val().forEach(item => {
                         const tr = document.createElement('tr');
-                        tr.className = "hover:bg-gray-800 transition-colors";
-                        const rmkStr = item.remarks ? item.remarks.join('<br>') : '';
+                        tr.className = "hover:bg-gray-800 transition-colors border-b border-gray-700";
+                        // 備註若有多筆，加大行距並以項目符號顯示會更清晰
+                        const rmkStr = item.remarks && item.remarks.length > 0 ? item.remarks.map(r => `<div class="mb-1 text-yellow-300">${r}</div>`).join('') : '';
+                        
+                        // 看板字體特大化
                         tr.innerHTML = `
-                            <td class="text-center font-bold text-green-400">${item.seqNo}</td>
-                            <td class="font-bold text-white">${item.color || ''}</td>
-                            <td class="font-bold text-white">${item.model || ''}</td>
-                            <td class="text-gray-300">${rmkStr}</td>
+                            <td class="text-center font-bold text-green-400 text-3xl py-4">${item.seqNo}</td>
+                            <td class="font-bold text-white text-2xl py-4 tracking-wider">${item.color || ''}</td>
+                            <td class="font-bold text-white text-2xl py-4 tracking-wider">${item.model || ''}</td>
+                            <td class="text-xl py-4 leading-relaxed">${rmkStr}</td>
                         `;
                         tbody.appendChild(tr);
                     });
                 } else {
-                    tbody.innerHTML = `<tr><td colspan="4" class="text-center text-gray-500 py-6">${i18n[currentLang].msgNoData}</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="4" class="text-center text-gray-500 py-10 text-xl">${i18n[currentLang].msgNoData}</td></tr>`;
                 }
             });
         }
@@ -211,7 +217,7 @@
             const sModel = document.getElementById('search-model').value.trim().toUpperCase();
             const tbody = document.getElementById('history-tbody');
             
-            tbody.innerHTML = `<tr><td colspan="5" class="text-center text-blue-400 py-4"><i class="fa-solid fa-spinner fa-spin"></i> ${i18n[currentLang].msgLoading}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center text-blue-400 py-8 text-lg"><i class="fa-solid fa-spinner fa-spin mr-2"></i> ${i18n[currentLang].msgLoading}</td></tr>`;
             
             try {
                 let results = [];
@@ -237,18 +243,18 @@
                 if (results.length > 0) {
                     results.forEach(r => {
                         const tr = document.createElement('tr');
-                        tr.className = "hover:bg-gray-700 transition-colors";
+                        tr.className = "hover:bg-gray-700 transition-colors text-lg";
                         tr.innerHTML = `
-                            <td class="text-blue-300 font-mono">${r.date}</td>
-                            <td class="text-center font-bold">${r.seqNo}</td>
-                            <td>${r.color||''}</td>
-                            <td>${r.model||''}</td>
-                            <td>${r.remarks ? r.remarks.join(' / ') : ''}</td>
+                            <td class="text-blue-300 font-mono tracking-wide py-3">${r.date}</td>
+                            <td class="text-center font-bold text-gray-200 py-3">${r.seqNo}</td>
+                            <td class="font-medium text-white py-3">${r.color||''}</td>
+                            <td class="font-medium text-white py-3">${r.model||''}</td>
+                            <td class="text-gray-300 py-3">${r.remarks ? r.remarks.join(' / ') : ''}</td>
                         `;
                         tbody.appendChild(tr);
                     });
                 } else {
-                    tbody.innerHTML = `<tr><td colspan="5" class="text-center text-gray-500 py-4">${i18n[currentLang].msgNoData}</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="5" class="text-center text-gray-500 py-8 text-lg">${i18n[currentLang].msgNoData}</td></tr>`;
                 }
             } catch (err) {
                 alert(`搜尋失敗: ${err.message}`);
@@ -259,7 +265,7 @@
             document.getElementById('search-date').value = '';
             document.getElementById('search-color').value = '';
             document.getElementById('search-model').value = '';
-            document.getElementById('history-tbody').innerHTML = `<tr><td colspan="5" class="text-center text-gray-500 py-4">${i18n[currentLang].msgNoData}</td></tr>`;
+            document.getElementById('history-tbody').innerHTML = `<tr><td colspan="5" class="text-center text-gray-500 py-8 text-lg">${i18n[currentLang].msgNoData}</td></tr>`;
         });
 
         document.addEventListener('DOMContentLoaded', () => {

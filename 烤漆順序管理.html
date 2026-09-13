@@ -1,613 +1,666 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title data-i18n="title">烤漆順序作業系統</title>
-<!-- 引入 Firebase v8 Compat SDK -->
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-<style>
-    :root {
-        --primary: #007acc;
-        --bg-color: #f5f5f5;
-        --card-bg: #ffffff;
-        --text-main: #333333;
-        --border-color: #dddddd;
-        --success: #2ea043;
-        --danger: #da3633;
-    }
-    
-    * {
-        box-sizing: border-box;
-        font-family: 'Segoe UI', 'Microsoft JhengHei', sans-serif;
-    }
-    
-    body {
-        margin: 0;
-        padding: 20px;
-        background-color: var(--bg-color);
-        color: var(--text-main);
-        /* 強制資料向下延伸，不使用固定高度與內部滾動軸 */
-        height: auto;
-        overflow-y: visible; 
-    }
-
-    .header-bar {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 20px;
-        flex-wrap: wrap;
-        gap: 10px;
-    }
-
-    h2 { margin: 0; color: var(--primary); }
-
-    .btn {
-        padding: 8px 16px;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        font-weight: bold;
-        transition: 0.2s;
-        font-size: 14px;
-    }
-    .btn-primary { background-color: var(--primary); color: white; }
-    .btn-success { background-color: var(--success); color: white; }
-    .btn-lang { background-color: #444; color: white; }
-    .btn-icon { padding: 4px 8px; font-size: 16px; }
-
-    .card {
-        background: var(--card-bg);
-        border: 1px solid var(--border-color);
-        border-radius: 8px;
-        padding: 20px;
-        margin-bottom: 20px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-        height: auto;
-        overflow: visible;
-    }
-
-    .form-row {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 15px;
-        align-items: flex-start;
-        margin-bottom: 15px;
-    }
-
-    .form-group {
-        display: flex;
-        flex-direction: column;
-        flex-grow: 1;
-        min-width: 120px;
-    }
-
-    label { font-size: 13px; font-weight: bold; margin-bottom: 5px; color: #555; }
-    input, select {
-        padding: 8px 10px;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-        font-size: 14px;
-        width: 100%;
-    }
-    
-    .remarks-container {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-    }
-    .remark-row {
-        display: flex;
-        gap: 5px;
-    }
-
-    /* 表格設計：自適應寬度，文字自動換行 */
-    table {
-        width: 100%;
-        border-collapse: collapse;
-        table-layout: auto;
-    }
-    th, td {
-        border: 1px solid var(--border-color);
-        padding: 10px;
-        text-align: left;
-        font-size: 14px;
-        word-break: break-all;
-    }
-    th { background-color: #eeeeee; font-weight: bold; }
-    tr:nth-child(even) { background-color: #fafafa; }
-
-    .system-msg {
-        margin-top: 10px;
-        font-size: 13px;
-        font-weight: bold;
-    }
-
-    @media (max-width: 768px) {
-        .form-row { flex-direction: column; }
-        .form-group { width: 100%; }
-        table, thead, tbody, th, td, tr { display: block; }
-        thead tr { position: absolute; top: -9999px; left: -9999px; }
-        tr { margin-bottom: 15px; border: 1px solid #ccc; border-radius: 6px; }
-        td { border: none; border-bottom: 1px solid #eee; position: relative; padding-left: 40%; }
-        td::before {
-            content: attr(data-label);
-            position: absolute;
-            left: 10px;
-            width: 35%;
-            white-space: nowrap;
-            font-weight: bold;
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>烤漆作業排程系統 | Hệ thống Lịch trình Sơn</title>
+    <!-- 引入 FontAwesome 圖示 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-main: #121212;
+            --bg-card: #1e1e1e;
+            --bg-input: #2d2d2d;
+            --text-main: #e0e0e0;
+            --text-muted: #9e9e9e;
+            --border-color: #333;
+            --primary: #4caf50;
+            --primary-hover: #45a049;
+            --danger: #f44336;
+            --danger-hover: #da190b;
+            --info: #2196f3;
         }
-    }
-</style>
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif, 'Microsoft JhengHei'; background-color: var(--bg-main); color: var(--text-main); line-height: 1.6; }
+        
+        /* 頂部導覽 */
+        .navbar { background-color: var(--bg-card); padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); }
+        .navbar h2 { font-size: 1.2rem; display: flex; align-items: center; gap: 10px; }
+        
+        .controls { display: flex; gap: 15px; }
+        select, input, button { font-family: inherit; font-size: 0.95rem; }
+        .lang-switch { padding: 6px 10px; background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 4px; cursor: pointer; }
+
+        /* 標籤頁切換 */
+        .tabs { display: flex; gap: 10px; padding: 20px 20px 0; max-width: 1400px; margin: 0 auto; }
+        .tab-btn { background: var(--bg-card); border: 1px solid var(--border-color); border-bottom: none; color: var(--text-muted); padding: 10px 20px; cursor: pointer; border-radius: 6px 6px 0 0; font-weight: bold; }
+        .tab-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+        /* 內容區塊 */
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        .section { display: none; background: var(--bg-card); padding: 20px; border-radius: 0 6px 6px 6px; border: 1px solid var(--border-color); margin-bottom: 20px; }
+        .section.active { display: block; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .section-header { margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid var(--border-color); color: var(--info); font-size: 1.1rem; font-weight: bold; display: flex; justify-content: space-between; }
+
+        /* 表格設定 - 取消滾動軸，向下拉伸適應 */
+        .table-responsive { width: 100%; overflow: visible; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; table-layout: auto; }
+        th, td { border: 1px solid var(--border-color); padding: 10px; text-align: left; vertical-align: top; }
+        th { background: #252526; color: #fff; white-space: nowrap; }
+        td { background: #1a1a1a; }
+        
+        /* 欄寬比例 */
+        .col-seq { width: 60px; text-align: center; font-weight: bold; color: var(--info); }
+        .col-color, .col-model { width: 220px; }
+        .col-action { width: 80px; text-align: center; }
+
+        /* 輸入元件 */
+        input.form-control, select.form-control { width: 100%; padding: 8px; background: var(--bg-input); border: 1px solid var(--border-color); color: #fff; border-radius: 4px; outline: none; }
+        input.form-control:focus { border-color: var(--info); }
+        
+        /* 備註欄位設計 */
+        .remark-group { display: flex; flex-direction: column; gap: 5px; }
+        .remark-item { display: flex; gap: 5px; }
+        .btn-icon { background: var(--info); color: white; border: none; width: 34px; height: 34px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .btn-icon.del { background: var(--danger); }
+        .btn-icon:hover { opacity: 0.8; }
+
+        /* 按鈕樣式 */
+        .btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; display: inline-flex; align-items: center; gap: 5px; color: white; }
+        .btn-primary { background: var(--primary); }
+        .btn-primary:hover { background: var(--primary-hover); }
+        .btn-danger { background: var(--danger); }
+        .btn-danger:hover { background: var(--danger-hover); }
+        
+        .mt-3 { margin-top: 15px; }
+        .text-center { text-align: center; }
+        
+        /* 歷史查詢區塊 */
+        .search-bar { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .search-bar label { display: block; margin-bottom: 5px; font-size: 0.9rem; color: var(--text-muted); }
+
+        /* Toast 提示通知 */
+        #toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
+        .toast { background: var(--primary); color: white; padding: 12px 20px; border-radius: 4px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); display: flex; align-items: center; gap: 10px; animation: slideIn 0.3s forwards; }
+        .toast.error { background: var(--danger); }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; transform: translateY(-10px); } }
+    </style>
 </head>
 <body>
 
-<div class="header-bar">
-    <h2 data-i18n="title">烤漆順序作業系統</h2>
-    <button class="btn btn-lang" onclick="toggleLanguage()" id="lang-btn">🇻🇳 切換至越南文</button>
-</div>
+    <!-- 頂部導航 -->
+    <div class="navbar">
+        <h2><i class="fa-solid fa-paint-roller"></i> <span data-i18n="appTitle">烤漆順序紀錄系統</span></h2>
+        <div class="controls">
+            <select id="lang-select" class="lang-switch">
+                <option value="zh">繁體中文</option>
+                <option value="vi">Tiếng Việt</option>
+            </select>
+        </div>
+    </div>
 
-<!-- 當天與排程輸入區 -->
-<div class="card">
-    <h3 style="margin-top:0;" data-i18n="scheduleTitle">新增烤漆作業程序</h3>
-    <div class="form-row">
-        <div class="form-group" style="max-width: 80px;">
-            <label data-i18n="serial">序號</label>
-            <input type="number" id="input-serial" readonly>
+    <!-- 標籤頁 -->
+    <div class="tabs">
+        <button class="tab-btn active" id="tab-main" data-i18n="tabMain">主頁與排程</button>
+        <button class="tab-btn" id="tab-history" data-i18n="tabHistory">歷史記錄查詢</button>
+    </div>
+
+    <div class="container">
+        <!-- 區塊：主頁與排程 -->
+        <div id="view-main" class="section active">
+            
+            <!-- 當日唯讀資料 -->
+            <div class="section-header">
+                <span><i class="fa-regular fa-calendar-check"></i> <span data-i18n="todayDataTitle">今日作業資料</span> - <span id="display-today-date" style="color:white;"></span></span>
+            </div>
+            <div class="table-responsive" style="margin-bottom: 30px;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="col-seq" data-i18n="colSeq">序號</th>
+                            <th class="col-color" data-i18n="colColor">顏色</th>
+                            <th class="col-model" data-i18n="colModel">機型</th>
+                            <th data-i18n="colRemarks">備註欄</th>
+                        </tr>
+                    </thead>
+                    <tbody id="today-tbody">
+                        <tr><td colspan="4" class="text-center text-muted" data-i18n="loading">載入中...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 次日排程編輯 -->
+            <div class="section-header mt-3">
+                <span><i class="fa-solid fa-clipboard-list"></i> <span data-i18n="nextDataTitle">隔天日期烤漆作業程序</span> - <span id="display-next-date" style="color:#ffeb3b;"></span></span>
+                <span id="sync-status" style="font-size: 0.85rem; color: var(--text-muted); font-weight: normal;"><i class="fa-solid fa-cloud"></i> <span data-i18n="cloudSync">Firebase 即時同步中</span></span>
+            </div>
+            <div class="table-responsive">
+                <table id="schedule-table">
+                    <thead>
+                        <tr>
+                            <th class="col-seq" data-i18n="colSeq">序號</th>
+                            <th class="col-color" data-i18n="colColor">顏色</th>
+                            <th class="col-model" data-i18n="colModel">機型</th>
+                            <th data-i18n="colRemarks">備註欄</th>
+                            <th class="col-action" data-i18n="colAction">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="next-tbody">
+                        <!-- 動態產生 -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="mt-3" style="display: flex; gap: 10px;">
+                <button class="btn btn-primary" id="btn-add-row"><i class="fa-solid fa-plus"></i> <span data-i18n="btnAddRow">新增下一筆資料</span></button>
+                <button class="btn btn-info" id="btn-save-all" style="background:var(--info);"><i class="fa-solid fa-floppy-disk"></i> <span data-i18n="btnSaveAll">儲存至雲端</span></button>
+            </div>
         </div>
-        <div class="form-group">
-            <label data-i18n="date">日期</label>
-            <input type="text" id="input-date" readonly placeholder="自動計算隔天工作日">
-        </div>
-        <div class="form-group">
-            <label data-i18n="color">顏色</label>
-            <input type="text" id="input-color" list="color-list" placeholder="選擇或手動輸入">
-            <datalist id="color-list"></datalist>
-        </div>
-        <div class="form-group">
-            <label data-i18n="model">機型</label>
-            <input type="text" id="input-model" list="model-list" placeholder="選擇或手動輸入">
-            <datalist id="model-list"></datalist>
-        </div>
-        <div class="form-group" style="flex-grow: 2;">
-            <label data-i18n="remarks">備註 <button class="btn btn-primary btn-icon" onclick="addRemarkField()">+</button></label>
-            <div id="remarks-container" class="remarks-container">
-                <div class="remark-row"><input type="text" class="remark-input"></div>
+
+        <!-- 區塊：歷史紀錄查詢 -->
+        <div id="view-history" class="section">
+            <div class="section-header">
+                <span><i class="fa-solid fa-magnifying-glass"></i> <span data-i18n="searchTitle">歷史記錄查詢</span></span>
+            </div>
+            
+            <form id="search-form" class="search-bar">
+                <div>
+                    <label data-i18n="searchDate">日期</label>
+                    <input type="date" id="search-date" class="form-control">
+                </div>
+                <div>
+                    <label data-i18n="searchColor">顏色</label>
+                    <input type="text" id="search-color" class="form-control" list="color-datalist" data-i18n-placeholder="placeholderColor">
+                </div>
+                <div>
+                    <label data-i18n="searchModel">機型</label>
+                    <input type="text" id="search-model" class="form-control" list="model-datalist" data-i18n-placeholder="placeholderModel">
+                </div>
+                <div style="display: flex; align-items: flex-end; gap:10px;">
+                    <button type="submit" class="btn btn-primary" style="width: 100%; height: 38px; justify-content: center;"><i class="fa-solid fa-search"></i> <span data-i18n="btnSearch">查詢</span></button>
+                </div>
+            </form>
+
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th data-i18n="colDate">日期</th>
+                            <th class="col-seq" data-i18n="colSeq">序號</th>
+                            <th class="col-color" data-i18n="colColor">顏色</th>
+                            <th class="col-model" data-i18n="colModel">機型</th>
+                            <th data-i18n="colRemarks">備註欄</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-tbody">
+                        <tr><td colspan="5" class="text-center text-muted" data-i18n="noData">暫無資料 / 請輸入條件查詢</td></tr>
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
-    <div class="form-row" style="justify-content: flex-end; align-items: center;">
-        <span id="save-msg" class="system-msg"></span>
-        <button class="btn btn-success" style="margin-left: 15px;" onclick="saveRecord()" data-i18n="addRecord">➕ 加入下一筆資料</button>
-    </div>
-</div>
 
-<!-- 當天作業資料顯示 -->
-<div class="card">
-    <h3 style="margin-top:0;" data-i18n="todayData">當天日期作業資料</h3>
-    <table>
-        <thead>
-            <tr>
-                <th data-i18n="serial">序號</th>
-                <th data-i18n="date">日期</th>
-                <th data-i18n="color">顏色</th>
-                <th data-i18n="model">機型</th>
-                <th data-i18n="remarks">備註</th>
-            </tr>
-        </thead>
-        <tbody id="today-table-body">
-            <tr><td colspan="5" style="text-align:center;" data-i18n="loading">載入中...</td></tr>
-        </tbody>
-    </table>
-</div>
+    <!-- 支援原生下拉與搜尋的 Datalist (全局共用) -->
+    <datalist id="color-datalist"></datalist>
+    <datalist id="model-datalist"></datalist>
 
-<!-- 歷史記錄查詢 -->
-<div class="card">
-    <h3 style="margin-top:0;" data-i18n="historyTitle">歷史記錄查詢</h3>
-    <div class="form-row">
-        <div class="form-group">
-            <label data-i18n="searchDate">查詢日期 (YYYY-MM-DD)</label>
-            <input type="date" id="search-date">
-        </div>
-        <div class="form-group">
-            <label data-i18n="searchColor">查詢顏色</label>
-            <input type="text" id="search-color">
-        </div>
-        <div class="form-group">
-            <label data-i18n="searchModel">查詢機型</label>
-            <input type="text" id="search-model">
-        </div>
-        <div class="form-group" style="justify-content: flex-end;">
-            <button class="btn btn-primary" onclick="queryHistory()" data-i18n="searchBtn">🔍 查詢</button>
-        </div>
-    </div>
-    <table>
-        <thead>
-            <tr>
-                <th data-i18n="serial">序號</th>
-                <th data-i18n="date">日期</th>
-                <th data-i18n="color">顏色</th>
-                <th data-i18n="model">機型</th>
-                <th data-i18n="remarks">備註</th>
-            </tr>
-        </thead>
-        <tbody id="history-table-body">
-            <tr><td colspan="5" style="text-align:center;" data-i18n="noData">尚無資料</td></tr>
-        </tbody>
-    </table>
-</div>
+    <!-- Toast 通知容器 -->
+    <div id="toast-container"></div>
 
-<script>
-/* ==================== 1. Firebase 核心初始化 ==================== */
-const firebaseConfig = {
-    apiKey: "AIzaSyBvx7Ej2h9ZV5S1t_Gag756qop_jcoxy2U",
-    authDomain: "shopee-60a13.firebaseapp.com",
-    databaseURL: "https://shopee-60a13-default-rtdb.firebaseio.com",
-    projectId: "shopee-60a13",
-    storageBucket: "shopee-60a13.firebasestorage.app",
-    messagingSenderId: "18436404849",
-    appId: "1:18436404849:web:f2bdfa4189ff15456fcdd0"
-};
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
+    <!-- Firebase v10 SDK (ES Modules) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getDatabase, ref, onValue, set, get, update } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
 
-/* ==================== 2. 多國語言 (i18n) 字典 ==================== */
-let currentLang = 'zh';
-const i18n = {
-    'zh': {
-        title: '烤漆順序作業系統',
-        scheduleTitle: '新增烤漆作業程序',
-        todayData: '當天日期作業資料',
-        addRecord: '➕ 加入下一筆資料',
-        serial: '序號',
-        date: '日期',
-        color: '顏色',
-        model: '機型',
-        remarks: '備註',
-        saveSuccess: '✅ 儲存成功並同步至雲端',
-        saveFail: '❌ 儲存失敗：',
-        historyTitle: '歷史記錄查詢',
-        searchDate: '查詢日期',
-        searchColor: '查詢顏色',
-        searchModel: '查詢機型',
-        searchBtn: '🔍 查詢',
-        loading: '載入中...',
-        noData: '尚無資料',
-        colorPlaceholder: '選擇或手動輸入',
-        modelPlaceholder: '選擇或手動輸入',
-        datePlaceholder: '自動計算隔天工作日',
-        toggleBtn: '🇻🇳 切換至越南文'
-    },
-    'vi': {
-        title: 'Hệ thống quy trình sơn',
-        scheduleTitle: 'Thêm quy trình sơn',
-        todayData: 'Dữ liệu công việc hôm nay',
-        addRecord: '➕ Thêm bản ghi tiếp theo',
-        serial: 'STT',
-        date: 'Ngày',
-        color: 'Màu sắc',
-        model: 'Mẫu máy',
-        remarks: 'Ghi chú',
-        saveSuccess: '✅ Lưu và đồng bộ thành công',
-        saveFail: '❌ Lưu thất bại: ',
-        historyTitle: 'Truy vấn lịch sử',
-        searchDate: 'Tìm theo ngày',
-        searchColor: 'Tìm theo màu',
-        searchModel: 'Tìm theo mẫu máy',
-        searchBtn: '🔍 Tìm kiếm',
-        loading: 'Đang tải...',
-        noData: 'Không có dữ liệu',
-        colorPlaceholder: 'Chọn hoặc nhập thủ công',
-        modelPlaceholder: 'Chọn hoặc nhập thủ công',
-        datePlaceholder: 'Tự động tính ngày làm việc tiếp',
-        toggleBtn: '🇹🇼 切換至繁體中文'
-    }
-};
+        // ==========================================
+        // 1. 系統設定與 Firebase 參數
+        // ==========================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyBvx7Ej2h9ZV5S1t_Gag756qop_jcoxy2U",
+            authDomain: "shopee-60a13.firebaseapp.com",
+            databaseURL: "https://shopee-60a13-default-rtdb.firebaseio.com",
+            projectId: "shopee-60a13",
+            storageBucket: "shopee-60a13.firebasestorage.app",
+            messagingSenderId: "18436404849",
+            appId: "1:18436404849:web:f2bdfa4189ff15456fcdd0"
+        };
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
 
-function toggleLanguage() {
-    currentLang = currentLang === 'zh' ? 'vi' : 'zh';
-    document.getElementById('lang-btn').innerText = i18n[currentLang].toggleBtn;
-    
-    // 替換所有具備 data-i18n 屬性的標籤內容
-    document.querySelectorAll('[data-i18n]').forEach(el => {
-        const key = el.getAttribute('data-i18n');
-        if (i18n[currentLang][key]) {
-            if(el.tagName.toLowerCase() === 'input' && el.type !== 'button') {
-                // 不動 value，僅動態結構
-            } else {
-                // 保留內部包含的按鈕 (如備註旁邊的 + 號)
-                if(el.querySelector('button')) {
-                    const btnHtml = el.querySelector('button').outerHTML;
-                    el.innerHTML = i18n[currentLang][key] + ' ' + btnHtml;
-                } else {
-                    el.innerText = i18n[currentLang][key];
+        // 預設顏色 (修正空逗號防錯)
+        const defaultColors = ["WE","YW","GYW","YWH","BKEBK","BKH","BKS","BKS1","BKS5","BKSA","BKSA1","OE","GN","FGN","PELBE","BEG","DBE","IG","IGS","DGS","ATG","GAST","PK","RD","SAT2"];
+        let dbColors = [...defaultColors];
+        let dbModels = [];
+        
+        let dateToday = {};
+        let dateNext = {};
+        
+        // ==========================================
+        // 2. 多國語系 (i18n) 字典設定
+        // ==========================================
+        let currentLang = 'zh';
+        const i18n = {
+            zh: {
+                appTitle: "烤漆順序紀錄系統",
+                tabMain: "主頁與排程",
+                tabHistory: "歷史記錄查詢",
+                todayDataTitle: "主頁面讀取當天日期作業資料",
+                nextDataTitle: "隔天日期烤漆作業程序",
+                colSeq: "序號",
+                colColor: "顏色 (下拉/手動輸入)",
+                colModel: "機型 (下拉/手動輸入)",
+                colRemarks: "備註欄 (按+新增)",
+                colAction: "操作",
+                colDate: "日期",
+                btnAddRow: "新增下一筆資料",
+                btnSaveAll: "儲存至雲端即時同步",
+                searchTitle: "歷史記錄查詢",
+                searchDate: "日期",
+                searchColor: "顏色",
+                searchModel: "機型",
+                btnSearch: "查詢",
+                loading: "載入資料中...",
+                noData: "無符合條件的資料",
+                cloudSync: "Firebase 雲端連線中",
+                placeholderColor: "選擇或輸入顏色...",
+                placeholderModel: "選擇或輸入機型...",
+                placeholderRemark: "輸入備註...",
+                toastSaveSuccess: "儲存成功！資料已同步至雲端。",
+                toastSaveError: "儲存失敗，請檢查網路狀態。",
+                toastEmptyWarn: "請至少填寫一筆有效資料才能儲存。",
+                toastSearchSuccess: "查詢完成！"
+            },
+            vi: {
+                appTitle: "Hệ thống Quản lý Thứ tự Sơn",
+                tabMain: "Trang chủ & Lịch trình",
+                tabHistory: "Tra cứu lịch sử",
+                todayDataTitle: "Dữ liệu công việc hôm nay",
+                nextDataTitle: "Quy trình sơn ngày hôm sau",
+                colSeq: "STT",
+                colColor: "Màu sắc (Chọn/Nhập)",
+                colModel: "Model (Chọn/Nhập)",
+                colRemarks: "Ghi chú (+ Thêm)",
+                colAction: "Thao tác",
+                colDate: "Ngày",
+                btnAddRow: "Thêm dữ liệu tiếp theo",
+                btnSaveAll: "Lưu & Đồng bộ Đám mây",
+                searchTitle: "Tra cứu lịch sử",
+                searchDate: "Ngày",
+                searchColor: "Màu sắc",
+                searchModel: "Model",
+                btnSearch: "Tìm kiếm",
+                loading: "Đang tải dữ liệu...",
+                noData: "Không có dữ liệu phù hợp",
+                cloudSync: "Đang kết nối Firebase",
+                placeholderColor: "Chọn hoặc nhập màu...",
+                placeholderModel: "Chọn hoặc nhập model...",
+                placeholderRemark: "Nhập ghi chú...",
+                toastSaveSuccess: "Lưu thành công! Đã đồng bộ lên đám mây.",
+                toastSaveError: "Lưu thất bại, vui lòng kiểm tra mạng.",
+                toastEmptyWarn: "Vui lòng nhập ít nhất một dòng dữ liệu hợp lệ.",
+                toastSearchSuccess: "Tìm kiếm hoàn tất!"
+            }
+        };
+
+        const weekMap = {
+            zh: ["週日", "週一", "週二", "週三", "週四", "週五", "週六"],
+            vi: ["CN", "Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy"]
+        };
+
+        // 台灣例假日與國定假日 (MM-DD格式，每年可自行擴充)
+        const holidays = ["01-01", "02-28", "04-04", "04-05", "05-01", "10-10", "12-31"];
+
+        // ==========================================
+        // 3. 核心工具與日期計算
+        // ==========================================
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            const icon = type === 'success' ? 'fa-circle-check' : 'fa-circle-exclamation';
+            toast.innerHTML = `<i class="fa-solid ${icon}"></i> <span>${message}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.animation = 'fadeOut 0.3s forwards';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        function switchLanguage(lang) {
+            currentLang = lang;
+            const dict = i18n[lang];
+            
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (dict[key]) el.innerText = dict[key];
+            });
+
+            document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+                const key = el.getAttribute('data-i18n-placeholder');
+                if (dict[key]) el.placeholder = dict[key];
+            });
+
+            updateDateDisplays();
+        }
+
+        function calculateDates() {
+            const t = new Date();
+            const formatDB = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            const formatMMDD = (d) => `${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            
+            // 今日
+            dateToday = {
+                obj: t,
+                dbStr: formatDB(t)
+            };
+
+            // 隔天 (略過休假、週末、國定假日)
+            let n = new Date(t);
+            while (true) {
+                n.setDate(n.getDate() + 1);
+                let w = n.getDay();
+                let md = formatMMDD(n);
+                if (w !== 0 && w !== 6 && !holidays.includes(md)) {
+                    break;
                 }
             }
-        }
-    });
-
-    // 替換 Placeholders
-    document.getElementById('input-color').placeholder = i18n[currentLang].colorPlaceholder;
-    document.getElementById('input-model').placeholder = i18n[currentLang].modelPlaceholder;
-    document.getElementById('input-date').placeholder = i18n[currentLang].datePlaceholder;
-
-    renderTodayTable(); // 重新渲染表格的 data-label (RWD 用)
-}
-
-/* ==================== 3. 智能日期運算引擎 ==================== */
-// 2026 國定假日與休假日陣列 (可擴充)
-const holidays2026 = [
-    "2026-01-01", "2026-02-16", "2026-02-17", "2026-02-18", 
-    "2026-02-19", "2026-02-20", "2026-02-28", "2026-04-03", 
-    "2026-04-06", "2026-05-01", "2026-06-19", "2026-09-25", "2026-10-09"
-];
-
-function isHoliday(dateObj) {
-    const day = dateObj.getDay();
-    if (day === 0 || day === 6) return true; // 週末休假
-    const iso = dateObj.getFullYear() + "-" + String(dateObj.getMonth() + 1).padStart(2, '0') + "-" + String(dateObj.getDate()).padStart(2, '0');
-    return holidays2026.includes(iso);
-}
-
-function getNextWorkingDayObj(baseDateObj) {
-    let d = new Date(baseDateObj);
-    do {
-        d.setDate(d.getDate() + 1);
-    } while (isHoliday(d));
-    return d;
-}
-
-function formatDisplayDate(dateObj) {
-    const m = String(dateObj.getMonth() + 1).padStart(2, '0');
-    const d = String(dateObj.getDate()).padStart(2, '0');
-    const wd = dateObj.getDay();
-    const weekdaysZH = ['日', '一', '二', '三', '四', '五', '六'];
-    const weekdaysVI = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
-    const wStr = currentLang === 'vi' ? weekdaysVI[wd] : weekdaysZH[wd];
-    return `${m}/${d}(${wStr})`;
-}
-
-function getIsoDate(dateObj) {
-    return dateObj.getFullYear() + "-" + String(dateObj.getMonth() + 1).padStart(2, '0') + "-" + String(dateObj.getDate()).padStart(2, '0');
-}
-
-// 系統核心狀態變數
-let globalLatestDateObj = new Date();
-let todayIso = getIsoDate(new Date());
-let nextSerialNumber = 1;
-let todayRecords = [];
-let cachedColors = [];
-let cachedModels = [];
-
-/* ==================== 4. 系統初始化與動態選單綁定 ==================== */
-const defaultColors = ["WE","YW","GYW","YWH","BKEBK","BKH","BKS","BKS1","BKS5","BKSA","BKSA1","OE","GN","FGN","PELBE","BEG","DBE","IG","IGS","DGS","ATG","GAST","PK","RD","SAT2"];
-
-function initSettings() {
-    // 初始化顏色
-    db.ref('settings/colors').on('value', snap => {
-        let colors = snap.val();
-        if (!colors) {
-            colors = defaultColors;
-            db.ref('settings/colors').set(colors);
-        }
-        cachedColors = colors;
-        const datalist = document.getElementById('color-list');
-        datalist.innerHTML = '';
-        colors.forEach(c => {
-            const opt = document.createElement('option');
-            opt.value = c;
-            datalist.appendChild(opt);
-        });
-    });
-
-    // 初始化機型
-    db.ref('settings/models').on('value', snap => {
-        let models = snap.val() || [];
-        cachedModels = models;
-        const datalist = document.getElementById('model-list');
-        datalist.innerHTML = '';
-        models.forEach(m => {
-            const opt = document.createElement('option');
-            opt.value = m;
-            datalist.appendChild(opt);
-        });
-    });
-}
-
-function calculateNextFormState() {
-    const nextDateObj = getNextWorkingDayObj(globalLatestDateObj);
-    document.getElementById('input-date').value = formatDisplayDate(nextDateObj);
-    document.getElementById('input-date').dataset.iso = getIsoDate(nextDateObj);
-    document.getElementById('input-serial').value = nextSerialNumber;
-}
-
-/* ==================== 5. 動態備註欄位 ==================== */
-function addRemarkField() {
-    const container = document.getElementById('remarks-container');
-    const div = document.createElement('div');
-    div.className = 'remark-row';
-    div.innerHTML = `<input type="text" class="remark-input">`;
-    container.appendChild(div);
-}
-
-/* ==================== 6. 雲端資料同步寫入 ==================== */
-function saveRecord() {
-    const serial = parseInt(document.getElementById('input-serial').value);
-    const dateDisp = document.getElementById('input-date').value;
-    const dateIso = document.getElementById('input-date').dataset.iso;
-    const color = document.getElementById('input-color').value.trim().toUpperCase();
-    const model = document.getElementById('input-model').value.trim().toUpperCase();
-    
-    // 收集備註
-    const remarks = [];
-    document.querySelectorAll('.remark-input').forEach(input => {
-        if(input.value.trim() !== '') remarks.push(input.value.trim());
-    });
-
-    if(!color) {
-        alert(currentLang === 'vi' ? 'Vui lòng nhập màu sắc!' : '請輸入顏色！');
-        return;
-    }
-
-    const recordData = {
-        serial: serial,
-        dateDisplay: dateDisp,
-        dateIso: dateIso,
-        color: color,
-        model: model,
-        remarks: remarks,
-        timestamp: firebase.database.ServerValue.TIMESTAMP
-    };
-
-    // 寫入 Firebase
-    const newRef = db.ref('paint_jobs/' + dateIso).push();
-    newRef.set(recordData).then(() => {
-        const msgEl = document.getElementById('save-msg');
-        msgEl.innerText = i18n[currentLang].saveSuccess;
-        msgEl.style.color = 'var(--success)';
-        setTimeout(() => { msgEl.innerText = ''; }, 3000);
-
-        // 自動學習新顏色與機型
-        if (color && !cachedColors.includes(color)) {
-            cachedColors.push(color);
-            db.ref('settings/colors').set(cachedColors);
-        }
-        if (model && !cachedModels.includes(model)) {
-            cachedModels.push(model);
-            db.ref('settings/models').set(cachedModels);
+            dateNext = {
+                obj: n,
+                dbStr: formatDB(n)
+            };
         }
 
-        // 更新狀態，推進至下一天工作日
-        globalLatestDateObj = new Date(dateIso);
-        nextSerialNumber++;
+        function updateDateDisplays() {
+            const getDisplay = (dateObj) => {
+                const yyyy = dateObj.getFullYear();
+                const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+                const dd = String(dateObj.getDate()).padStart(2, '0');
+                const weekStr = weekMap[currentLang][dateObj.getDay()];
+                return `${yyyy}/${mm}/${dd} (${weekStr})`;
+            };
+            document.getElementById('display-today-date').innerText = getDisplay(dateToday.obj);
+            document.getElementById('display-next-date').innerText = getDisplay(dateNext.obj);
+        }
+
+        // ==========================================
+        // 4. UI 渲染與事件綁定
+        // ==========================================
         
-        // 重置表單
-        document.getElementById('input-color').value = '';
-        document.getElementById('input-model').value = '';
-        document.getElementById('remarks-container').innerHTML = `<div class="remark-row"><input type="text" class="remark-input"></div>`;
-        calculateNextFormState();
+        // 渲染 Datalist (下拉選單)
+        function updateDatalists() {
+            const cList = document.getElementById('color-datalist');
+            const mList = document.getElementById('model-datalist');
+            cList.innerHTML = dbColors.map(c => `<option value="${c}">`).join('');
+            mList.innerHTML = dbModels.map(m => `<option value="${m}">`).join('');
+        }
 
-    }).catch(err => {
-        const msgEl = document.getElementById('save-msg');
-        msgEl.innerText = i18n[currentLang].saveFail + err.message;
-        msgEl.style.color = 'var(--danger)';
-    });
-}
-
-/* ==================== 7. 讀取當日作業資料 ==================== */
-function listenTodayData() {
-    db.ref('paint_jobs/' + todayIso).on('value', snap => {
-        todayRecords = [];
-        const data = snap.val();
-        if (data) {
-            let maxSerial = 0;
-            Object.keys(data).forEach(key => {
-                const item = data[key];
-                todayRecords.push(item);
-                if(item.serial > maxSerial) maxSerial = item.serial;
+        // 重新計算序號
+        function recalculateSeq() {
+            const rows = document.querySelectorAll('#next-tbody tr');
+            rows.forEach((row, index) => {
+                row.querySelector('.seq-cell').innerText = index + 1;
             });
-            // 確保系統一啟動時序號接續當日最大值
-            if (nextSerialNumber === 1 && maxSerial > 0) {
-                nextSerialNumber = maxSerial + 1;
-                document.getElementById('input-serial').value = nextSerialNumber;
-            }
-            // 依照序號排序
-            todayRecords.sort((a,b) => a.serial - b.serial);
         }
-        renderTodayTable();
-    });
-}
 
-function renderTodayTable() {
-    const tbody = document.getElementById('today-table-body');
-    if (todayRecords.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">${i18n[currentLang].noData}</td></tr>`;
-        return;
-    }
-    
-    let html = '';
-    todayRecords.forEach(r => {
-        html += `<tr>
-            <td data-label="${i18n[currentLang].serial}">${r.serial}</td>
-            <td data-label="${i18n[currentLang].date}">${r.dateDisplay}</td>
-            <td data-label="${i18n[currentLang].color}">${r.color}</td>
-            <td data-label="${i18n[currentLang].model}">${r.model}</td>
-            <td data-label="${i18n[currentLang].remarks}">${(r.remarks || []).join('<br>')}</td>
-        </tr>`;
-    });
-    tbody.innerHTML = html;
-}
+        // 新增次日草稿的一列資料 (支援載入舊資料)
+        function addScheduleRow(data = null) {
+            const tbody = document.getElementById('next-tbody');
+            const tr = document.createElement('tr');
+            
+            const colorVal = data && data.color ? data.color : '';
+            const modelVal = data && data.model ? data.model : '';
+            const remarks = data && data.remarks && data.remarks.length > 0 ? data.remarks : [''];
 
-/* ==================== 8. 歷史記錄查詢 ==================== */
-function queryHistory() {
-    const qDate = document.getElementById('search-date').value; // YYYY-MM-DD
-    const qColor = document.getElementById('search-color').value.trim().toUpperCase();
-    const qModel = document.getElementById('search-model').value.trim().toUpperCase();
-    const tbody = document.getElementById('history-table-body');
-    
-    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">${i18n[currentLang].loading}</td></tr>`;
+            // 構建備註欄 HTML
+            let remarkHTML = '<div class="remark-group">';
+            remarks.forEach((rmk, idx) => {
+                remarkHTML += `
+                    <div class="remark-item">
+                        <input type="text" class="form-control remark-input" value="${rmk}" data-i18n-placeholder="placeholderRemark" placeholder="${i18n[currentLang].placeholderRemark}">
+                        ${idx === 0 
+                            ? `<button type="button" class="btn-icon btn-add-remark"><i class="fa-solid fa-plus"></i></button>`
+                            : `<button type="button" class="btn-icon del btn-del-remark"><i class="fa-solid fa-minus"></i></button>`
+                        }
+                    </div>
+                `;
+            });
+            remarkHTML += '</div>';
 
-    // 針對節點進行資料擷取
-    let ref = db.ref('paint_jobs');
-    if (qDate) {
-        ref = db.ref('paint_jobs/' + qDate);
-    }
+            tr.innerHTML = `
+                <td class="col-seq seq-cell">1</td>
+                <td><input type="text" class="form-control color-input" list="color-datalist" value="${colorVal}" data-i18n-placeholder="placeholderColor" placeholder="${i18n[currentLang].placeholderColor}" style="text-transform:uppercase;"></td>
+                <td><input type="text" class="form-control model-input" list="model-datalist" value="${modelVal}" data-i18n-placeholder="placeholderModel" placeholder="${i18n[currentLang].placeholderModel}" style="text-transform:uppercase;"></td>
+                <td class="remark-cell">${remarkHTML}</td>
+                <td class="col-action">
+                    <button type="button" class="btn-icon del btn-del-row" title="刪除列"><i class="fa-regular fa-trash-can"></i></button>
+                </td>
+            `;
 
-    ref.once('value').then(snap => {
-        const data = snap.val();
-        let results = [];
-        if (data) {
-            if (qDate) {
-                // 單日結構
-                Object.values(data).forEach(item => results.push(item));
+            tbody.appendChild(tr);
+            recalculateSeq();
+
+            // 綁定動態按鈕事件 (新增備註 / 刪除備註 / 刪除整列)
+            const remarkGroup = tr.querySelector('.remark-group');
+            tr.querySelector('.btn-add-remark').addEventListener('click', () => {
+                const div = document.createElement('div');
+                div.className = 'remark-item';
+                div.innerHTML = `
+                    <input type="text" class="form-control remark-input" data-i18n-placeholder="placeholderRemark" placeholder="${i18n[currentLang].placeholderRemark}">
+                    <button type="button" class="btn-icon del btn-del-remark"><i class="fa-solid fa-minus"></i></button>
+                `;
+                remarkGroup.appendChild(div);
+                
+                div.querySelector('.btn-del-remark').addEventListener('click', () => div.remove());
+            });
+
+            // 初始化時綁定已有的減號按鈕 (針對從資料庫讀取含有多筆備註的列)
+            tr.querySelectorAll('.btn-del-remark').forEach(btn => {
+                btn.addEventListener('click', (e) => e.target.closest('.remark-item').remove());
+            });
+
+            tr.querySelector('.btn-del-row').addEventListener('click', () => {
+                tr.remove();
+                recalculateSeq();
+            });
+        }
+
+        // ==========================================
+        // 5. Firebase 讀寫操作
+        // ==========================================
+
+        // 監聽全域下拉選項 (顏色、機型)
+        onValue(ref(db, 'settings'), (snapshot) => {
+            if (snapshot.exists()) {
+                const data = snapshot.val();
+                if (data.colors) dbColors = data.colors;
+                if (data.models) dbModels = data.models;
+                updateDatalists();
             } else {
-                // 跨日結構
-                Object.values(data).forEach(dayData => {
-                    Object.values(dayData).forEach(item => results.push(item));
-                });
+                // 初次建置預設顏色寫入資料庫
+                set(ref(db, 'settings/colors'), dbColors);
+                updateDatalists();
             }
-        }
-
-        // 客戶端二次過濾
-        if (qColor) results = results.filter(r => r.color && r.color.includes(qColor));
-        if (qModel) results = results.filter(r => r.model && r.model.includes(qModel));
-
-        // 排序：日期降冪，序號降冪
-        results.sort((a, b) => {
-            if(a.dateIso !== b.dateIso) return b.dateIso.localeCompare(a.dateIso);
-            return b.serial - a.serial;
         });
 
-        if (results.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">${i18n[currentLang].noData}</td></tr>`;
-            return;
-        }
-
-        let html = '';
-        results.forEach(r => {
-            html += `<tr>
-                <td data-label="${i18n[currentLang].serial}">${r.serial}</td>
-                <td data-label="${i18n[currentLang].date}">${r.dateDisplay}</td>
-                <td data-label="${i18n[currentLang].color}">${r.color}</td>
-                <td data-label="${i18n[currentLang].model}">${r.model}</td>
-                <td data-label="${i18n[currentLang].remarks}">${(r.remarks || []).join('<br>')}</td>
-            </tr>`;
+        // 監聽今日作業
+        onValue(ref(db, `records/${dateToday.dbStr}`), (snapshot) => {
+            const tbody = document.getElementById('today-tbody');
+            tbody.innerHTML = '';
+            
+            if (snapshot.exists() && snapshot.val().length > 0) {
+                snapshot.val().forEach(item => {
+                    const tr = document.createElement('tr');
+                    const remarksJoined = item.remarks ? item.remarks.join('<br>') : '';
+                    tr.innerHTML = `
+                        <td class="col-seq">${item.seq}</td>
+                        <td style="font-weight:bold;">${item.color || '-'}</td>
+                        <td style="font-weight:bold;">${item.model || '-'}</td>
+                        <td style="color:var(--text-muted);">${remarksJoined || '-'}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } else {
+                tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted">${i18n[currentLang].noData}</td></tr>`;
+            }
         });
-        tbody.innerHTML = html;
-    }).catch(err => {
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:red;">查詢失敗: ${err.message}</td></tr>`;
-    });
-}
 
-/* ==================== 9. 啟動生命週期 ==================== */
-window.onload = function() {
-    initSettings();
-    listenTodayData();
-    calculateNextFormState();
-};
-</script>
+        // 讀取隔日草稿 (一次性讀取)
+        get(ref(db, `records/${dateNext.dbStr}`)).then((snapshot) => {
+            document.getElementById('next-tbody').innerHTML = '';
+            if (snapshot.exists() && snapshot.val().length > 0) {
+                snapshot.val().forEach(item => addScheduleRow(item));
+            } else {
+                addScheduleRow(); // 預設給一行空列
+            }
+        }).catch(err => console.error(err));
+
+        // 儲存至 Firebase (寫入紀錄 + 更新自訂選項)
+        document.getElementById('btn-save-all').addEventListener('click', async () => {
+            const rows = document.querySelectorAll('#next-tbody tr');
+            let dataToSave = [];
+            let newColors = new Set();
+            let newModels = new Set();
+
+            rows.forEach((row, index) => {
+                const color = row.querySelector('.color-input').value.trim().toUpperCase();
+                const model = row.querySelector('.model-input').value.trim().toUpperCase();
+                
+                const rInputs = row.querySelectorAll('.remark-input');
+                const remarks = Array.from(rInputs).map(inp => inp.value.trim()).filter(v => v !== '');
+
+                // 只要有一項有值就視為有效列
+                if (color || model || remarks.length > 0) {
+                    dataToSave.push({ seq: index + 1, color, model, remarks });
+                    
+                    if (color && !dbColors.includes(color)) newColors.add(color);
+                    if (model && !dbModels.includes(model)) newModels.add(model);
+                }
+            });
+
+            if (dataToSave.length === 0) {
+                showToast(i18n[currentLang].toastEmptyWarn, 'error');
+                return;
+            }
+
+            try {
+                // 儲存隔天排程
+                await set(ref(db, `records/${dateNext.dbStr}`), dataToSave);
+
+                // 更新下拉選單字庫
+                if (newColors.size > 0 || newModels.size > 0) {
+                    const updates = {};
+                    if (newColors.size > 0) {
+                        dbColors = [...new Set([...dbColors, ...newColors])];
+                        updates['settings/colors'] = dbColors;
+                    }
+                    if (newModels.size > 0) {
+                        dbModels = [...new Set([...dbModels, ...newModels])];
+                        updates['settings/models'] = dbModels;
+                    }
+                    await update(ref(db), updates);
+                }
+
+                showToast(i18n[currentLang].toastSaveSuccess, 'success');
+            } catch (error) {
+                console.error(error);
+                showToast(i18n[currentLang].toastSaveError, 'error');
+            }
+        });
+
+        // 歷史查詢
+        document.getElementById('search-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const sDate = document.getElementById('search-date').value;
+            const sColor = document.getElementById('search-color').value.trim().toUpperCase();
+            const sModel = document.getElementById('search-model').value.trim().toUpperCase();
+            
+            const tbody = document.getElementById('history-tbody');
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted">${i18n[currentLang].loading}</td></tr>`;
+
+            try {
+                let results = [];
+                if (sDate) {
+                    // 精確查某一天
+                    const snap = await get(ref(db, `records/${sDate}`));
+                    if (snap.exists()) {
+                        snap.val().forEach(item => results.push({ date: sDate, ...item }));
+                    }
+                } else {
+                    // 全庫掃描
+                    const snap = await get(ref(db, 'records'));
+                    if (snap.exists()) {
+                        const all = snap.val();
+                        Object.keys(all).forEach(dateKey => {
+                            all[dateKey].forEach(item => results.push({ date: dateKey, ...item }));
+                        });
+                    }
+                }
+
+                // 套用條件過濾
+                if (sColor) results = results.filter(r => r.color && r.color.includes(sColor));
+                if (sModel) results = results.filter(r => r.model && r.model.includes(sModel));
+
+                tbody.innerHTML = '';
+                if (results.length > 0) {
+                    // 排序: 日期倒序, 序號正序
+                    results.sort((a, b) => b.date.localeCompare(a.date) || a.seq - b.seq);
+                    
+                    results.forEach(item => {
+                        const tr = document.createElement('tr');
+                        const remarksStr = item.remarks ? item.remarks.join(' ; ') : '';
+                        tr.innerHTML = `
+                            <td style="color:var(--info); font-family:monospace;">${item.date}</td>
+                            <td class="col-seq">${item.seq}</td>
+                            <td style="font-weight:bold;">${item.color || '-'}</td>
+                            <td style="font-weight:bold;">${item.model || '-'}</td>
+                            <td style="color:var(--text-muted);">${remarksStr || '-'}</td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                    showToast(i18n[currentLang].toastSearchSuccess, 'success');
+                } else {
+                    tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted">${i18n[currentLang].noData}</td></tr>`;
+                }
+            } catch (err) {
+                console.error(err);
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center" style="color:var(--danger);">${i18n[currentLang].toastSaveError}</td></tr>`;
+            }
+        });
+
+        // ==========================================
+        // 6. 初始啟動設定
+        // ==========================================
+        
+        // 綁定標籤切換
+        document.getElementById('tab-main').addEventListener('click', (e) => {
+            document.getElementById('view-main').classList.add('active');
+            document.getElementById('view-history').classList.remove('active');
+            e.target.classList.add('active');
+            document.getElementById('tab-history').classList.remove('active');
+        });
+        
+        document.getElementById('tab-history').addEventListener('click', (e) => {
+            document.getElementById('view-history').classList.add('active');
+            document.getElementById('view-main').classList.remove('active');
+            e.target.classList.add('active');
+            document.getElementById('tab-main').classList.remove('active');
+        });
+
+        document.getElementById('btn-add-row').addEventListener('click', () => addScheduleRow());
+        
+        document.getElementById('lang-select').addEventListener('change', (e) => {
+            switchLanguage(e.target.value);
+        });
+
+        // 系統初始化
+        window.addEventListener('DOMContentLoaded', () => {
+            calculateDates();
+            switchLanguage('zh');
+        });
+    </script>
 </body>
 </html>

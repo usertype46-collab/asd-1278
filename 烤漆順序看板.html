@@ -4,65 +4,69 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>烤漆作業排程 - 順序看板與查詢</title>
+    <!-- 引入 Tailwind CSS 與 FontAwesome -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
-        body { background-color: #121212; color: #e0e0e0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .card { background-color: #1e1e1e; border: 1px solid #333; border-radius: 0.75rem; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3); }
+        body { background-color: #1e1e1e; color: #e5e5e5; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .card { background-color: #252526; border: 1px solid #3c3c3c; border-radius: 0.5rem; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
         
         table { width: 100%; border-collapse: collapse; table-layout: auto; }
-        th, td { border: 1px solid #3c3c3c; padding: 0.8rem 1rem; vertical-align: middle; }
-        th { background-color: #2a2a2a; color: #fff; white-space: nowrap; font-weight: 600; text-align: left; font-size: 1.05rem; }
-        td { font-size: 1.05rem; }
+        th, td { border: 1px solid #444; padding: 0.85rem; vertical-align: middle; }
+        th { background-color: #2d2d2d; color: #fff; white-space: nowrap; font-weight: 600; text-align: left; }
         
-        .w-seq { width: 70px; text-align: center; }
-        .w-color { width: 220px; }
-        .w-model { width: 220px; }
-        .w-action { width: 90px; text-align: center; }
+        .w-seq { width: 60px; text-align: center; }
+        .w-color { width: 180px; }
+        .w-model { width: 180px; }
+        .w-action { width: 120px; text-align: center; }
 
-        input, select, textarea { background-color: #2a2a2a; color: #fff; border: 1px solid #555; border-radius: 0.375rem; padding: 0.6rem; width: 100%; outline: none; transition: all 0.2s; font-size: 1rem; }
-        input:focus, select:focus, textarea:focus { border-color: #3b82f6; background-color: #333; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3); }
+        input[type="text"], input[type="date"], select { 
+            background-color: #1e1e1e; color: #fff; border: 1px solid #555; 
+            border-radius: 0.375rem; padding: 0.5rem; width: 100%; outline: none; 
+            transition: border-color 0.2s;
+        }
+        input:focus, select:focus { border-color: #3b82f6; box-shadow: 0 0 0 1px #3b82f6; }
         
         button { cursor: pointer; transition: all 0.2s; }
-        
-        /* Modal 背景模糊效果 */
-        .modal-bg { backdrop-filter: blur(4px); }
     </style>
 </head>
-<body class="min-h-screen p-4 md:p-8">
+<body class="min-h-screen p-4 md:p-8 text-base">
 
-    <div class="flex flex-col md:flex-row justify-between items-center mb-8 pb-4 border-b border-gray-700 gap-4">
-        <h1 class="text-3xl font-bold text-white flex items-center gap-3" data-i18n="appTitle">📊 烤漆作業順序看板</h1>
-        <div class="flex items-center gap-4 bg-gray-800 p-2 rounded-lg border border-gray-700">
-            <a href="烤漆順序管理.html" class="text-base bg-gray-700 hover:bg-gray-600 text-green-400 px-4 py-2 rounded-md flex items-center gap-2 font-medium">
-                <i class="fa-solid fa-pen-to-square"></i> 切換至建立紀錄
-            </a>
-            <div class="h-6 w-px bg-gray-600"></div>
-            <span class="text-sm text-gray-400" data-i18n="langLabel">語言 / Ngôn ngữ:</span>
-            <select id="lang-switch" class="w-auto cursor-pointer border-none bg-transparent font-medium">
-                <option value="zh">繁體中文</option>
-                <option value="vi">Tiếng Việt</option>
-            </select>
-        </div>
-    </div>
-
-    <!-- 支援編輯時的下拉選單 -->
+    <!-- 用於編輯時的自動補齊 -->
     <datalist id="color-list"></datalist>
     <datalist id="model-list"></datalist>
 
+    <!-- 頂部導覽列 -->
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 pb-4 border-b border-gray-700 gap-4">
+        <h1 class="text-2xl md:text-3xl font-bold text-white flex items-center gap-2" data-i18n="appTitle">📊 烤漆作業順序看板</h1>
+        <div class="flex items-center gap-3 flex-wrap">
+            <a href="烤漆順序管理_2.html" class="bg-gray-700 hover:bg-gray-600 text-green-400 px-4 py-2 rounded-md flex items-center gap-2 font-medium shadow">
+                <i class="fa-solid fa-pen-to-square"></i> 切換至建立紀錄
+            </a>
+            <div class="flex items-center gap-2 ml-2">
+                <span class="text-sm text-gray-400" data-i18n="langLabel">語言 / Ngôn ngữ:</span>
+                <select id="lang-switch" class="w-auto cursor-pointer py-1 px-2 text-sm">
+                    <option value="zh">繁體中文</option>
+                    <option value="vi">Tiếng Việt</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
     <div class="grid grid-cols-1 gap-8">
+
         <!-- 區塊 1: 今日作業資料 -->
         <div class="card border-l-4 border-l-green-500 shadow-lg">
-            <div class="flex flex-wrap justify-between items-center mb-6 gap-2">
-                <h2 class="text-2xl font-bold text-green-400 flex items-center">
-                    <i class="fa-solid fa-calendar-day mr-3"></i><span data-i18n="todayTitle">今日作業資料</span>
-                    <span id="today-date-display" class="ml-3 text-white bg-gray-700 px-3 py-1 rounded text-lg font-normal tracking-wider"></span>
+            <div class="flex justify-between items-center mb-5">
+                <h2 class="text-xl font-bold text-green-400 flex items-center">
+                    <i class="fa-solid fa-calendar-day mr-2"></i><span data-i18n="todayTitle">今日作業資料</span>
+                    <span id="today-date-display" class="ml-3 text-white bg-gray-700 px-3 py-1 rounded text-base font-normal"></span>
                 </h2>
-                <span class="text-sm text-gray-400 bg-gray-800 px-3 py-1 rounded-full"><i class="fa-solid fa-rotate animate-spin mr-2"></i>實時同步中</span>
+                <span class="text-sm text-gray-400 bg-gray-800 px-2 py-1 rounded"><i class="fa-solid fa-rotate animate-spin mr-2"></i>即時同步</span>
             </div>
-            <div class="overflow-x-auto rounded-lg border border-gray-700">
-                <table>
+            <div class="overflow-x-auto">
+                <table class="min-w-full">
                     <thead>
                         <tr>
                             <th class="w-seq" data-i18n="thNo">序號</th>
@@ -72,37 +76,38 @@
                             <th class="w-action" data-i18n="thAction">操作</th>
                         </tr>
                     </thead>
-                    <tbody id="today-tbody" class="text-lg">
-                        <tr><td colspan="5" class="text-center text-gray-500 py-8" data-i18n="msgLoading">載入中...</td></tr>
+                    <tbody id="today-tbody">
+                        <tr><td colspan="5" class="text-center text-gray-500 py-6" data-i18n="msgLoading">載入中...</td></tr>
                     </tbody>
                 </table>
             </div>
         </div>
 
         <!-- 區塊 2: 歷史記錄查詢 -->
-        <div class="card border-l-4 border-l-blue-500 shadow-lg">
-            <h2 class="text-xl font-bold text-blue-400 mb-6 flex items-center gap-2" data-i18n="searchTitle"><i class="fa-solid fa-magnifying-glass"></i> 歷史記錄查詢</h2>
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-5 items-end mb-6">
+        <div class="card border-l-4 border-l-blue-500">
+            <h2 class="text-xl font-bold text-blue-400 mb-5 flex items-center gap-2" data-i18n="searchTitle"><i class="fa-solid fa-magnifying-glass"></i> 歷史記錄查詢</h2>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end mb-6">
                 <div>
-                    <label class="block text-sm text-gray-400 mb-2 font-medium" data-i18n="lblDate">日期 (Ngày)</label>
+                    <label class="block text-sm text-gray-400 mb-1 font-medium" data-i18n="lblDate">日期 (Ngày)</label>
                     <input type="date" id="search-date">
                 </div>
                 <div>
-                    <label class="block text-sm text-gray-400 mb-2 font-medium" data-i18n="lblColor">顏色 (Màu sắc)</label>
+                    <label class="block text-sm text-gray-400 mb-1 font-medium" data-i18n="lblColor">顏色 (Màu sắc)</label>
                     <input type="text" id="search-color" data-i18n-ph="phSearchColor" placeholder="輸入顏色查詢...">
                 </div>
                 <div>
-                    <label class="block text-sm text-gray-400 mb-2 font-medium" data-i18n="lblModel">機型 (Model)</label>
+                    <label class="block text-sm text-gray-400 mb-1 font-medium" data-i18n="lblModel">機型 (Model)</label>
                     <input type="text" id="search-model" data-i18n-ph="phSearchModel" placeholder="輸入機型查詢...">
                 </div>
-                <div class="flex gap-3">
-                    <button id="btn-search" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white p-2.5 rounded-md font-bold text-base shadow" data-i18n="btnSearch"><i class="fa-solid fa-magnifying-glass mr-1"></i> 查詢</button>
-                    <button id="btn-reset-search" class="flex-1 bg-gray-600 hover:bg-gray-500 text-white p-2.5 rounded-md font-bold text-base shadow" data-i18n="btnReset">重設</button>
+                <div class="flex gap-2">
+                    <button id="btn-search" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-3 rounded shadow font-bold flex items-center justify-center gap-2"><i class="fa-solid fa-magnifying-glass"></i> <span data-i18n="btnSearch">查詢</span></button>
+                    <button id="btn-reset-search" class="w-full bg-gray-600 hover:bg-gray-700 text-white py-2 px-3 rounded shadow font-bold flex items-center justify-center gap-2"><i class="fa-solid fa-rotate-left"></i> <span data-i18n="btnReset">重設</span></button>
                 </div>
             </div>
 
-            <div class="overflow-x-auto rounded-lg border border-gray-700">
-                <table>
+            <!-- 查詢結果表格 -->
+            <div class="overflow-x-auto">
+                <table class="min-w-full">
                     <thead>
                         <tr>
                             <th data-i18n="thDate">日期</th>
@@ -113,250 +118,318 @@
                             <th class="w-action" data-i18n="thAction">操作</th>
                         </tr>
                     </thead>
-                    <tbody id="history-tbody" class="text-base">
-                        <tr><td colspan="6" class="text-center text-gray-500 py-8" data-i18n="msgNoData">請設定條件進行查詢</td></tr>
+                    <tbody id="history-tbody">
+                        <tr><td colspan="6" class="text-center text-gray-500 py-6" data-i18n="msgNoData">請設定條件進行查詢</td></tr>
                     </tbody>
                 </table>
             </div>
         </div>
-    </div>
 
-    <!-- 編輯紀錄 Modal -->
-    <div id="edit-modal" class="hidden fixed inset-0 bg-black bg-opacity-75 modal-bg flex items-center justify-center z-50">
-        <div class="bg-[#1e1e1e] border border-gray-600 rounded-xl p-6 w-full max-w-lg shadow-2xl transform transition-all">
-            <h3 class="text-2xl font-bold mb-6 text-blue-400 flex items-center gap-2" data-i18n="editTitle"><i class="fa-solid fa-pen-to-square"></i> 編輯烤漆記錄</h3>
-            
-            <input type="hidden" id="edit-date">
-            <input type="hidden" id="edit-seqNo">
-
-            <div class="space-y-4">
-                <div class="flex gap-4">
-                    <div class="flex-1">
-                        <label class="block text-sm text-gray-400 mb-1" data-i18n="thColor">顏色</label>
-                        <input type="text" id="edit-color" list="color-list">
-                    </div>
-                    <div class="flex-1">
-                        <label class="block text-sm text-gray-400 mb-1" data-i18n="thModel">機型</label>
-                        <input type="text" id="edit-model" list="model-list">
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-sm text-gray-400 mb-1"><span data-i18n="thRemark">備註</span> <span class="text-xs text-gray-500" data-i18n="lblRemarksHelp">(每行一筆備註)</span></label>
-                    <textarea id="edit-remarks" rows="4" class="resize-none"></textarea>
-                </div>
-            </div>
-
-            <div class="flex justify-end gap-3 mt-8">
-                <button id="btn-cancel-edit" class="bg-gray-600 hover:bg-gray-500 text-white px-5 py-2.5 rounded-md font-medium" data-i18n="btnCancel">取消</button>
-                <button id="btn-save-edit" class="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-md font-bold shadow-lg flex items-center gap-2">
-                    <i class="fa-solid fa-cloud-arrow-up"></i> <span data-i18n="btnSaveEdit">儲存修改</span>
-                </button>
-            </div>
-        </div>
     </div>
 
     <!-- Firebase 腳本與邏輯 -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getDatabase, ref, onValue, get, set, update } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+        import { getDatabase, ref, onValue, get, set } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBvx7Ej2h9ZV5S1t_Gag756qop_jcoxy2U",
             authDomain: "shopee-60a13.firebaseapp.com",
             databaseURL: "https://shopee-60a13-default-rtdb.firebaseio.com",
-            projectId: "shopee-60a13"
+            projectId: "shopee-60a13",
+            storageBucket: "shopee-60a13.firebasestorage.app",
+            messagingSenderId: "18436404849",
+            appId: "1:18436404849:web:f2bdfa4189ff15456fcdd0"
         };
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
         let currentLang = 'zh';
-        let todayDataStore = [];
-        let searchDataStore = [];
-
-        // 讀取設定檔以提供下拉選單
-        let dbColors = [];
-        let dbModels = [];
-        onValue(ref(db, 'settings/colors'), (snap) => { if(snap.exists()) { dbColors = snap.val(); document.getElementById('color-list').innerHTML = dbColors.map(c=>`<option value="${c}">`).join(''); }});
-        onValue(ref(db, 'settings/models'), (snap) => { if(snap.exists()) { dbModels = snap.val(); document.getElementById('model-list').innerHTML = dbModels.map(m=>`<option value="${m}">`).join(''); }});
+        
+        // 供編輯狀態追蹤與重新渲染
+        let todayData = [];
+        let historyData = [];
+        let isEditingToday = null;
+        let isEditingHistory = null;
 
         const i18n = {
             zh: {
-                appTitle: "📊 烤漆作業順序看板", langLabel: "語言 / Ngôn ngữ:", searchTitle: "歷史記錄查詢", lblDate: "日期 (Ngày)", lblColor: "顏色 (Màu sắc)", lblModel: "機型 (Model)",
-                btnSearch: "查詢", btnReset: "重設", msgNoData: "尚無符合條件的資料", msgLoading: "載入中...", todayTitle: "今日作業資料", thDate: "日期", thNo: "序號", thColor: "顏色", thModel: "機型", thRemark: "備註", thAction: "操作",
-                phSearchColor: "輸入顏色查詢...", phSearchModel: "輸入機型查詢...", editTitle: "編輯烤漆記錄", btnCancel: "取消", btnSaveEdit: "儲存修改", lblRemarksHelp: "(每行一筆備註)", msgSaveSuccess: "修改成功！", msgSaveError: "修改失敗："
+                appTitle: "📊 烤漆作業順序看板", langLabel: "語言 / Ngôn ngữ:", searchTitle: "歷史記錄查詢",
+                lblDate: "日期 (Ngày)", lblColor: "顏色 (Màu sắc)", lblModel: "機型 (Model)",
+                btnSearch: "查詢", btnReset: "重設", msgNoData: "尚無符合條件的資料", msgLoading: "載入中...",
+                todayTitle: "今日作業資料", thDate: "日期", thNo: "序號", thColor: "顏色", thModel: "機型", thRemark: "備註", thAction: "操作",
+                phSearchColor: "輸入顏色查詢...", phSearchModel: "輸入機型查詢...",
+                btnEdit: "編輯", btnSave: "儲存", btnCancel: "取消", msgUpdateOk: "資料更新成功！", msgUpdateErr: "資料更新失敗："
             },
             vi: {
-                appTitle: "📊 Bảng Thứ tự Sơn", langLabel: "Ngôn ngữ / 語言:", searchTitle: "Tra cứu lịch sử", lblDate: "Ngày (日期)", lblColor: "Màu sắc (顏色)", lblModel: "Model (機型)",
-                btnSearch: "Tìm kiếm", btnReset: "Đặt lại", msgNoData: "Không có dữ liệu", msgLoading: "Đang tải...", todayTitle: "Dữ liệu làm việc hôm nay", thDate: "Ngày", thNo: "STT", thColor: "Màu sắc", thModel: "Model", thRemark: "Ghi chú", thAction: "Thao tác",
-                phSearchColor: "Nhập màu sắc...", phSearchModel: "Nhập model...", editTitle: "Chỉnh sửa bản ghi", btnCancel: "Hủy", btnSaveEdit: "Lưu thay đổi", lblRemarksHelp: "(Mỗi dòng một ghi chú)", msgSaveSuccess: "Lưu thành công!", msgSaveError: "Lưu thất bại: "
+                appTitle: "📊 Bảng Thứ tự Sơn", langLabel: "Ngôn ngữ / 語言:", searchTitle: "Tra cứu lịch sử",
+                lblDate: "Ngày (日期)", lblColor: "Màu sắc (顏色)", lblModel: "Model (機型)",
+                btnSearch: "Tìm kiếm", btnReset: "Đặt lại", msgNoData: "Không có dữ liệu", msgLoading: "Đang tải...",
+                todayTitle: "Dữ liệu làm việc hôm nay", thDate: "Ngày", thNo: "STT", thColor: "Màu sắc", thModel: "Model", thRemark: "Ghi chú", thAction: "Thao tác",
+                phSearchColor: "Nhập màu sắc...", phSearchModel: "Nhập model...",
+                btnEdit: "Sửa", btnSave: "Lưu", btnCancel: "Hủy", msgUpdateOk: "Cập nhật thành công!", msgUpdateErr: "Cập nhật thất bại: "
             }
         };
 
-        const weekdays = { zh: ["日", "一", "二", "三", "四", "五", "六"], vi: ["CN", "T2", "T3", "T4", "T5", "T6", "T7"] };
+        const weekdays = {
+            zh: ["日", "一", "二", "三", "四", "五", "六"],
+            vi: ["CN", "T2", "T3", "T4", "T5", "T6", "T7"]
+        };
 
-        function getDBDateFormat(dateObj) { return `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')}`; }
+        // 讀取設定檔充填 datalist
+        onValue(ref(db, 'settings/colors'), (snapshot) => {
+            if (snapshot.exists()) {
+                document.getElementById('color-list').innerHTML = snapshot.val().map(c => `<option value="${c}">`).join('');
+            }
+        });
+        onValue(ref(db, 'settings/models'), (snapshot) => {
+            if (snapshot.exists()) {
+                document.getElementById('model-list').innerHTML = snapshot.val().map(m => `<option value="${m}">`).join('');
+            }
+        });
+
+        function getDBDateFormat(dateObj) {
+            return `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')}`;
+        }
+
         function getTodayDisplay() {
             const today = new Date();
-            return { todayDB: getDBDateFormat(today), todayDisplay: `${today.getMonth() + 1}/${today.getDate()} (${currentLang === 'vi' ? 'Thứ ' : '週'}${weekdays[currentLang][today.getDay()]})` };
+            const todayDB = getDBDateFormat(today);
+            const todayDisplay = `${today.getMonth() + 1}/${today.getDate()} (${currentLang === 'vi' ? 'Thứ ' : '週'}${weekdays[currentLang][today.getDay()]})`;
+            return { todayDB, todayDisplay };
         }
 
         function applyLanguage() {
             const t = i18n[currentLang];
-            document.querySelectorAll('[data-i18n]').forEach(el => { el.innerHTML = el.querySelector('i') ? el.querySelector('i').outerHTML + ' ' + t[el.getAttribute('data-i18n')] : t[el.getAttribute('data-i18n')]; });
-            document.querySelectorAll('[data-i18n-ph]').forEach(el => el.placeholder = t[el.getAttribute('data-i18n-ph')]);
-            document.getElementById('today-date-display').innerText = getTodayDisplay().todayDisplay;
+            document.querySelectorAll('[data-i18n]').forEach(el => { el.innerText = t[el.getAttribute('data-i18n')]; });
+            document.querySelectorAll('[data-i18n-ph]').forEach(el => { el.placeholder = t[el.getAttribute('data-i18n-ph')]; });
+            const dates = getTodayDisplay();
+            document.getElementById('today-date-display').innerText = dates.todayDisplay;
+            
+            // 切換語言時同步重新繪製表格
+            renderTodayTable();
+            renderHistoryTable();
         }
 
-        document.getElementById('lang-switch').addEventListener('change', (e) => { currentLang = e.target.value; applyLanguage(); });
+        document.getElementById('lang-switch').addEventListener('change', (e) => {
+            currentLang = e.target.value;
+            applyLanguage();
+        });
 
-        // 監聽今日資料
-        function listenTodaySchedule() {
-            const { todayDB } = getTodayDisplay();
-            onValue(ref(db, `schedules/${todayDB}`), (snapshot) => {
-                const tbody = document.getElementById('today-tbody');
-                tbody.innerHTML = '';
-                todayDataStore = [];
-                if (snapshot.exists() && snapshot.val().length > 0) {
-                    todayDataStore = snapshot.val();
-                    todayDataStore.forEach((item, idx) => {
-                        if(!item) return; // 防呆空資料
-                        const tr = document.createElement('tr');
-                        tr.className = "hover:bg-gray-800 transition-colors";
-                        const rmkStr = item.remarks ? item.remarks.join('<br>') : '';
-                        tr.innerHTML = `
-                            <td class="text-center font-bold text-green-400 text-xl">${item.seqNo}</td>
-                            <td class="font-bold text-white text-lg tracking-wide">${item.color || ''}</td>
-                            <td class="font-bold text-white text-lg tracking-wide">${item.model || ''}</td>
-                            <td class="text-gray-300 leading-relaxed">${rmkStr}</td>
-                            <td class="text-center">
-                                <button data-action="edit" data-source="today" data-idx="${idx}" class="bg-gray-700 text-blue-400 hover:text-white hover:bg-blue-600 px-3 py-1.5 rounded-md transition-all shadow"><i class="fa-solid fa-pen-to-square"></i></button>
-                            </td>
-                        `;
-                        tbody.appendChild(tr);
-                    });
+        // 渲染今日資料表
+        function renderTodayTable() {
+            const tbody = document.getElementById('today-tbody');
+            const t = i18n[currentLang];
+            tbody.innerHTML = '';
+            
+            if (todayData.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center text-gray-500 py-6">${t.msgNoData}</td></tr>`;
+                return;
+            }
+
+            todayData.forEach((item, idx) => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-gray-800 transition-colors";
+                
+                if (isEditingToday === idx) {
+                    // 編輯模式
+                    tr.innerHTML = `
+                        <td class="text-center font-bold text-green-400">${item.seqNo}</td>
+                        <td><input type="text" id="edit-t-color-${idx}" list="color-list" value="${item.color || ''}"></td>
+                        <td><input type="text" id="edit-t-model-${idx}" list="model-list" value="${item.model || ''}"></td>
+                        <td><input type="text" id="edit-t-remark-${idx}" value="${item.remarks ? item.remarks.join(' / ') : ''}" placeholder="使用 / 分隔多條備註"></td>
+                        <td class="text-center">
+                            <div class="flex flex-col md:flex-row gap-2 justify-center">
+                                <button onclick="saveToday(${idx})" class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm"><i class="fa-solid fa-check"></i> ${t.btnSave}</button>
+                                <button onclick="cancelEditToday()" class="bg-gray-500 hover:bg-gray-600 text-white px-3 py-1 rounded text-sm"><i class="fa-solid fa-xmark"></i> ${t.btnCancel}</button>
+                            </div>
+                        </td>
+                    `;
                 } else {
-                    tbody.innerHTML = `<tr><td colspan="5" class="text-center text-gray-500 py-8">${i18n[currentLang].msgNoData}</td></tr>`;
+                    // 檢視模式
+                    const rmkStr = item.remarks ? item.remarks.join('<br>') : '';
+                    tr.innerHTML = `
+                        <td class="text-center font-bold text-green-400 text-lg">${item.seqNo}</td>
+                        <td class="font-bold text-white text-lg">${item.color || ''}</td>
+                        <td class="font-bold text-white text-lg">${item.model || ''}</td>
+                        <td class="text-gray-300">${rmkStr}</td>
+                        <td class="text-center">
+                            <button onclick="editToday(${idx})" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded shadow text-sm font-bold"><i class="fa-solid fa-pen"></i> ${t.btnEdit}</button>
+                        </td>
+                    `;
                 }
+                tbody.appendChild(tr);
             });
         }
 
-        // 搜尋歷史
+        // 渲染歷史查詢表
+        function renderHistoryTable() {
+            const tbody = document.getElementById('history-tbody');
+            const t = i18n[currentLang];
+            tbody.innerHTML = '';
+            
+            if (historyData.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center text-gray-500 py-6">${t.msgNoData}</td></tr>`;
+                return;
+            }
+
+            historyData.forEach((r, idx) => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-gray-700 transition-colors";
+                
+                if (isEditingHistory === idx) {
+                    // 編輯模式
+                    tr.innerHTML = `
+                        <td class="text-blue-300 font-mono align-middle">${r.date}</td>
+                        <td class="text-center font-bold align-middle">${r.seqNo}</td>
+                        <td><input type="text" id="edit-h-color-${idx}" list="color-list" value="${r.color||''}"></td>
+                        <td><input type="text" id="edit-h-model-${idx}" list="model-list" value="${r.model||''}"></td>
+                        <td><input type="text" id="edit-h-remark-${idx}" value="${r.remarks ? r.remarks.join(' / ') : ''}" placeholder="使用 / 分隔多條備註"></td>
+                        <td class="text-center align-middle">
+                            <div class="flex flex-col md:flex-row gap-2 justify-center">
+                                <button onclick="saveHistory(${idx})" class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm"><i class="fa-solid fa-check"></i> ${t.btnSave}</button>
+                                <button onclick="cancelEditHistory()" class="bg-gray-500 hover:bg-gray-600 text-white px-3 py-1 rounded text-sm"><i class="fa-solid fa-xmark"></i> ${t.btnCancel}</button>
+                            </div>
+                        </td>
+                    `;
+                } else {
+                    // 檢視模式
+                    tr.innerHTML = `
+                        <td class="text-blue-300 font-mono">${r.date}</td>
+                        <td class="text-center font-bold text-lg">${r.seqNo}</td>
+                        <td class="text-lg font-bold">${r.color||''}</td>
+                        <td class="text-lg font-bold">${r.model||''}</td>
+                        <td>${r.remarks ? r.remarks.join(' / ') : ''}</td>
+                        <td class="text-center">
+                            <button onclick="editHistory(${idx})" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded shadow text-sm font-bold"><i class="fa-solid fa-pen"></i> ${t.btnEdit}</button>
+                        </td>
+                    `;
+                }
+                tbody.appendChild(tr);
+            });
+        }
+
+        // 綁定全域編輯與儲存函數
+        window.editToday = (idx) => { isEditingToday = idx; renderTodayTable(); };
+        window.cancelEditToday = () => { isEditingToday = null; renderTodayTable(); };
+        window.saveToday = async (idx) => {
+            const item = todayData[idx];
+            const color = document.getElementById(`edit-t-color-${idx}`).value.trim().toUpperCase();
+            const model = document.getElementById(`edit-t-model-${idx}`).value.trim().toUpperCase();
+            const rmkStr = document.getElementById(`edit-t-remark-${idx}`).value.trim();
+            const remarks = rmkStr ? rmkStr.split('/').map(r => r.trim()).filter(r => r !== '') : [];
+            
+            const updatedData = { ...item, color, model, remarks };
+            
+            try {
+                const { todayDB } = getTodayDisplay();
+                // 使用 originalIndex 更新 Firebase 準確路徑，防止刪除造成的陣列偏移
+                await set(ref(db, `schedules/${todayDB}/${item.originalIndex}`), updatedData);
+                isEditingToday = null;
+                alert(i18n[currentLang].msgUpdateOk);
+            } catch (err) {
+                alert(i18n[currentLang].msgUpdateErr + err.message);
+            }
+        };
+
+        window.editHistory = (idx) => { isEditingHistory = idx; renderHistoryTable(); };
+        window.cancelEditHistory = () => { isEditingHistory = null; renderHistoryTable(); };
+        window.saveHistory = async (idx) => {
+            const item = historyData[idx];
+            const color = document.getElementById(`edit-h-color-${idx}`).value.trim().toUpperCase();
+            const model = document.getElementById(`edit-h-model-${idx}`).value.trim().toUpperCase();
+            const rmkStr = document.getElementById(`edit-h-remark-${idx}`).value.trim();
+            const remarks = rmkStr ? rmkStr.split('/').map(r => r.trim()).filter(r => r !== '') : [];
+            
+            const updatedData = { seqNo: item.seqNo, color, model, remarks };
+            
+            try {
+                await set(ref(db, `schedules/${item.date}/${item.originalIndex}`), updatedData);
+                // 本地同步更新以即時顯示
+                historyData[idx] = { ...item, color, model, remarks };
+                isEditingHistory = null;
+                renderHistoryTable();
+                alert(i18n[currentLang].msgUpdateOk);
+            } catch (err) {
+                alert(i18n[currentLang].msgUpdateErr + err.message);
+            }
+        };
+
+        // 即時監聽今日作業資料
+        function listenTodaySchedule() {
+            const { todayDB } = getTodayDisplay();
+            onValue(ref(db, `schedules/${todayDB}`), (snapshot) => {
+                todayData = [];
+                if (snapshot.exists()) {
+                    const data = snapshot.val();
+                    // Firebase 存儲陣列若有刪減可能轉為 Object
+                    Object.keys(data).forEach(key => {
+                        if (data[key]) todayData.push({ originalIndex: key, ...data[key] });
+                    });
+                }
+                renderTodayTable();
+            });
+        }
+
+        // 搜尋歷史紀錄
         document.getElementById('btn-search').addEventListener('click', async () => {
             const sDate = document.getElementById('search-date').value;
             const sColor = document.getElementById('search-color').value.trim().toUpperCase();
             const sModel = document.getElementById('search-model').value.trim().toUpperCase();
             const tbody = document.getElementById('history-tbody');
             
-            tbody.innerHTML = `<tr><td colspan="6" class="text-center text-blue-400 py-8 text-lg"><i class="fa-solid fa-spinner fa-spin mr-2"></i> ${i18n[currentLang].msgLoading}</td></tr>`;
+            isEditingHistory = null; // 重置編輯狀態
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center text-blue-400 py-6"><i class="fa-solid fa-spinner fa-spin mr-2"></i> ${i18n[currentLang].msgLoading}</td></tr>`;
             
             try {
-                searchDataStore = [];
+                let results = [];
                 if (sDate) {
                     const snap = await get(ref(db, `schedules/${sDate}`));
-                    if(snap.exists()) snap.val().forEach(i => i && searchDataStore.push({date: sDate, ...i}));
+                    if(snap.exists()) {
+                        const data = snap.val();
+                        Object.keys(data).forEach(key => {
+                            if(data[key]) results.push({ date: sDate, originalIndex: key, ...data[key] });
+                        });
+                    }
                 } else {
                     const snap = await get(ref(db, `schedules`));
                     if(snap.exists()) {
-                        Object.entries(snap.val()).forEach(([d, arr]) => arr && arr.forEach(i => i && searchDataStore.push({date: d, ...i})));
+                        const allData = snap.val();
+                        Object.keys(allData).forEach(d => {
+                            const dayData = allData[d];
+                            Object.keys(dayData).forEach(key => {
+                                if(dayData[key]) results.push({ date: d, originalIndex: key, ...dayData[key] });
+                            });
+                        });
                     }
                 }
 
-                if (sColor) searchDataStore = searchDataStore.filter(r => r.color && r.color.includes(sColor));
-                if (sModel) searchDataStore = searchDataStore.filter(r => r.model && r.model.includes(sModel));
-                searchDataStore.sort((a, b) => b.date.localeCompare(a.date) || a.seqNo - b.seqNo);
+                if (sColor) results = results.filter(r => r.color && r.color.includes(sColor));
+                if (sModel) results = results.filter(r => r.model && r.model.includes(sModel));
 
-                tbody.innerHTML = '';
-                if (searchDataStore.length > 0) {
-                    searchDataStore.forEach((r, idx) => {
-                        const tr = document.createElement('tr');
-                        tr.className = "hover:bg-gray-800 transition-colors";
-                        tr.innerHTML = `
-                            <td class="text-blue-300 font-mono tracking-wider">${r.date}</td>
-                            <td class="text-center font-bold text-gray-300">${r.seqNo}</td>
-                            <td class="font-semibold text-white">${r.color||''}</td>
-                            <td class="font-semibold text-white">${r.model||''}</td>
-                            <td class="text-gray-300">${r.remarks ? r.remarks.join('<br>') : ''}</td>
-                            <td class="text-center">
-                                <button data-action="edit" data-source="search" data-idx="${idx}" class="bg-gray-700 text-blue-400 hover:text-white hover:bg-blue-600 px-3 py-1.5 rounded-md transition-all shadow"><i class="fa-solid fa-pen-to-square"></i></button>
-                            </td>
-                        `;
-                        tbody.appendChild(tr);
-                    });
-                } else {
-                    tbody.innerHTML = `<tr><td colspan="6" class="text-center text-gray-500 py-8">${i18n[currentLang].msgNoData}</td></tr>`;
-                }
-            } catch (err) { alert(`搜尋失敗: ${err.message}`); }
+                // 排序：日期降序，序號升序
+                results.sort((a, b) => b.date.localeCompare(a.date) || a.seqNo - b.seqNo);
+                historyData = results;
+                renderHistoryTable();
+
+            } catch (err) {
+                alert(`搜尋失敗 / Lỗi tìm kiếm: ${err.message}`);
+            }
         });
 
         document.getElementById('btn-reset-search').addEventListener('click', () => {
-            document.getElementById('search-date').value = ''; document.getElementById('search-color').value = ''; document.getElementById('search-model').value = '';
-            document.getElementById('history-tbody').innerHTML = `<tr><td colspan="6" class="text-center text-gray-500 py-8">${i18n[currentLang].msgNoData}</td></tr>`;
+            document.getElementById('search-date').value = '';
+            document.getElementById('search-color').value = '';
+            document.getElementById('search-model').value = '';
+            historyData = [];
+            isEditingHistory = null;
+            renderHistoryTable();
         });
 
-        // 統一處理編輯按鈕點擊 (Event Delegation)
-        document.body.addEventListener('click', (e) => {
-            const btn = e.target.closest('button[data-action="edit"]');
-            if (btn) {
-                const source = btn.getAttribute('data-source');
-                const idx = btn.getAttribute('data-idx');
-                const item = source === 'today' ? todayDataStore[idx] : searchDataStore[idx];
-                const date = source === 'today' ? getTodayDisplay().todayDB : item.date;
-                
-                document.getElementById('edit-date').value = date;
-                document.getElementById('edit-seqNo').value = item.seqNo;
-                document.getElementById('edit-color').value = item.color || '';
-                document.getElementById('edit-model').value = item.model || '';
-                document.getElementById('edit-remarks').value = item.remarks ? item.remarks.join('\n') : '';
-                
-                document.getElementById('edit-modal').classList.remove('hidden');
-            }
+        document.addEventListener('DOMContentLoaded', () => {
+            applyLanguage();
+            listenTodaySchedule();
         });
-
-        // 關閉 Modal
-        document.getElementById('btn-cancel-edit').addEventListener('click', () => document.getElementById('edit-modal').classList.add('hidden'));
-
-        // 儲存修改至雲端
-        document.getElementById('btn-save-edit').addEventListener('click', async () => {
-            const btn = document.getElementById('btn-save-edit');
-            btn.disabled = true; btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Saving...`;
-
-            const date = document.getElementById('edit-date').value;
-            const seqNo = parseInt(document.getElementById('edit-seqNo').value);
-            const newColor = document.getElementById('edit-color').value.trim().toUpperCase();
-            const newModel = document.getElementById('edit-model').value.trim().toUpperCase();
-            const newRemarks = document.getElementById('edit-remarks').value.split('\n').map(r => r.trim()).filter(r => r !== '');
-
-            try {
-                const dayRef = ref(db, `schedules/${date}`);
-                const snap = await get(dayRef);
-                if (snap.exists()) {
-                    let arr = snap.val();
-                    let targetIdx = arr.findIndex(x => x && x.seqNo === seqNo);
-                    if (targetIdx !== -1) {
-                        arr[targetIdx] = { seqNo: seqNo, color: newColor, model: newModel, remarks: newRemarks };
-                        await set(dayRef, arr);
-                        
-                        // 順便同步新顏色/機型至雲端設定
-                        let updates = {};
-                        if(newColor && !dbColors.includes(newColor)) updates['settings/colors'] = [...new Set([...dbColors, newColor])];
-                        if(newModel && !dbModels.includes(newModel)) updates['settings/models'] = [...new Set([...dbModels, newModel])];
-                        if(Object.keys(updates).length > 0) await update(ref(db), updates);
-
-                        alert(i18n[currentLang].msgSaveSuccess);
-                        document.getElementById('edit-modal').classList.add('hidden');
-                        
-                        // 若修改的非今日資料，重新觸發查詢更新畫面
-                        if (date !== getTodayDisplay().todayDB) document.getElementById('btn-search').click();
-                    }
-                }
-            } catch (err) {
-                alert(i18n[currentLang].msgSaveError + err.message);
-            } finally {
-                btn.disabled = false; btn.innerHTML = `<i class="fa-solid fa-cloud-arrow-up"></i> <span data-i18n="btnSaveEdit">${i18n[currentLang].btnSaveEdit}</span>`;
-            }
-        });
-
-        document.addEventListener('DOMContentLoaded', () => { applyLanguage(); listenTodaySchedule(); });
     </script>
 </body>
 </html>

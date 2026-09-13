@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>烤漆作業排程 - 順序看板與查詢</title>
+    <!-- 引入 Tailwind CSS 與 FontAwesome -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body { background-color: #1e1e1e; color: #d4d4d4; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .card { background-color: #252526; border: 1px solid #333; border-radius: 0.5rem; padding: 1.25rem; margin-bottom: 1.5rem; }
+        
+        table { width: 100%; border-collapse: collapse; table-layout: auto; }
+        th, td { border: 1px solid #3c3c3c; padding: 0.75rem; vertical-align: top; }
+        th { background-color: #2d2d2d; color: #fff; white-space: nowrap; font-weight: 600; text-align: left; }
+        
+        .w-seq { width: 60px; text-align: center; }
+        .w-color { width: 200px; }
+        .w-model { width: 200px; }
+
+        input, select { background-color: #1e1e1e; color: #fff; border: 1px solid #444; border-radius: 0.25rem; padding: 0.5rem; width: 100%; outline: none; }
+        input:focus, select:focus { border-color: #3b82f6; }
+        
+        button { cursor: pointer; transition: background-color 0.2s; }
+    </style>
+</head>
+<body class="min-h-screen p-4 md:p-8">
+
+    <!-- 頂部導覽列 -->
+    <div class="flex justify-between items-center mb-6 pb-4 border-b border-gray-700">
+        <h1 class="text-2xl font-bold text-white flex items-center gap-2" data-i18n="appTitle">📊 烤漆作業順序看板</h1>
+        <div class="flex items-center gap-3">
+            <a href="烤漆順序管理.html" class="text-sm bg-gray-700 hover:bg-gray-600 text-green-400 px-3 py-1 rounded flex items-center gap-1">
+                <i class="fa-solid fa-pen-to-square"></i> 切換至建立紀錄
+            </a>
+            <span class="text-sm text-gray-400" data-i18n="langLabel">語言 / Ngôn ngữ:</span>
+            <select id="lang-switch" class="w-auto cursor-pointer">
+                <option value="zh">繁體中文</option>
+                <option value="vi">Tiếng Việt</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 gap-6">
+
+        <!-- 區塊 1: 今日作業資料 (即時讀取看板) -->
+        <div class="card border-l-4 border-l-green-500 shadow-lg">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold text-green-400 flex items-center">
+                    <i class="fa-solid fa-calendar-day mr-2"></i><span data-i18n="todayTitle">今日作業資料</span>
+                    <span id="today-date-display" class="ml-2 text-white bg-gray-700 px-3 py-1 rounded text-base font-normal"></span>
+                </h2>
+                <span class="text-xs text-gray-400"><i class="fa-solid fa-rotate animate-spin mr-1"></i>實時雲端同步中</span>
+            </div>
+            <div class="overflow-x-auto">
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="w-seq" data-i18n="thNo">序號</th>
+                            <th class="w-color" data-i18n="thColor">顏色</th>
+                            <th class="w-model" data-i18n="thModel">機型</th>
+                            <th data-i18n="thRemark">備註</th>
+                        </tr>
+                    </thead>
+                    <tbody id="today-tbody" class="text-base">
+                        <tr><td colspan="4" class="text-center text-gray-500 py-6" data-i18n="msgLoading">載入中...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 區塊 2: 歷史記錄查詢 -->
+        <div class="card border-l-4 border-l-blue-500">
+            <h2 class="text-lg font-bold text-blue-400 mb-4" data-i18n="searchTitle">🔍 歷史記錄查詢</h2>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end mb-4">
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1" data-i18n="lblDate">日期 (Ngày)</label>
+                    <input type="date" id="search-date">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1" data-i18n="lblColor">顏色 (Màu sắc)</label>
+                    <input type="text" id="search-color" data-i18n-ph="phSearchColor" placeholder="輸入顏色查詢...">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1" data-i18n="lblModel">機型 (Model)</label>
+                    <input type="text" id="search-model" data-i18n-ph="phSearchModel" placeholder="輸入機型查詢...">
+                </div>
+                <div class="flex gap-2">
+                    <button id="btn-search" class="w-full bg-blue-600 hover:bg-blue-700 text-white p-2 rounded font-bold" data-i18n="btnSearch">查詢</button>
+                    <button id="btn-reset-search" class="w-full bg-gray-600 hover:bg-gray-700 text-white p-2 rounded" data-i18n="btnReset">重設</button>
+                </div>
+            </div>
+
+            <!-- 查詢結果表格 -->
+            <div class="overflow-x-auto">
+                <table>
+                    <thead>
+                        <tr>
+                            <th data-i18n="thDate">日期</th>
+                            <th class="w-seq" data-i18n="thNo">序號</th>
+                            <th class="w-color" data-i18n="thColor">顏色</th>
+                            <th class="w-model" data-i18n="thModel">機型</th>
+                            <th data-i18n="thRemark">備註</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-tbody">
+                        <tr><td colspan="5" class="text-center text-gray-500 py-4" data-i18n="msgNoData">請設定條件進行查詢</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Firebase 腳本與邏輯 -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getDatabase, ref, onValue, get } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBvx7Ej2h9ZV5S1t_Gag756qop_jcoxy2U",
+            authDomain: "shopee-60a13.firebaseapp.com",
+            databaseURL: "https://shopee-60a13-default-rtdb.firebaseio.com",
+            projectId: "shopee-60a13",
+            storageBucket: "shopee-60a13.firebasestorage.app",
+            messagingSenderId: "18436404849",
+            appId: "1:18436404849:web:f2bdfa4189ff15456fcdd0"
+        };
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        let currentLang = 'zh';
+
+        const i18n = {
+            zh: {
+                appTitle: "📊 烤漆作業順序看板", langLabel: "語言 / Ngôn ngữ:", searchTitle: "🔍 歷史記錄查詢",
+                lblDate: "日期 (Ngày)", lblColor: "顏色 (Màu sắc)", lblModel: "機型 (Model)",
+                btnSearch: "查詢", btnReset: "重設", msgNoData: "尚無符合條件的資料", msgLoading: "載入中...",
+                todayTitle: "今日作業資料", thDate: "日期", thNo: "序號", thColor: "顏色", thModel: "機型", thRemark: "備註",
+                phSearchColor: "輸入顏色查詢...", phSearchModel: "輸入機型查詢..."
+            },
+            vi: {
+                appTitle: "📊 Bảng Thứ tự Sơn", langLabel: "Ngôn ngữ / 語言:", searchTitle: "🔍 Tra cứu lịch sử",
+                lblDate: "Ngày (日期)", lblColor: "Màu sắc (顏色)", lblModel: "Model (機型)",
+                btnSearch: "Tìm kiếm", btnReset: "Đặt lại", msgNoData: "Không có dữ liệu", msgLoading: "Đang tải...",
+                todayTitle: "Dữ liệu làm việc hôm nay", thDate: "Ngày", thNo: "STT", thColor: "Màu sắc", thModel: "Model", thRemark: "Ghi chú",
+                phSearchColor: "Nhập màu sắc...", phSearchModel: "Nhập model..."
+            }
+        };
+
+        const weekdays = {
+            zh: ["日", "一", "二", "三", "四", "五", "六"],
+            vi: ["CN", "T2", "T3", "T4", "T5", "T6", "T7"]
+        };
+
+        function getDBDateFormat(dateObj) {
+            return `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')}`;
+        }
+
+        function getTodayDisplay() {
+            const today = new Date();
+            const todayDB = getDBDateFormat(today);
+            const todayDisplay = `${today.getMonth() + 1}/${today.getDate()} (${currentLang === 'vi' ? 'Thứ ' : '週'}${weekdays[currentLang][today.getDay()]})`;
+            return { todayDB, todayDisplay };
+        }
+
+        function applyLanguage() {
+            const t = i18n[currentLang];
+            document.querySelectorAll('[data-i18n]').forEach(el => { el.innerText = t[el.getAttribute('data-i18n')]; });
+            document.querySelectorAll('[data-i18n-ph]').forEach(el => { el.placeholder = t[el.getAttribute('data-i18n-ph')]; });
+            const dates = getTodayDisplay();
+            document.getElementById('today-date-display').innerText = dates.todayDisplay;
+        }
+
+        document.getElementById('lang-switch').addEventListener('change', (e) => {
+            currentLang = e.target.value;
+            applyLanguage();
+        });
+
+        // 即時監聽今日作業資料
+        function listenTodaySchedule() {
+            const { todayDB } = getTodayDisplay();
+            onValue(ref(db, `schedules/${todayDB}`), (snapshot) => {
+                const tbody = document.getElementById('today-tbody');
+                tbody.innerHTML = '';
+                if (snapshot.exists() && snapshot.val().length > 0) {
+                    snapshot.val().forEach(item => {
+                        const tr = document.createElement('tr');
+                        tr.className = "hover:bg-gray-800 transition-colors";
+                        const rmkStr = item.remarks ? item.remarks.join('<br>') : '';
+                        tr.innerHTML = `
+                            <td class="text-center font-bold text-green-400">${item.seqNo}</td>
+                            <td class="font-bold text-white">${item.color || ''}</td>
+                            <td class="font-bold text-white">${item.model || ''}</td>
+                            <td class="text-gray-300">${rmkStr}</td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                } else {
+                    tbody.innerHTML = `<tr><td colspan="4" class="text-center text-gray-500 py-6">${i18n[currentLang].msgNoData}</td></tr>`;
+                }
+            });
+        }
+
+        // 搜尋歷史紀錄
+        document.getElementById('btn-search').addEventListener('click', async () => {
+            const sDate = document.getElementById('search-date').value;
+            const sColor = document.getElementById('search-color').value.trim().toUpperCase();
+            const sModel = document.getElementById('search-model').value.trim().toUpperCase();
+            const tbody = document.getElementById('history-tbody');
+            
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center text-blue-400 py-4"><i class="fa-solid fa-spinner fa-spin"></i> ${i18n[currentLang].msgLoading}</td></tr>`;
+            
+            try {
+                let results = [];
+                if (sDate) {
+                    const snap = await get(ref(db, `schedules/${sDate}`));
+                    if(snap.exists()) snap.val().forEach(i => results.push({date: sDate, ...i}));
+                } else {
+                    const snap = await get(ref(db, `schedules`));
+                    if(snap.exists()) {
+                        const allData = snap.val();
+                        Object.keys(allData).forEach(d => {
+                            allData[d].forEach(i => results.push({date: d, ...i}));
+                        });
+                    }
+                }
+
+                if (sColor) results = results.filter(r => r.color && r.color.includes(sColor));
+                if (sModel) results = results.filter(r => r.model && r.model.includes(sModel));
+
+                results.sort((a, b) => b.date.localeCompare(a.date) || a.seqNo - b.seqNo);
+
+                tbody.innerHTML = '';
+                if (results.length > 0) {
+                    results.forEach(r => {
+                        const tr = document.createElement('tr');
+                        tr.className = "hover:bg-gray-700 transition-colors";
+                        tr.innerHTML = `
+                            <td class="text-blue-300 font-mono">${r.date}</td>
+                            <td class="text-center font-bold">${r.seqNo}</td>
+                            <td>${r.color||''}</td>
+                            <td>${r.model||''}</td>
+                            <td>${r.remarks ? r.remarks.join(' / ') : ''}</td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                } else {
+                    tbody.innerHTML = `<tr><td colspan="5" class="text-center text-gray-500 py-4">${i18n[currentLang].msgNoData}</td></tr>`;
+                }
+            } catch (err) {
+                alert(`搜尋失敗: ${err.message}`);
+            }
+        });
+
+        document.getElementById('btn-reset-search').addEventListener('click', () => {
+            document.getElementById('search-date').value = '';
+            document.getElementById('search-color').value = '';
+            document.getElementById('search-model').value = '';
+            document.getElementById('history-tbody').innerHTML = `<tr><td colspan="5" class="text-center text-gray-500 py-4">${i18n[currentLang].msgNoData}</td></tr>`;
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            applyLanguage();
+            listenTodaySchedule();
+        });
+    </script>
+</body>
+</html>

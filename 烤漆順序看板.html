@@ -152,6 +152,37 @@
         let isEditingToday = null;
         let isEditingHistory = null;
 
+        // --- 內容雙向翻譯字典 (可在此新增常用詞彙) ---
+        const contentDict = {
+            "急件": "Hàng gấp",
+            "特急": "Cực gấp",
+            "重烤": "Sơn lại",
+            "補漆": "Sơn dặm",
+            "缺件": "Thiếu kiện",
+            "暫停": "Tạm dừng",
+            "優先": "Ưu tiên",
+            "待確認": "Chờ xác nhận",
+            "測試": "Kiểm tra",
+            "報廢": "Phế liệu",
+            "打樣": "Hàng mẫu"
+        };
+
+        // 翻譯函數：動態替換 Firebase 內的資料字串
+        function translateContent(text, targetLang) {
+            if (!text) return '';
+            let result = text;
+            if (targetLang === 'vi') {
+                for (const [zh, vi] of Object.entries(contentDict)) {
+                    result = result.split(zh).join(vi);
+                }
+            } else if (targetLang === 'zh') {
+                for (const [zh, vi] of Object.entries(contentDict)) {
+                    result = result.split(vi).join(zh);
+                }
+            }
+            return result;
+        }
+
         const i18n = {
             zh: {
                 appTitle: "📊 烤漆作業順序看板", langLabel: "語言 / Ngôn ngữ:", searchTitle: "歷史記錄查詢",
@@ -206,7 +237,7 @@
             const dates = getTodayDisplay();
             document.getElementById('today-date-display').innerText = dates.todayDisplay;
             
-            // 切換語言時同步重新繪製表格
+            // 切換語言時同步重新繪製表格 (觸發翻譯)
             renderTodayTable();
             renderHistoryTable();
         }
@@ -232,7 +263,7 @@
                 tr.className = "hover:bg-gray-800 transition-colors";
                 
                 if (isEditingToday === idx) {
-                    // 編輯模式
+                    // 編輯模式：保留資料庫原始文字，避免翻譯後的文字存回資料庫
                     tr.innerHTML = `
                         <td class="text-center font-bold text-green-400">${item.seqNo}</td>
                         <td><input type="text" id="edit-t-color-${idx}" list="color-list" value="${item.color || ''}"></td>
@@ -246,13 +277,16 @@
                         </td>
                     `;
                 } else {
-                    // 檢視模式
-                    const rmkStr = item.remarks ? item.remarks.join('<br>') : '';
+                    // 檢視模式：套用動態翻譯
+                    const displayColor = translateContent(item.color || '', currentLang);
+                    const displayModel = translateContent(item.model || '', currentLang);
+                    const displayRemarks = item.remarks ? item.remarks.map(r => translateContent(r, currentLang)).join('<br>') : '';
+                    
                     tr.innerHTML = `
                         <td class="text-center font-bold text-green-400 text-lg">${item.seqNo}</td>
-                        <td class="font-bold text-white text-lg">${item.color || ''}</td>
-                        <td class="font-bold text-white text-lg">${item.model || ''}</td>
-                        <td class="text-gray-300">${rmkStr}</td>
+                        <td class="font-bold text-white text-lg">${displayColor}</td>
+                        <td class="font-bold text-white text-lg">${displayModel}</td>
+                        <td class="text-gray-300">${displayRemarks}</td>
                         <td class="text-center">
                             <button onclick="editToday(${idx})" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded shadow text-sm font-bold"><i class="fa-solid fa-pen"></i> ${t.btnEdit}</button>
                         </td>
@@ -278,7 +312,7 @@
                 tr.className = "hover:bg-gray-700 transition-colors";
                 
                 if (isEditingHistory === idx) {
-                    // 編輯模式
+                    // 編輯模式：保留原始文字
                     tr.innerHTML = `
                         <td class="text-blue-300 font-mono align-middle">${r.date}</td>
                         <td class="text-center font-bold align-middle">${r.seqNo}</td>
@@ -293,13 +327,17 @@
                         </td>
                     `;
                 } else {
-                    // 檢視模式
+                    // 檢視模式：套用動態翻譯
+                    const displayColor = translateContent(r.color || '', currentLang);
+                    const displayModel = translateContent(r.model || '', currentLang);
+                    const displayRemarks = r.remarks ? r.remarks.map(rmk => translateContent(rmk, currentLang)).join(' / ') : '';
+                    
                     tr.innerHTML = `
                         <td class="text-blue-300 font-mono">${r.date}</td>
                         <td class="text-center font-bold text-lg">${r.seqNo}</td>
-                        <td class="text-lg font-bold">${r.color||''}</td>
-                        <td class="text-lg font-bold">${r.model||''}</td>
-                        <td>${r.remarks ? r.remarks.join(' / ') : ''}</td>
+                        <td class="text-lg font-bold">${displayColor}</td>
+                        <td class="text-lg font-bold">${displayModel}</td>
+                        <td>${displayRemarks}</td>
                         <td class="text-center">
                             <button onclick="editHistory(${idx})" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded shadow text-sm font-bold"><i class="fa-solid fa-pen"></i> ${t.btnEdit}</button>
                         </td>
@@ -323,7 +361,6 @@
             
             try {
                 const { todayDB } = getTodayDisplay();
-                // 使用 originalIndex 更新 Firebase 準確路徑，防止刪除造成的陣列偏移
                 await set(ref(db, `schedules/${todayDB}/${item.originalIndex}`), updatedData);
                 isEditingToday = null;
                 alert(i18n[currentLang].msgUpdateOk);
@@ -345,7 +382,6 @@
             
             try {
                 await set(ref(db, `schedules/${item.date}/${item.originalIndex}`), updatedData);
-                // 本地同步更新以即時顯示
                 historyData[idx] = { ...item, color, model, remarks };
                 isEditingHistory = null;
                 renderHistoryTable();
@@ -362,7 +398,6 @@
                 todayData = [];
                 if (snapshot.exists()) {
                     const data = snapshot.val();
-                    // Firebase 存儲陣列若有刪減可能轉為 Object
                     Object.keys(data).forEach(key => {
                         if (data[key]) todayData.push({ originalIndex: key, ...data[key] });
                     });
@@ -374,11 +409,12 @@
         // 搜尋歷史紀錄
         document.getElementById('btn-search').addEventListener('click', async () => {
             const sDate = document.getElementById('search-date').value;
+            // 查詢時可考慮讓輸入框也支援原生語言，但通常還是用代碼查比較精準
             const sColor = document.getElementById('search-color').value.trim().toUpperCase();
             const sModel = document.getElementById('search-model').value.trim().toUpperCase();
             const tbody = document.getElementById('history-tbody');
             
-            isEditingHistory = null; // 重置編輯狀態
+            isEditingHistory = null;
             tbody.innerHTML = `<tr><td colspan="6" class="text-center text-blue-400 py-6"><i class="fa-solid fa-spinner fa-spin mr-2"></i> ${i18n[currentLang].msgLoading}</td></tr>`;
             
             try {
@@ -407,7 +443,6 @@
                 if (sColor) results = results.filter(r => r.color && r.color.includes(sColor));
                 if (sModel) results = results.filter(r => r.model && r.model.includes(sModel));
 
-                // 排序：日期降序，序號升序
                 results.sort((a, b) => b.date.localeCompare(a.date) || a.seqNo - b.seqNo);
                 historyData = results;
                 renderHistoryTable();

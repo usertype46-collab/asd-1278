@@ -227,6 +227,8 @@
             nextDayData[rowIndex].remarks.splice(rmkIndex, 1);
             renderNextTable();
         }
+        
+        // 輸入框直接更新原始資料，確保資料庫儲存的都是單一語言基準（建議皆用中文輸入）
         window.updateData = function(rowIndex, field, val, rmkIndex = -1) {
             if (rmkIndex === -1) nextDayData[rowIndex][field] = val.toUpperCase();
             else nextDayData[rowIndex].remarks[rmkIndex] = val;

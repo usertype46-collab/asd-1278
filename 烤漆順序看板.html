@@ -199,7 +199,7 @@
                 <div class="text-xl font-bold text-emerald-400 flex items-center justify-between">
                     <span id="sync-countdown">10:00</span>
                     <button onclick="manualRefreshMaster()" class="bg-gray-700 hover:bg-gray-600 text-xs px-2 py-1 rounded text-white flex items-center gap-1">
-                        <i class="fa-solid fa-rotate"></i> <span data-i18n="btnRefreshNow">立即更新</span>
+                        <i class="fa-solid fa-rotate"></i> <span data-i18n="btnRefreshNow">立卽更新</span>
                     </button>
                 </div>
             </div>
@@ -401,6 +401,32 @@
             return result;
         }
 
+        // 日期轉繁體中文月日模式格式化函數
+        function formatChineseDate(val) {
+            if (!val) return '';
+            const str = String(val).trim();
+
+            // 匹配 Google Sheets GViz API 的 Date(yyyy,m,d) 格式 (Google GViz 月份為 0-indexed)
+            const gvizDateRegex = /^Date\((\d{4}),\s*(\d{1,2}),\s*(\d{1,2})\)$/i;
+            const match = str.match(gvizDateRegex);
+            if (match) {
+                const month = parseInt(match[2], 10) + 1; // 0-indexed 轉為 1-12 月
+                const day = parseInt(match[3], 10);
+                return `${month}月${day}日`;
+            }
+
+            // 匹配 YYYY-MM-DD 或 YYYY/MM/DD 標準日期格式
+            const stdDateRegex = /^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/;
+            const stdMatch = str.match(stdDateRegex);
+            if (stdMatch) {
+                const month = parseInt(stdMatch[2], 10);
+                const day = parseInt(stdMatch[3], 10);
+                return `${month}月${day}日`;
+            }
+
+            return str;
+        }
+
         const i18n = {
             zh: {
                 appTitle: "烤漆與生產總排程管理系統",
@@ -519,10 +545,14 @@
             return `color: #38bdf8; font-weight: 700;`;
         }
 
-        // 渲染單元格（含狀態顏色與烤漆顏色邏輯）
+        // 渲染單元格（含日期格式化、狀態顏色與烤漆顏色邏輯）
         function renderMasterCellContent(val, headerName) {
             if (val === null || val === undefined || val === '') return '-';
-            const valStr = String(val).trim();
+            let valStr = String(val).trim();
+
+            // 自動將 Date(YYYY,M,D) 或標準日期格式轉為繁體中文月日模式 (例如: 8月18日)
+            valStr = formatChineseDate(valStr);
+
             const translatedVal = translateContent(valStr, currentLang);
 
             // 狀態顏色判定 (排版、倉庫、採購、完成等)
@@ -637,7 +667,7 @@
                 document.getElementById('kpi-completed-count').innerText = completedCount;
                 document.getElementById('kpi-working-count').innerText = workingCount;
 
-                // 建立 表頭
+                // 建立表頭
                 if (headers.length > 0) {
                     thead.innerHTML = `
                         <tr>
@@ -671,8 +701,8 @@
             }
 
             let filtered = rawMasterRows.filter(row => {
-                // 關鍵字比對
-                const rowText = row.map(cell => String(cell)).join(' ').toLowerCase();
+                // 關鍵字比對 (轉換日期後再比對)
+                const rowText = row.map(cell => formatChineseDate(String(cell))).join(' ').toLowerCase();
                 const matchKeyword = !searchKeyword || rowText.includes(searchKeyword);
 
                 // 狀態比對
@@ -748,9 +778,7 @@
                 if (day !== 0 && day !== 6 && !holidays.has(isoStr)) break;
             }
             const nextDB = getDBDateFormat(nextDate);
-            const nextDisplay = currentLang === 'zh'
-                ? `${nextDate.getMonth() + 1}月${nextDate.getDate()}日 (週${weekdays[currentLang][nextDate.getDay()]})`
-                : `${nextDate.getMonth() + 1}/${nextDate.getDate()} (Thứ ${weekdays[currentLang][nextDate.getDay()]})`;
+            const nextDisplay = `${nextDate.getMonth() + 1}/${nextDate.getDate()} (${currentLang === 'vi' ? 'Thứ ' : '週'}${weekdays[currentLang][nextDate.getDay()]})`;
             return { dbDate: nextDB, displayDate: nextDisplay, isNext: true };
         }
 
@@ -763,9 +791,7 @@
                 return getNextWorkingDate();
             } else {
                 const todayDB = getDBDateFormat(now);
-                const todayDisplay = currentLang === 'zh'
-                    ? `${now.getMonth() + 1}月${now.getDate()}日 (週${weekdays[currentLang][now.getDay()]})`
-                    : `${now.getMonth() + 1}/${now.getDate()} (Thứ ${weekdays[currentLang][now.getDay()]})`;
+                const todayDisplay = `${now.getMonth() + 1}/${now.getDate()} (${currentLang === 'vi' ? 'Thứ ' : '週'}${weekdays[currentLang][now.getDay()]})`;
                 return { dbDate: todayDB, displayDate: todayDisplay, isNext: false };
             }
         }
@@ -854,7 +880,7 @@
                 
                 if (isEditingHistory === idx) {
                     tr.innerHTML = `
-                        <td class="text-blue-300 font-mono align-middle">${r.date}</td>
+                        <td class="text-blue-300 font-mono align-middle">${formatChineseDate(r.date)}</td>
                         <td class="text-center font-bold align-middle">${r.seqNo}</td>
                         <td><input type="text" id="edit-h-color-${idx}" list="color-list" value="${r.color||''}"></td>
                         <td><input type="text" id="edit-h-model-${idx}" list="model-list" value="${r.model||''}"></td>
@@ -873,7 +899,7 @@
                     const colorStyle = getPaintColorStyle(r.color || '');
 
                     tr.innerHTML = `
-                        <td class="text-blue-300 font-mono">${r.date}</td>
+                        <td class="text-blue-300 font-mono">${formatChineseDate(r.date)}</td>
                         <td class="text-center font-bold text-lg">${r.seqNo}</td>
                         <td class="text-lg font-bold"><span style="${colorStyle}">${displayColor}</span></td>
                         <td class="text-lg font-bold">${displayModel}</td>

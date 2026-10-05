@@ -3,66 +3,55 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>烤漆作業排程 - 總排程與順序看板</title>
-    <!-- 引入 Tailwind CSS 與 FontAwesome 圖示庫 -->
+    <title>烤漆作業排程 - 順序看板與查詢 (含總排程)</title>
+    <!-- 引入 Tailwind CSS 與 FontAwesome -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
-        :root {
-            --bg-main: #1e1e1e;
-            --bg-card: #252526;
-            --border-color: #3c3c3c;
-            --text-main: #e5e5e5;
-            --status-red: #ef4444;
-            --status-violet: #8b5cf6;
-            --status-orange: #f97316;
-        }
-
+        /* 基礎全域設定，採用深色模式提升視覺舒適度 */
         body { 
-            background-color: var(--bg-main); 
-            color: var(--text-main); 
+            background-color: #1e1e1e; 
+            color: #e5e5e5; 
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
         }
-
+        
+        /* 卡片容器樣式設定 */
         .card { 
-            background-color: var(--bg-card); 
-            border: 1px solid var(--border-color); 
+            background-color: #252526; 
+            border: 1px solid #3c3c3c; 
             border-radius: 0.5rem; 
             padding: 1.5rem; 
             margin-bottom: 1.5rem; 
             box-shadow: 0 4px 6px rgba(0,0,0,0.3); 
         }
-
+        
+        /* 表格與儲存格通用樣式 */
         table { 
             width: 100%; 
             border-collapse: collapse; 
             table-layout: auto; 
         }
-
         th, td { 
             border: 1px solid #444; 
-            padding: 0.75rem 0.85rem; 
+            padding: 0.85rem; 
             vertical-align: middle; 
-            font-size: 0.95rem;
         }
-
         th { 
             background-color: #2d2d2d; 
             color: #fff; 
             white-space: nowrap; 
             font-weight: 600; 
             text-align: left; 
-            position: sticky;
-            top: 0;
-            z-index: 10;
         }
-
+        
+        /* 特定欄位寬度設定 */
         .w-seq { width: 60px; text-align: center; }
-        .w-color { width: 160px; }
-        .w-model { width: 160px; }
+        .w-color { width: 180px; }
+        .w-model { width: 180px; }
         .w-action { width: 120px; text-align: center; }
 
+        /* 表單輸入框樣式設定 */
         input[type="text"], input[type="date"], select { 
             background-color: #1e1e1e; 
             color: #fff; 
@@ -73,83 +62,56 @@
             outline: none; 
             transition: border-color 0.2s, box-shadow 0.2s;
         }
-
         input:focus, select:focus { 
             border-color: #3b82f6; 
             box-shadow: 0 0 0 1px #3b82f6; 
         }
         
+        /* 按鈕基礎過渡效果 */
         button { 
             cursor: pointer; 
-            transition: all 0.2s; 
+            transition: all 0.2s ease-in-out; 
         }
 
-        /* 頁籤 Tab 樣式 */
-        .tab-btn {
-            padding: 0.65rem 1.25rem;
-            font-weight: 600;
-            border-radius: 0.5rem 0.5rem 0 0;
-            border: 1px solid transparent;
-            background-color: #2d2d2d;
-            color: #9ca3af;
-            transition: all 0.2s ease-in-out;
+        /* 總排程看板專屬樣式 */
+        .master-table-container {
+            max-height: 600px;
+            overflow-y: auto;
+            border: 1px solid #444;
+            border-radius: 0.375rem;
+        }
+        
+        /* 固定表頭以利長資料捲動閱讀 */
+        .master-table th {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background-color: #1f2937;
+            box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.4);
         }
 
-        .tab-btn:hover {
-            color: #ffffff;
-            background-color: #374151;
-        }
-
-        .tab-btn.active {
-            background-color: #252526;
-            color: #38bdf8;
-            border-color: #3c3c3c #3c3c3c transparent #3c3c3c;
-            border-top: 3px solid #38bdf8;
-        }
-
-        /* 狀態填色 Badge 樣式 */
-        .status-badge-red {
-            background-color: #ef4444 !important;
+        /* 狀態填滿特效類別：排版, 倉庫, 採購, 完成 */
+        .status-red {
+            background-color: #dc2626 !important; /* Tailwind red-600 */
             color: #ffffff !important;
-            font-weight: bold;
-            padding: 0.35rem 0.65rem;
-            border-radius: 0.375rem;
-            display: inline-block;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+            font-weight: 700;
         }
 
-        .status-badge-violet {
-            background-color: #8b5cf6 !important;
+        /* 狀態填滿特效類別：作業中 */
+        .status-violet {
+            background-color: #7c3aed !important; /* Tailwind violet-600 */
             color: #ffffff !important;
-            font-weight: bold;
-            padding: 0.35rem 0.65rem;
-            border-radius: 0.375rem;
-            display: inline-block;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+            font-weight: 700;
         }
 
-        .status-badge-orange {
-            background-color: #f97316 !important;
+        /* 狀態填滿特效類別：完成-先挪庫存料 */
+        .status-orange {
+            background-color: #f97316 !important; /* Tailwind orange-500 */
             color: #ffffff !important;
-            font-weight: bold;
-            padding: 0.35rem 0.65rem;
-            border-radius: 0.375rem;
-            display: inline-block;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+            font-weight: 700;
         }
 
-        /* 烤漆顏色 Tag 樣式 */
-        .paint-tag {
-            display: inline-block;
-            padding: 0.25rem 0.6rem;
-            border-radius: 0.375rem;
-            font-weight: 600;
-            font-size: 0.9rem;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.2);
-            text-align: center;
-        }
-
-        /* 自訂滾動條 */
+        /* 捲軸美化 */
         ::-webkit-scrollbar {
             width: 8px;
             height: 8px;
@@ -158,46 +120,32 @@
             background: #1e1e1e;
         }
         ::-webkit-scrollbar-thumb {
-            background: #4b5563;
+            background: #555;
             border-radius: 4px;
         }
         ::-webkit-scrollbar-thumb:hover {
-            background: #6b7280;
-        }
-
-        /* 脈衝微動畫 */
-        @keyframes pulse-subtle {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.85; }
-        }
-        .animate-pulse-subtle {
-            animation: pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+            background: #777;
         }
     </style>
 </head>
-<body class="min-h-screen p-4 md:p-6 text-base">
+<body class="min-h-screen p-4 md:p-8 text-base">
 
-    <!-- 用於編輯時的自動補齊數據清單 -->
+    <!-- 用於編輯時的自動補齊清單 -->
     <datalist id="color-list"></datalist>
     <datalist id="model-list"></datalist>
 
-    <!-- 頂部標頭與導覽 -->
-    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 pb-4 border-b border-gray-700 gap-4">
-        <div>
-            <h1 class="text-2xl md:text-3xl font-bold text-white flex items-center gap-3">
-                <i class="fa-solid fa-industry text-blue-400"></i>
-                <span data-i18n="appTitle">烤漆作業排程系統</span>
-            </h1>
-            <p class="text-xs md:text-sm text-gray-400 mt-1" data-i18n="appSubtitle">即時同步 Google Sheet 總排程與烤漆生產順序看板</p>
-        </div>
-        
+    <!-- 頂部導覽列與語系切換 -->
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 pb-4 border-b border-gray-700 gap-4">
+        <h1 class="text-2xl md:text-3xl font-bold text-white flex items-center gap-2" data-i18n="appTitle">
+            📊 烤漆作業順序看板
+        </h1>
         <div class="flex items-center gap-3 flex-wrap">
-            <a href="烤漆順序管理.html" class="bg-gray-800 hover:bg-gray-700 border border-gray-600 text-green-400 px-4 py-2 rounded-md flex items-center gap-2 font-medium shadow text-sm">
-                <i class="fa-solid fa-pen-to-square"></i> <span data-i18n="btnManage">切換至建立紀錄</span>
+            <a href="烤漆順序管理.html" class="bg-gray-700 hover:bg-gray-600 text-green-400 px-4 py-2 rounded-md flex items-center gap-2 font-medium shadow">
+                <i class="fa-solid fa-pen-to-square"></i> 切換至建立紀錄
             </a>
-            <div class="flex items-center gap-2 ml-2 bg-gray-800 px-3 py-1.5 rounded-md border border-gray-700">
-                <span class="text-xs md:text-sm text-gray-300" data-i18n="langLabel">語言 / Ngôn ngữ:</span>
-                <select id="lang-switch" class="w-auto cursor-pointer py-0.5 px-2 text-xs md:text-sm bg-gray-900 text-white rounded">
+            <div class="flex items-center gap-2 ml-2">
+                <span class="text-sm text-gray-400" data-i18n="langLabel">語言 / Ngôn ngữ:</span>
+                <select id="lang-switch" class="w-auto cursor-pointer py-1 px-2 text-sm">
                     <option value="zh">繁體中文</option>
                     <option value="vi">Tiếng Việt</option>
                 </select>
@@ -205,117 +153,55 @@
         </div>
     </div>
 
-    <!-- 主分頁導覽按鈕 (Tabs) -->
-    <div class="flex border-b border-gray-700 mb-6 gap-1 overflow-x-auto">
-        <button id="tab-btn-master" onclick="switchTab('master')" class="tab-btn active flex items-center gap-2">
-            <i class="fa-solid fa-table-list text-yellow-400"></i> <span data-i18n="tabMaster">總排程看板 (Google Sheet)</span>
-        </button>
-        <button id="tab-btn-today" onclick="switchTab('today')" class="tab-btn flex items-center gap-2">
-            <i class="fa-solid fa-calendar-day text-green-400"></i> <span data-i18n="tabToday">今日作業資料</span>
-        </button>
-        <button id="tab-btn-history" onclick="switchTab('history')" class="tab-btn flex items-center gap-2">
-            <i class="fa-solid fa-clock-rotate-left text-blue-400"></i> <span data-i18n="tabHistory">歷史記錄查詢</span>
-        </button>
-    </div>
+    <!-- 主要內容區塊 -->
+    <div class="grid grid-cols-1 gap-8">
 
-    <!-- 主內容區域 -->
-    <div class="grid grid-cols-1 gap-6">
-
-        <!-- ==================== 區塊 1: 總排程看板 (Google Sheet 每10分鐘即時更新) ==================== -->
-        <div id="tab-content-master" class="card border-l-4 border-l-yellow-500 shadow-xl">
-            <!-- 標題與更新資訊列 -->
-            <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-5 gap-4 pb-4 border-b border-gray-700">
-                <div>
-                    <h2 class="text-xl font-bold text-yellow-400 flex items-center gap-2">
-                        <i class="fa-solid fa-file-spreadsheet"></i>
-                        <span data-i18n="masterTitle">總排程即時看板</span>
-                        <span class="text-xs bg-yellow-900 text-yellow-200 border border-yellow-600 px-2.5 py-0.5 rounded-full font-normal">工作表 1</span>
-                    </h2>
-                    <p class="text-xs text-gray-400 mt-1" data-i18n="masterSub">唯讀讀取 Google Sheet 所有欄位，邏輯設定為每 10 分鐘自動同步最新數據。</p>
-                </div>
-
-                <div class="flex items-center gap-3 flex-wrap text-sm">
-                    <!-- 自動倒數計時與狀態顯示 -->
-                    <div class="bg-gray-800 border border-gray-700 px-3 py-1.5 rounded-md flex items-center gap-2">
-                        <i class="fa-solid fa-rotate animate-spin text-yellow-400"></i>
-                        <span data-i18n="nextRefresh">下次自動更新：</span>
-                        <span id="countdown-display" class="font-mono text-yellow-300 font-bold">10:00</span>
+        <!-- 新增區塊：總排程看板 (Google Sheets 即時同步) -->
+        <div class="card border-l-4 border-l-orange-500 shadow-xl">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-5 gap-4">
+                <h2 class="text-xl font-bold text-orange-400 flex items-center flex-wrap gap-2">
+                    <i class="fa-solid fa-table-list mr-1"></i>
+                    <span data-i18n="masterTitle">總排程看板 (Google 試算表)</span>
+                </h2>
+                
+                <!-- 控制面板：顯示更新時間與倒數計時器 -->
+                <div class="flex items-center gap-3 bg-gray-800 px-3 py-2 rounded-lg border border-gray-700">
+                    <div class="flex flex-col text-xs text-gray-400">
+                        <span>最後更新: <span id="last-update-time" class="text-white font-mono">--:--:--</span></span>
+                        <span>下次更新: <span id="next-update-timer" class="text-orange-400 font-mono font-bold">10:00</span></span>
                     </div>
-
-                    <!-- 最後更新時間 -->
-                    <div class="text-xs text-gray-400 bg-gray-900 px-3 py-2 rounded border border-gray-800">
-                        <span data-i18n="lastUpdated">最後同步：</span>
-                        <span id="last-update-time" class="text-gray-200 font-mono">載入中...</span>
-                    </div>
-
-                    <!-- 手動重新整理按鈕 -->
-                    <button id="btn-refresh-master" onclick="manualRefreshMasterSchedule()" class="bg-yellow-600 hover:bg-yellow-500 text-white px-3.5 py-1.5 rounded-md shadow font-bold flex items-center gap-1.5 text-xs">
-                        <i class="fa-solid fa-arrows-rotate"></i> <span data-i18n="btnRefreshNow">立即更新</span>
+                    <div class="h-6 w-px bg-gray-600 mx-1"></div>
+                    <button id="btn-refresh-master" class="bg-orange-600 hover:bg-orange-700 text-white px-3 py-1 rounded text-sm flex items-center gap-1 transition-all shadow">
+                        <i class="fa-solid fa-rotate"></i> 立即更新
                     </button>
                 </div>
             </div>
-
-            <!-- 圖例說明條 -->
-            <div class="mb-4 p-3 bg-gray-900 border border-gray-800 rounded-md text-xs flex flex-wrap gap-4 items-center">
-                <span class="text-gray-400 font-bold"><i class="fa-solid fa-circle-info mr-1"></i><span data-i18n="legendTitle">狀態填色邏輯：</span></span>
-                <span class="status-badge-red"><i class="fa-solid fa-square mr-1"></i>排版 / 倉庫 / 採購 / 完成 (紅色填滿)</span>
-                <span class="status-badge-violet"><i class="fa-solid fa-spinner mr-1"></i>作業中 (紫羅蘭色填滿)</span>
-                <span class="status-badge-orange"><i class="fa-solid fa-boxes-packing mr-1"></i>完成挪用庫存料 (橙色填滿)</span>
-                <span class="text-gray-300"><i class="fa-solid fa-palette text-blue-400 mr-1"></i>烤漆顏色：依字樣顏色自動標示</span>
-            </div>
-
-            <!-- 篩選列 -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
-                <div>
-                    <input type="text" id="master-search-input" placeholder="搜尋關鍵字 (機型/顏色/狀態/單號)..." data-i18n-ph="phMasterSearch" oninput="filterMasterTable()" class="text-xs md:text-sm">
-                </div>
-                <div>
-                    <select id="master-filter-status" onchange="filterMasterTable()" class="text-xs md:text-sm">
-                        <option value="" data-i18n="optAllStatus">所有狀態 (Tất cả trạng thái)</option>
-                        <option value="作業中">作業中 (Đang thực hiện)</option>
-                        <option value="完成">完成 (Hoàn thành)</option>
-                        <option value="排版">排版 (Xếp bản)</option>
-                        <option value="倉庫">倉庫 (Kho)</option>
-                        <option value="採購">採購 (Thu mua)</option>
-                        <option value="完成挪用庫存料">完成挪用庫存料 (Dùng kho)</option>
-                    </select>
-                </div>
-                <div class="flex items-center justify-end text-xs text-gray-400">
-                    <span data-i18n="totalRows">顯示筆數：</span>
-                    <span id="master-row-count" class="text-white font-bold mx-1">0</span> 筆
-                </div>
-            </div>
-
-            <!-- Google Sheet 資料表格容器 -->
-            <div class="overflow-x-auto max-h-[680px] border border-gray-700 rounded-md">
-                <table class="min-w-full text-left">
+            
+            <!-- 總排程表格容器 -->
+            <div class="master-table-container">
+                <table class="min-w-full master-table" id="master-table">
                     <thead id="master-thead">
-                        <tr>
-                            <th class="py-3 px-4 text-center text-gray-400" data-i18n="msgLoading">資料載入中...</th>
-                        </tr>
+                        <!-- 表頭將由 JS 動態生成 -->
+                        <tr><th class="text-gray-400 py-3">資料載入中...</th></tr>
                     </thead>
-                    <tbody id="master-tbody" class="divide-y divide-gray-800">
-                        <tr>
-                            <td class="text-center text-gray-400 py-10">
-                                <i class="fa-solid fa-spinner fa-spin text-2xl mb-2 text-yellow-400"></i>
-                                <p data-i18n="msgFetchingSheet">正在連結 Google Sheet 讀取資料...</p>
-                            </td>
-                        </tr>
+                    <tbody id="master-tbody">
+                        <!-- 表格內容將由 JS 動態生成 -->
+                        <tr><td class="text-center text-gray-500 py-10"><i class="fa-solid fa-spinner fa-spin fa-2x"></i></td></tr>
                     </tbody>
                 </table>
             </div>
         </div>
 
-
-        <!-- ==================== 區塊 2: 作業資料看板 (過 16:30 自動顯示隔天) ==================== -->
-        <div id="tab-content-today" class="card border-l-4 border-l-green-500 shadow-lg hidden">
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-5 gap-2 pb-3 border-b border-gray-700">
+        <!-- 區塊 1: 作業資料看板 (Firebase 當日或次日邏輯) -->
+        <div class="card border-l-4 border-l-green-500 shadow-lg">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-5 gap-2">
                 <h2 class="text-xl font-bold text-green-400 flex items-center flex-wrap gap-2">
-                    <i class="fa-solid fa-calendar-day mr-1"></i><span id="board-title-text" data-i18n="todayTitle">今日作業資料</span>
+                    <i class="fa-solid fa-calendar-day mr-1"></i>
+                    <span id="board-title-text" data-i18n="todayTitle">今日作業資料</span>
                     <span id="today-date-display" class="text-white bg-gray-700 px-3 py-1 rounded text-base font-normal"></span>
                 </h2>
-                <span class="text-sm text-gray-400 bg-gray-800 px-3 py-1 rounded border border-gray-700">
-                    <i class="fa-solid fa-rotate animate-spin mr-2 text-green-400"></i><span data-i18n="autoNextRule">即時同步 (16:30自動切換次日)</span>
+                <span class="text-sm text-gray-400 bg-gray-800 px-2 py-1 rounded">
+                    <i class="fa-solid fa-rotate animate-spin mr-2"></i>即時同步 (16:30自動切換次日)
                 </span>
             </div>
             <div class="overflow-x-auto">
@@ -336,10 +222,9 @@
             </div>
         </div>
 
-
-        <!-- ==================== 區塊 3: 歷史記錄查詢 ==================== -->
-        <div id="tab-content-history" class="card border-l-4 border-l-blue-500 hidden">
-            <h2 class="text-xl font-bold text-blue-400 mb-5 flex items-center gap-2 pb-3 border-b border-gray-700" data-i18n="searchTitle">
+        <!-- 區塊 2: 歷史記錄查詢 (Firebase 搜尋功能) -->
+        <div class="card border-l-4 border-l-blue-500">
+            <h2 class="text-xl font-bold text-blue-400 mb-5 flex items-center gap-2" data-i18n="searchTitle">
                 <i class="fa-solid fa-magnifying-glass"></i> 歷史記錄查詢
             </h2>
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end mb-6">
@@ -387,12 +272,12 @@
 
     </div>
 
-    <!-- Firebase 腳本與系統核心邏輯 -->
+    <!-- 腳本邏輯區：包含 Firebase 與 Google Sheets 解析 -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getDatabase, ref, onValue, get, set } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
 
-        // Firebase 配置資訊
+        // Firebase 原始設定與初始化
         const firebaseConfig = {
             apiKey: "AIzaSyBvx7Ej2h9ZV5S1t_Gag756qop_jcoxy2U",
             authDomain: "shopee-60a13.firebaseapp.com",
@@ -405,28 +290,20 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        // 系統狀態變數
+        // 系統全域變數
         let currentLang = 'zh';
-        let activeTab = 'master'; // 'master' | 'today' | 'history'
         let todayData = [];
         let historyData = [];
         let isEditingToday = null;
         let isEditingHistory = null;
 
-        // 總排程 Google Sheet 設定與資料快取
-        const SPREADSHEET_ID = "1Xo-KJND3rkrv02Wl3CdnrJh7g1kyV2gIaOUl0vYKrAk";
-        let masterSheetRawData = [];
-        let masterHeaders = [];
-        let countdownTimer = null;
-        let countdownSeconds = 600; // 10分鐘倒數 (600秒)
-
-        // 假日表
+        // 國定假日清單，用於過濾工作日
         const holidays = new Set([
             "2026-01-01", "2026-02-16", "2026-02-17", "2026-02-18", "2026-02-19", "2026-02-20", 
             "2026-02-28", "2026-04-03", "2026-04-06", "2026-05-01", "2026-06-19", "2026-09-25", "2026-10-09"
         ]);
 
-        // 中越對照字典
+        // 詞彙翻譯對照表
         const contentDict = {
             "急件": "Hàng gấp",
             "特急": "Cực gấp",
@@ -441,9 +318,15 @@
             "打樣": "Hàng mẫu"
         };
 
+        /**
+         * 多國語系內容翻譯函數
+         * @param {string} text - 原始文本
+         * @param {string} targetLang - 目標語系 ('zh' 或是 'vi')
+         * @returns {string} 翻譯後的文本
+         */
         function translateContent(text, targetLang) {
             if (!text) return '';
-            let result = String(text);
+            let result = text;
             if (targetLang === 'vi') {
                 for (const [zh, vi] of Object.entries(contentDict)) {
                     result = result.split(zh).join(vi);
@@ -456,92 +339,27 @@
             return result;
         }
 
+        // 介面翻譯字典
         const i18n = {
             zh: {
-                appTitle: "烤漆作業排程系統",
-                appSubtitle: "即時同步 Google Sheet 總排程與烤漆生產順序看板",
-                btnManage: "切換至建立紀錄",
-                langLabel: "語言 / Ngôn ngữ:",
-                tabMaster: "總排程看板 (Google Sheet)",
-                tabToday: "今日作業資料",
-                tabHistory: "歷史記錄查詢",
-                masterTitle: "總排程即時看板",
-                masterSub: "唯讀讀取 Google Sheet 所有欄位，邏輯設定為每 10 分鐘自動同步最新數據。",
-                nextRefresh: "下次自動更新：",
-                lastUpdated: "最後同步：",
-                btnRefreshNow: "立即更新",
-                legendTitle: "狀態填色邏輯：",
-                phMasterSearch: "搜尋關鍵字 (機型/顏色/狀態/單號)...",
-                optAllStatus: "所有狀態 (Tất cả trạng thái)",
-                totalRows: "顯示筆數：",
-                searchTitle: "歷史記錄查詢",
-                lblDate: "日期 (Ngày)",
-                lblColor: "顏色 (Màu sắc)",
-                lblModel: "Model (機型)",
-                btnSearch: "查詢",
-                btnReset: "重設",
-                msgNoData: "尚無符合條件的資料",
-                msgLoading: "載入中...",
-                msgFetchingSheet: "正在連結 Google Sheet 讀取資料...",
-                todayTitle: "今日作業資料",
-                nextDayTitle: "次日作業排程 (已過16:30)",
-                autoNextRule: "即時同步 (16:30自動切換次日)",
-                thDate: "日期",
-                thNo: "序號",
-                thColor: "顏色",
-                thModel: "機型",
-                thRemark: "備註",
-                thAction: "操作",
-                phSearchColor: "輸入顏色查詢...",
-                phSearchModel: "輸入機型查詢...",
-                btnEdit: "編輯",
-                btnSave: "儲存",
-                btnCancel: "取消",
-                msgUpdateOk: "資料更新成功！",
-                msgUpdateErr: "資料更新失敗："
+                appTitle: "📊 烤漆作業順序看板", langLabel: "語言 / Ngôn ngữ:", 
+                masterTitle: "總排程看板 (即時同步)", searchTitle: "歷史記錄查詢",
+                lblDate: "日期 (Ngày)", lblColor: "顏色 (Màu sắc)", lblModel: "Model (機型)",
+                btnSearch: "查詢", btnReset: "重設", msgNoData: "尚無符合條件的資料", msgLoading: "載入中...",
+                todayTitle: "今日作業資料", nextDayTitle: "次日作業排程 (已過16:30)", 
+                thDate: "日期", thNo: "序號", thColor: "顏色", thModel: "機型", thRemark: "備註", thAction: "操作",
+                phSearchColor: "輸入顏色查詢...", phSearchModel: "輸入機型查詢...",
+                btnEdit: "編輯", btnSave: "儲存", btnCancel: "取消", msgUpdateOk: "資料更新成功！", msgUpdateErr: "資料更新失敗："
             },
             vi: {
-                appTitle: "Hệ thống Lịch Bảng Sơn",
-                appSubtitle: "Đồng bộ thời gian thực từ Google Sheet & Bảng thứ tự sơn",
-                btnManage: "Chuyển sang Tạo dữ liệu",
-                langLabel: "Ngôn ngữ / 語言:",
-                tabMaster: "Bảng tổng lịch (Google Sheet)",
-                tabToday: "Dữ liệu làm việc hôm nay",
-                tabHistory: "Tra cứu lịch sử",
-                masterTitle: "Bảng Tổng Lịch Thời Gian Thực",
-                masterSub: "Chỉ đọc dữ liệu Google Sheet, tự động cập nhật mỗi 10 phút.",
-                nextRefresh: "Tự động cập nhật sau:",
-                lastUpdated: "Đồng bộ lần cuối:",
-                btnRefreshNow: "Cập nhật ngay",
-                legendTitle: "Quy tắc màu trạng thái:",
-                phMasterSearch: "Tìm từ khóa (Model/Màu/Trạng thái)...",
-                optAllStatus: "Tất cả trạng thái (所有狀態)",
-                totalRows: "Số dòng hiển thị:",
-                searchTitle: "Tra cứu lịch sử",
-                lblDate: "Ngày (日期)",
-                lblColor: "Màu sắc (顏色)",
-                lblModel: "Model (機型)",
-                btnSearch: "Tìm kiếm",
-                btnReset: "Đặt lại",
-                msgNoData: "Không có dữ liệu phù hợp",
-                msgLoading: "Đang tải...",
-                msgFetchingSheet: "Đang kết nối Google Sheet để tải dữ liệu...",
-                todayTitle: "Dữ liệu làm việc hôm nay",
-                nextDayTitle: "Lịch trình ngày mai (Đã qua 16:30)",
-                autoNextRule: "Đồng bộ (Qua 16:30 tự chuyển ngày mai)",
-                thDate: "Ngày",
-                thNo: "STT",
-                thColor: "Màu sắc",
-                thModel: "Model",
-                thRemark: "Ghi chú",
-                thAction: "Thao tác",
-                phSearchColor: "Nhập màu sắc...",
-                phSearchModel: "Nhập model...",
-                btnEdit: "Sửa",
-                btnSave: "Lưu",
-                btnCancel: "Hủy",
-                msgUpdateOk: "Cập nhật thành công!",
-                msgUpdateErr: "Cập nhật thất bại: "
+                appTitle: "📊 Bảng Thứ tự Sơn", langLabel: "Ngôn ngữ / 語言:", 
+                masterTitle: "Bảng tổng tiến độ (Đồng bộ trực tiếp)", searchTitle: "Tra cứu lịch sử",
+                lblDate: "Ngày (日期)", lblColor: "Màu sắc (顏色)", lblModel: "Model (機型)",
+                btnSearch: "Tìm kiếm", btnReset: "Đặt lại", msgNoData: "Không có dữ liệu", msgLoading: "Đang tải...",
+                todayTitle: "Dữ liệu làm việc hôm nay", nextDayTitle: "Lịch trình ngày mai (Đã qua 16:30)", 
+                thDate: "Ngày", thNo: "STT", thColor: "Màu sắc", thModel: "Model", thRemark: "Ghi chú", thAction: "Thao tác",
+                phSearchColor: "Nhập màu sắc...", phSearchModel: "Nhập model...",
+                btnEdit: "Sửa", btnSave: "Lưu", btnCancel: "Hủy", msgUpdateOk: "Cập nhật thành công!", msgUpdateErr: "Cập nhật thất bại: "
             }
         };
 
@@ -550,333 +368,7 @@
             vi: ["CN", "T2", "T3", "T4", "T5", "T6", "T7"]
         };
 
-        // 頁籤切換邏輯
-        window.switchTab = (tabName) => {
-            activeTab = tabName;
-            ['master', 'today', 'history'].forEach(t => {
-                const btn = document.getElementById(`tab-btn-${t}`);
-                const content = document.getElementById(`tab-content-${t}`);
-                if (t === tabName) {
-                    btn.classList.add('active');
-                    content.classList.remove('hidden');
-                } else {
-                    btn.classList.remove('active');
-                    content.classList.add('hidden');
-                }
-            });
-        };
-
-        // 轉義 HTML 避免 XSS
-        function escapeHtml(text) {
-            if (text === null || text === undefined) return '';
-            return String(text)
-                .replace(/&/g, "&amp;")
-                .replace(/</g, "&lt;")
-                .replace(/>/g, "&gt;")
-                .replace(/"/g, "&quot;")
-                .replace(/'/g, "&#039;");
-        }
-
-        // ==================== 烤漆顏色與狀態樣式解析引擎 ====================
-
-        /**
-         * 烤漆顏色：依照字樣顏色標示
-         * 智慧提取顏色關鍵字並賦予視覺對應標籤
-         */
-        function parsePaintColorTag(colorStr) {
-            if (!colorStr) return '<span class="text-gray-500">-</span>';
-            const str = String(colorStr).trim();
-            if (!str) return '<span class="text-gray-500">-</span>';
-
-            const lower = str.toLowerCase();
-            let style = "background-color: #374151; color: #f9fafb; border: 1px solid #4b5563;"; // 預設深灰
-
-            if (str.includes("黑") || lower.includes("black")) {
-                style = "background-color: #0f172a; color: #f8fafc; border: 1px solid #475569;";
-            } else if (str.includes("白") || lower.includes("white")) {
-                style = "background-color: #ffffff; color: #0f172a; border: 1px solid #cbd5e1; font-weight: bold;";
-            } else if (str.includes("紅") || lower.includes("red")) {
-                style = "background-color: #dc2626; color: #ffffff;";
-            } else if (str.includes("藍") || lower.includes("blue")) {
-                style = "background-color: #2563eb; color: #ffffff;";
-            } else if (str.includes("黃") || lower.includes("yellow")) {
-                style = "background-color: #eab308; color: #0f172a; font-weight: bold;";
-            } else if (str.includes("綠") || lower.includes("green")) {
-                style = "background-color: #16a34a; color: #ffffff;";
-            } else if (str.includes("橙") || str.includes("橘") || lower.includes("orange")) {
-                style = "background-color: #ea580c; color: #ffffff;";
-            } else if (str.includes("紫") || lower.includes("purple") || lower.includes("violet")) {
-                style = "background-color: #9333ea; color: #ffffff;";
-            } else if (str.includes("銀") || lower.includes("silver")) {
-                style = "background-color: #94a3b8; color: #0f172a; border: 1px solid #e2e8f0; font-weight: bold;";
-            } else if (str.includes("灰") || lower.includes("gray") || lower.includes("grey")) {
-                style = "background-color: #64748b; color: #ffffff;";
-            } else if (str.includes("金") || lower.includes("gold")) {
-                style = "background-color: #d97706; color: #ffffff;";
-            } else if (str.includes("粉") || lower.includes("pink")) {
-                style = "background-color: #ec4899; color: #ffffff;";
-            } else if (str.includes("棕") || str.includes("咖") || lower.includes("brown")) {
-                style = "background-color: #78350f; color: #ffffff;";
-            }
-
-            return `<span class="paint-tag" style="${style}">${escapeHtml(str)}</span>`;
-        }
-
-        /**
-         * 狀態填色邏輯判斷：
-         * - 排版、倉庫、採購、完成 -> 紅色填滿 (#ef4444)
-         * - 作業中 -> 紫羅蘭色填滿 (#8b5cf6)
-         * - 完成挪用庫存料 -> 橙色填滿 (#f97316)
-         */
-        function renderStatusCell(cellValue, colName) {
-            if (cellValue === null || cellValue === undefined || cellValue === '') {
-                return '<span class="text-gray-600">-</span>';
-            }
-
-            const valStr = String(cellValue).trim();
-
-            // 完成挪用庫存料以橙色填滿
-            if (valStr === '完成挪用庫存料' || valStr.includes('挪用庫存料')) {
-                return `<span class="status-badge-orange">${escapeHtml(valStr)}</span>`;
-            }
-
-            // 作業中以紫羅蘭色填滿
-            if (valStr === '作業中' || valStr.includes('作業中')) {
-                return `<span class="status-badge-violet animate-pulse-subtle">${escapeHtml(valStr)}</span>`;
-            }
-
-            // 排版，倉庫，採購，完成以紅色填滿
-            if (valStr === '排版' || valStr === '倉庫' || valStr === '採購' || valStr === '完成' ||
-                valStr.includes('排版') || valStr.includes('倉庫') || valStr.includes('採購') || valStr.includes('完成')) {
-                return `<span class="status-badge-red">${escapeHtml(valStr)}</span>`;
-            }
-
-            // 若欄位名稱包含「顏色」或「烤漆」，以烤漆顏色字樣視覺渲染
-            if (colName && (colName.includes('顏色') || colName.includes('烤漆') || colName.toLowerCase().includes('color'))) {
-                return parsePaintColorTag(valStr);
-            }
-
-            return escapeHtml(valStr);
-        }
-
-
-        // ==================== 讀取 Google Sheet (總排程看板 10分鐘同步邏輯) ====================
-
-        async function fetchMasterSchedule() {
-            const tbody = document.getElementById('master-tbody');
-            const lastUpdateEl = document.getElementById('last-update-time');
-
-            // 1. 嘗試使用 Google GViz JSON API 讀取工作表 1
-            const gvizUrl = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:json&sheet=Sheet1`;
-            
-            try {
-                const res = await fetch(gvizUrl);
-                if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
-                const text = await res.text();
-
-                // 解析 GViz JSON 回傳格式
-                const jsonMatch = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]+)\);/);
-                if (!jsonMatch) throw new Error("GViz response parse format error");
-
-                const json = JSON.parse(jsonMatch[1]);
-                const table = json.table;
-
-                if (!table || !table.cols) throw new Error("No table data found in Google Sheet");
-
-                // 提取欄位標題 (Headers)
-                masterHeaders = table.cols.map((col, idx) => col.label ? col.label.trim() : `欄位 ${idx + 1}`);
-
-                // 提取數據列 (Rows)
-                masterSheetRawData = table.rows.map(row => {
-                    const rowObj = {};
-                    table.cols.forEach((col, idx) => {
-                        const cell = row.c[idx];
-                        const headerName = masterHeaders[idx];
-                        rowObj[headerName] = cell ? (cell.f ? cell.f : (cell.v !== null ? cell.v : '')) : '';
-                    });
-                    return rowObj;
-                });
-
-                // 更新最後更新時間
-                const now = new Date();
-                lastUpdateEl.innerText = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
-
-                renderMasterScheduleTable();
-
-            } catch (err) {
-                console.warn("GViz API 讀取失敗，嘗試備用 CSV 模式:", err);
-                fetchMasterScheduleCSV();
-            }
-        }
-
-        // CSV 備用抓取機制
-        async function fetchMasterScheduleCSV() {
-            const csvUrl = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=Sheet1`;
-            const tbody = document.getElementById('master-tbody');
-            const lastUpdateEl = document.getElementById('last-update-time');
-
-            try {
-                const res = await fetch(csvUrl);
-                if (!res.ok) throw new Error(`CSV HTTP Error: ${res.status}`);
-                const csvText = await res.text();
-
-                const rows = parseCSV(csvText);
-                if (rows.length === 0) throw new Error("CSV 資料空白");
-
-                masterHeaders = rows[0].map((h, i) => h.trim() || `欄位 ${i + 1}`);
-                masterSheetRawData = [];
-
-                for (let i = 1; i < rows.length; i++) {
-                    const rowArr = rows[i];
-                    if (rowArr.length === 0 || (rowArr.length === 1 && rowArr[0] === '')) continue;
-                    const rowObj = {};
-                    masterHeaders.forEach((h, idx) => {
-                        rowObj[h] = rowArr[idx] !== undefined ? rowArr[idx].trim() : '';
-                    });
-                    masterSheetRawData.push(rowObj);
-                }
-
-                const now = new Date();
-                lastUpdateEl.innerText = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
-
-                renderMasterScheduleTable();
-
-            } catch (err) {
-                console.error("無法讀取 Google Sheet 總排程:", err);
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="100%" class="text-center text-red-400 py-8">
-                            <i class="fa-solid fa-triangle-exclamation text-3xl mb-2"></i>
-                            <p class="font-bold">連線至 Google Sheet 失敗 / Không thể tải Google Sheet</p>
-                            <p class="text-xs text-gray-400 mt-1">${escapeHtml(err.message)}</p>
-                            <button onclick="manualRefreshMasterSchedule()" class="mt-3 bg-red-600 hover:bg-red-500 text-white text-xs px-3 py-1.5 rounded">重試 (Thử lại)</button>
-                        </td>
-                    </tr>
-                `;
-            }
-        }
-
-        // 簡單 CSV 解析器
-        function parseCSV(text) {
-            const lines = text.split(/\r\n|\n/);
-            const result = [];
-            lines.forEach(line => {
-                if (!line.trim()) return;
-                const row = [];
-                let inQuotes = false;
-                let currentVal = '';
-                for (let i = 0; i < line.length; i++) {
-                    const char = line[i];
-                    if (char === '"') {
-                        inQuotes = !inQuotes;
-                    } else if (char === ',' && !inQuotes) {
-                        row.push(currentVal);
-                        currentVal = '';
-                    } else {
-                        currentVal += char;
-                    }
-                }
-                row.push(currentVal);
-                result.push(row);
-            });
-            return result;
-        }
-
-        // 渲染總排程表格
-        function renderMasterScheduleTable() {
-            const thead = document.getElementById('master-thead');
-            const tbody = document.getElementById('master-tbody');
-            const rowCountEl = document.getElementById('master-row-count');
-
-            const searchKey = document.getElementById('master-search-input').value.trim().toLowerCase();
-            const filterStatus = document.getElementById('master-filter-status').value;
-
-            // 1. 動態建立 Headers
-            if (masterHeaders.length > 0) {
-                let headerHTML = '<tr><th class="w-12 text-center">#</th>';
-                masterHeaders.forEach(h => {
-                    headerHTML += `<th class="whitespace-nowrap">${escapeHtml(h)}</th>`;
-                });
-                headerHTML += '</tr>';
-                thead.innerHTML = headerHTML;
-            }
-
-            // 2. 篩選資料
-            let filteredData = masterSheetRawData.filter(row => {
-                // 關鍵字搜尋
-                if (searchKey) {
-                    const matchSearch = Object.values(row).some(val => String(val).toLowerCase().includes(searchKey));
-                    if (!matchSearch) return false;
-                }
-                // 狀態篩選
-                if (filterStatus) {
-                    const matchStatus = Object.values(row).some(val => String(val).includes(filterStatus));
-                    if (!matchStatus) return false;
-                }
-                return true;
-            });
-
-            rowCountEl.innerText = filteredData.length;
-
-            if (filteredData.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="${masterHeaders.length + 1}" class="text-center text-gray-500 py-8">${i18n[currentLang].msgNoData}</td></tr>`;
-                return;
-            }
-
-            // 3. 渲染資料列
-            let bodyHTML = '';
-            filteredData.forEach((row, idx) => {
-                bodyHTML += `<tr class="hover:bg-gray-800/80 transition-colors">`;
-                bodyHTML += `<td class="text-center text-gray-500 font-mono text-xs">${idx + 1}</td>`;
-
-                masterHeaders.forEach(h => {
-                    const cellVal = row[h];
-                    const renderedCell = renderStatusCell(cellVal, h);
-                    bodyHTML += `<td class="whitespace-nowrap">${renderedCell}</td>`;
-                });
-
-                bodyHTML += `</tr>`;
-            });
-
-            tbody.innerHTML = bodyHTML;
-        }
-
-        // 搜尋/篩選監聽
-        window.filterMasterTable = () => {
-            renderMasterScheduleTable();
-        };
-
-        // 手動重新整理總排程
-        window.manualRefreshMasterSchedule = () => {
-            countdownSeconds = 600; // 重置為 10 分鐘
-            fetchMasterSchedule();
-        };
-
-        // 啟動 10 分鐘 (600秒) 自動更新計時器
-        function startAutoRefreshTimer() {
-            if (countdownTimer) clearInterval(countdownTimer);
-
-            countdownTimer = setInterval(() => {
-                countdownSeconds--;
-
-                if (countdownSeconds <= 0) {
-                    countdownSeconds = 600;
-                    fetchMasterSchedule();
-                }
-
-                // 更新倒數 UI (MM:SS)
-                const mins = Math.floor(countdownSeconds / 60);
-                const secs = countdownSeconds % 60;
-                const displayStr = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-                const cdEl = document.getElementById('countdown-display');
-                if (cdEl) cdEl.innerText = displayStr;
-
-            }, 1000);
-        }
-
-
-        // ==================== 今日與歷史作業資料邏輯 (Firebase) ====================
-
+        // Firebase 載入自動補齊選單
         onValue(ref(db, 'settings/colors'), (snapshot) => {
             if (snapshot.exists()) {
                 document.getElementById('color-list').innerHTML = snapshot.val().map(c => `<option value="${c}">`).join('');
@@ -888,10 +380,16 @@
             }
         });
 
+        /**
+         * 格式化日期至資料庫所需的 YYYY-MM-DD
+         */
         function getDBDateFormat(dateObj) {
             return `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')}`;
         }
 
+        /**
+         * 取得下一個工作日 (略過週末與國定假日)
+         */
         function getNextWorkingDate() {
             let nextDate = new Date();
             while (true) {
@@ -905,11 +403,13 @@
             return { dbDate: nextDB, displayDate: nextDisplay, isNext: true };
         }
 
+        /**
+         * 判斷應顯示的日期面板 (超過 16:30 自動切換至次日)
+         */
         function getTargetBoardDate() {
             const now = new Date();
             const hours = now.getHours();
             const minutes = now.getMinutes();
-
             if (hours > 16 || (hours === 16 && minutes >= 30)) {
                 return getNextWorkingDate();
             } else {
@@ -921,16 +421,13 @@
 
         let currentActiveTarget = getTargetBoardDate();
 
+        /**
+         * 套用當前選定的介面語系
+         */
         function applyLanguage() {
             const t = i18n[currentLang];
-            document.querySelectorAll('[data-i18n]').forEach(el => { 
-                const key = el.getAttribute('data-i18n');
-                if (t[key]) el.innerText = t[key]; 
-            });
-            document.querySelectorAll('[data-i18n-ph]').forEach(el => { 
-                const key = el.getAttribute('data-i18n-ph');
-                if (t[key]) el.placeholder = t[key]; 
-            });
+            document.querySelectorAll('[data-i18n]').forEach(el => { el.innerText = t[el.getAttribute('data-i18n')]; });
+            document.querySelectorAll('[data-i18n-ph]').forEach(el => { el.placeholder = t[el.getAttribute('data-i18n-ph')]; });
             
             currentActiveTarget = getTargetBoardDate();
             document.getElementById('board-title-text').innerText = currentActiveTarget.isNext ? t.nextDayTitle : t.todayTitle;
@@ -938,14 +435,17 @@
             
             renderTodayTable();
             renderHistoryTable();
-            renderMasterScheduleTable();
         }
 
+        // 監聽語系切換
         document.getElementById('lang-switch').addEventListener('change', (e) => {
             currentLang = e.target.value;
             applyLanguage();
         });
 
+        /**
+         * 渲染今日(或次日)之 Firebase 表格
+         */
         function renderTodayTable() {
             const tbody = document.getElementById('today-tbody');
             const t = i18n[currentLang];
@@ -974,14 +474,14 @@
                         </td>
                     `;
                 } else {
-                    const displayColor = parsePaintColorTag(translateContent(item.color || '', currentLang));
+                    const displayColor = translateContent(item.color || '', currentLang);
                     const displayModel = translateContent(item.model || '', currentLang);
                     const displayRemarks = item.remarks ? item.remarks.map(r => translateContent(r, currentLang)).join('<br>') : '';
                     
                     tr.innerHTML = `
                         <td class="text-center font-bold text-green-400 text-lg">${item.seqNo}</td>
                         <td class="font-bold text-white text-lg">${displayColor}</td>
-                        <td class="font-bold text-white text-lg">${escapeHtml(displayModel)}</td>
+                        <td class="font-bold text-white text-lg">${displayModel}</td>
                         <td class="text-gray-300">${displayRemarks}</td>
                         <td class="text-center">
                             <button onclick="editToday(${idx})" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded shadow text-sm font-bold"><i class="fa-solid fa-pen"></i> ${t.btnEdit}</button>
@@ -992,6 +492,9 @@
             });
         }
 
+        /**
+         * 渲染歷史搜尋之 Firebase 表格
+         */
         function renderHistoryTable() {
             const tbody = document.getElementById('history-tbody');
             const t = i18n[currentLang];
@@ -1021,7 +524,7 @@
                         </td>
                     `;
                 } else {
-                    const displayColor = parsePaintColorTag(translateContent(r.color || '', currentLang));
+                    const displayColor = translateContent(r.color || '', currentLang);
                     const displayModel = translateContent(r.model || '', currentLang);
                     const displayRemarks = r.remarks ? r.remarks.map(rmk => translateContent(rmk, currentLang)).join(' / ') : '';
                     
@@ -1029,7 +532,7 @@
                         <td class="text-blue-300 font-mono">${r.date}</td>
                         <td class="text-center font-bold text-lg">${r.seqNo}</td>
                         <td class="text-lg font-bold">${displayColor}</td>
-                        <td class="text-lg font-bold">${escapeHtml(displayModel)}</td>
+                        <td class="text-lg font-bold">${displayModel}</td>
                         <td>${displayRemarks}</td>
                         <td class="text-center">
                             <button onclick="editHistory(${idx})" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded shadow text-sm font-bold"><i class="fa-solid fa-pen"></i> ${t.btnEdit}</button>
@@ -1040,6 +543,7 @@
             });
         }
 
+        // Firebase 編輯保存與取消邏輯
         window.editToday = (idx) => { isEditingToday = idx; renderTodayTable(); };
         window.cancelEditToday = () => { isEditingToday = null; renderTodayTable(); };
         window.saveToday = async (idx) => {
@@ -1048,9 +552,7 @@
             const model = document.getElementById(`edit-t-model-${idx}`).value.trim().toUpperCase();
             const rmkStr = document.getElementById(`edit-t-remark-${idx}`).value.trim();
             const remarks = rmkStr ? rmkStr.split('/').map(r => r.trim()).filter(r => r !== '') : [];
-            
             const updatedData = { ...item, color, model, remarks };
-            
             try {
                 await set(ref(db, `schedules/${currentActiveTarget.dbDate}/${item.originalIndex}`), updatedData);
                 isEditingToday = null;
@@ -1068,9 +570,7 @@
             const model = document.getElementById(`edit-h-model-${idx}`).value.trim().toUpperCase();
             const rmkStr = document.getElementById(`edit-h-remark-${idx}`).value.trim();
             const remarks = rmkStr ? rmkStr.split('/').map(r => r.trim()).filter(r => r !== '') : [];
-            
             const updatedData = { seqNo: item.seqNo, color, model, remarks };
-            
             try {
                 await set(ref(db, `schedules/${item.date}/${item.originalIndex}`), updatedData);
                 historyData[idx] = { ...item, color, model, remarks };
@@ -1082,6 +582,9 @@
             }
         };
 
+        /**
+         * 監聽 Firebase 今日(或次日) 即時排程資料
+         */
         function listenActiveSchedule() {
             currentActiveTarget = getTargetBoardDate();
             const t = i18n[currentLang];
@@ -1100,6 +603,7 @@
             });
         }
 
+        // Firebase 搜尋按鈕事件
         document.getElementById('btn-search').addEventListener('click', async () => {
             const sDate = document.getElementById('search-date').value;
             const sColor = document.getElementById('search-color').value.trim().toUpperCase();
@@ -1153,13 +657,236 @@
             renderHistoryTable();
         });
 
-        // 頁面初始化
+
+        /* =========================================================================
+           新增區塊：總排程看板 (Google Sheets API 整合邏輯)
+           - 讀取唯讀工作表 1 所有資料，不動原資料。
+           - 狀態關鍵字填滿：紅(排版/倉庫/採購/完成)、紫(作業中)、橙(完成-先挪庫存料)。
+           - 顏色對應：依據文字內容轉換為 CSS 色碼顯示。
+           - 10 分鐘計時自動更新機制。
+           ========================================================================= */
+
+        const GOOGLE_SHEET_ID = "1Xo-KJND3rkrv02Wl3CdnrJh7g1kyV2gIaOUl0vYKrAk";
+        // 透過 Google Visualization API 跨域讀取 JSON 資料 (gid=0 代表工作表 1)
+        const MASTER_DATA_URL = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/gviz/tq?tqx=out:json&gid=0`;
+        
+        let masterTimerInterval = null;
+        let masterCountdown = 600; // 600 秒 = 10 分鐘
+
+        /**
+         * 顏色轉換引擎：將中文顏色名稱轉為 CSS 色碼 (用於烤漆顏色標示)
+         * @param {string} colorText 儲存格內的文字
+         * @returns {string|null} 對應的 CSS色碼或 null
+         */
+        function mapColorNameToHex(colorText) {
+            if (!colorText) return null;
+            const text = colorText.trim();
+            // 常見顏色名稱映射字典
+            const colorMap = {
+                '紅': '#ef4444', '藍': '#3b82f6', '黃': '#eab308', 
+                '綠': '#22c55e', '白': '#ffffff', '灰': '#9ca3af',
+                '黑': '#9ca3af', // 深色背景中，黑色文字難以閱讀，使用顯眼灰色代替
+                '紫': '#a855f7', '橘': '#f97316', '粉': '#ec4899', 
+                '青': '#14b8a6', '棕': '#b45309', '金': '#fbbf24', 
+                '銀': '#d1d5db', '透明': '#e5e7eb'
+            };
+
+            // 尋找是否包含字典內的關鍵字
+            for (let key in colorMap) {
+                if (text.includes(key)) {
+                    return colorMap[key];
+                }
+            }
+            return null;
+        }
+
+        /**
+         * 狀態顏色類別引擎：依據儲存格文字內容決定背景顏色
+         * 規則優先級：
+         * 1. 包含「完成-先挪庫存料」 -> 橙色 (必須優先比對，因包含「完成」二字)
+         * 2. 包含「排版」、「倉庫」、「採購」、「完成」 -> 紅色
+         * 3. 包含「作業中」 -> 紫羅蘭色
+         * @param {string} cellText 儲存格文字
+         * @returns {string} Tailwind 類別名稱字串
+         */
+        function getStatusColorClass(cellText) {
+            if (!cellText) return "";
+            const text = cellText.trim();
+            
+            // 優先攔截複合詞彙
+            if (text.includes("完成-先挪庫存料")) {
+                return "status-orange";
+            }
+            
+            // 檢查是否包含紅色相關狀態關鍵字
+            const redKeywords = ["排版", "倉庫", "採購", "完成"];
+            for (let word of redKeywords) {
+                if (text.includes(word)) {
+                    return "status-red";
+                }
+            }
+
+            // 檢查紫色相關狀態關鍵字
+            if (text.includes("作業中")) {
+                return "status-violet";
+            }
+
+            return "";
+        }
+
+        /**
+         * 核心函數：非同步取得 Google Sheets 資料並渲染 HTML 表格
+         */
+        async function fetchAndRenderMasterSheet() {
+            const thead = document.getElementById('master-thead');
+            const tbody = document.getElementById('master-tbody');
+            const timeLabel = document.getElementById('last-update-time');
+            
+            // 載入狀態 UI
+            tbody.innerHTML = `<tr><td class="text-center text-orange-400 py-10"><i class="fa-solid fa-spinner fa-spin fa-2x mb-3"></i><br>正在同步雲端資料...</td></tr>`;
+
+            try {
+                // 發送請求以獲取 Visualization 格式的 JSON 數據
+                const response = await fetch(MASTER_DATA_URL);
+                const rawText = await response.text();
+                
+                // 去除 Google Visualization API 外層封裝，提取純 JSON 字串
+                // 原始格式為: /*O_o*/ google.visualization.Query.setResponse({ ... });
+                const jsonString = rawText.substring(47).slice(0, -2);
+                const data = JSON.parse(jsonString);
+
+                const cols = data.table.cols;
+                const rows = data.table.rows;
+
+                // 判斷哪個欄位是「顏色」欄位 (用來做字體顏色變換)
+                let colorColumnIndices = [];
+
+                // 1. 動態建立表頭
+                let theadHTML = `<tr class="bg-gray-800 border-b-2 border-gray-600">`;
+                cols.forEach((col, index) => {
+                    const label = col.label ? col.label : `欄位 ${index + 1}`;
+                    // 記錄標題中含有「顏色」或「烤漆」的欄位索引
+                    if (label.includes("顏色") || label.includes("烤漆")) {
+                        colorColumnIndices.push(index);
+                    }
+                    theadHTML += `<th class="py-3 px-4 font-bold text-gray-200">${label}</th>`;
+                });
+                theadHTML += `</tr>`;
+                thead.innerHTML = theadHTML;
+
+                // 2. 動態建立表身
+                let tbodyHTML = ``;
+                if (!rows || rows.length === 0) {
+                    tbodyHTML = `<tr><td colspan="${cols.length}" class="text-center py-6 text-gray-400">目前沒有排程資料</td></tr>`;
+                } else {
+                    rows.forEach((row, rowIndex) => {
+                        let trHTML = `<tr class="hover:bg-gray-700 transition-colors border-b border-gray-700">`;
+                        const cells = row.c;
+                        
+                        cells.forEach((cell, colIndex) => {
+                            // 取得儲存格顯示文字
+                            let cellValue = (cell && cell.v !== null && cell.v !== undefined) ? cell.v : "";
+                            // 格式化：若為數字或其他類型，轉為字串
+                            let cellText = String(cellValue).trim();
+
+                            // 計算需要套用的樣式 (狀態背景與文字顏色)
+                            let cellClass = "py-2 px-4";
+                            let cellStyle = "";
+
+                            // 處理狀態背景色填滿邏輯
+                            const statusClass = getStatusColorClass(cellText);
+                            if (statusClass) {
+                                cellClass += ` ${statusClass}`;
+                            }
+
+                            // 處理烤漆顏色字體變色邏輯 (僅套用於特定欄位，且該單元格無背景色時為佳，避免干擾)
+                            if (colorColumnIndices.includes(colIndex) && !statusClass) {
+                                const hexColor = mapColorNameToHex(cellText);
+                                if (hexColor) {
+                                    cellStyle = `color: ${hexColor}; font-weight: 800; text-shadow: 0px 1px 2px rgba(0,0,0,0.8);`;
+                                }
+                            }
+
+                            trHTML += `<td class="${cellClass}" style="${cellStyle}">${cellText}</td>`;
+                        });
+                        trHTML += `</tr>`;
+                        tbodyHTML += trHTML;
+                    });
+                }
+                tbody.innerHTML = tbodyHTML;
+
+                // 3. 更新最後更新時間標籤
+                const now = new Date();
+                timeLabel.innerText = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+
+                // 資料載入成功，重置倒數計時器
+                resetMasterTimer();
+
+            } catch (error) {
+                console.error("讀取 Google Sheet 失敗:", error);
+                tbody.innerHTML = `<tr><td colspan="10" class="text-center text-red-500 py-6 font-bold"><i class="fa-solid fa-triangle-exclamation mr-2"></i>資料讀取失敗，請檢查網路連線或檔案權限。</td></tr>`;
+            }
+        }
+
+        /**
+         * 總排程看板更新計時器機制 (每 10 分鐘 600 秒)
+         */
+        function startMasterTimer() {
+            const timerDisplay = document.getElementById('next-update-timer');
+            
+            // 若已有計時器在跑，先清除
+            if (masterTimerInterval) {
+                clearInterval(masterTimerInterval);
+            }
+            
+            masterTimerInterval = setInterval(() => {
+                masterCountdown--;
+                
+                // 格式化顯示 MM:SS
+                const m = Math.floor(masterCountdown / 60);
+                const s = masterCountdown % 60;
+                timerDisplay.innerText = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+                
+                // 顏色提醒機制 (最後 30 秒變紅色)
+                if (masterCountdown <= 30) {
+                    timerDisplay.className = "text-red-500 font-mono font-bold animate-pulse";
+                } else {
+                    timerDisplay.className = "text-orange-400 font-mono font-bold";
+                }
+
+                // 倒數歸零，觸發資料更新
+                if (masterCountdown <= 0) {
+                    fetchAndRenderMasterSheet();
+                }
+            }, 1000);
+        }
+
+        /**
+         * 重置計時器回 10 分鐘狀態
+         */
+        function resetMasterTimer() {
+            masterCountdown = 600;
+            const timerDisplay = document.getElementById('next-update-timer');
+            timerDisplay.innerText = "10:00";
+            timerDisplay.className = "text-orange-400 font-mono font-bold";
+            startMasterTimer();
+        }
+
+        // 手動點擊立即更新按鈕事件
+        document.getElementById('btn-refresh-master').addEventListener('click', () => {
+            fetchAndRenderMasterSheet();
+        });
+
+        // 頁面載入完成後初始化所有功能
         document.addEventListener('DOMContentLoaded', () => {
+            // 原 Firebase 相關初始化
             applyLanguage();
             listenActiveSchedule();
-            fetchMasterSchedule();
-            startAutoRefreshTimer();
+            
+            // 新增 Google 總排程看板初始化
+            fetchAndRenderMasterSheet();
         });
+
     </script>
 </body>
 </html>

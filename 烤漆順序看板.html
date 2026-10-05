@@ -3,32 +3,131 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>烤漆作業排程 - 順序看板與查詢</title>
+    <title>烤漆作業排程 - 順序看板與總排程</title>
     <!-- 引入 Tailwind CSS 與 FontAwesome -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
-        body { background-color: #1e1e1e; color: #e5e5e5; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .card { background-color: #252526; border: 1px solid #3c3c3c; border-radius: 0.5rem; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
-        
-        table { width: 100%; border-collapse: collapse; table-layout: auto; }
-        th, td { border: 1px solid #444; padding: 0.85rem; vertical-align: middle; }
-        th { background-color: #2d2d2d; color: #fff; white-space: nowrap; font-weight: 600; text-align: left; }
-        
-        .w-seq { width: 60px; text-align: center; }
-        .w-color { width: 180px; }
-        .w-model { width: 180px; }
-        .w-action { width: 120px; text-align: center; }
-
-        input[type="text"], input[type="date"], select { 
-            background-color: #1e1e1e; color: #fff; border: 1px solid #555; 
-            border-radius: 0.375rem; padding: 0.5rem; width: 100%; outline: none; 
-            transition: border-color 0.2s;
+        /* 全局與主題樣式設定 */
+        body {
+            background-color: #1e1e1e;
+            color: #e5e5e5;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-        input:focus, select:focus { border-color: #3b82f6; box-shadow: 0 0 0 1px #3b82f6; }
-        
-        button { cursor: pointer; transition: all 0.2s; }
+
+        .card {
+            background-color: #252526;
+            border: 1px solid #3c3c3c;
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: auto;
+        }
+
+        th, td {
+            border: 1px solid #444;
+            padding: 0.85rem;
+            vertical-align: middle;
+        }
+
+        th {
+            background-color: #2d2d2d;
+            color: #fff;
+            white-space: nowrap;
+            font-weight: 600;
+            text-align: left;
+        }
+
+        .w-seq {
+            width: 60px;
+            text-align: center;
+        }
+
+        .w-color {
+            width: 180px;
+        }
+
+        .w-model {
+            width: 180px;
+        }
+
+        .w-action {
+            width: 120px;
+            text-align: center;
+        }
+
+        input[type="text"], input[type="date"], select {
+            background-color: #1e1e1e;
+            color: #fff;
+            border: 1px solid #555;
+            border-radius: 0.375rem;
+            padding: 0.5rem;
+            width: 100%;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        input:focus, select:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 1px #3b82f6;
+        }
+
+        button {
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        /* 總排程表格自訂樣式 */
+        .master-table-container {
+            max-height: 600px;
+            overflow-y: auto;
+            overflow-x: auto;
+            border: 1px solid #444;
+            border-radius: 0.375rem;
+        }
+
+        .master-table-container th {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background-color: #2d2d2d;
+            box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.4);
+        }
+
+        .badge-live {
+            background-color: rgba(16, 185, 129, 0.2);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.4);
+        }
+
+        .badge-timer {
+            background-color: rgba(59, 130, 246, 0.2);
+            color: #60a5fa;
+            border: 1px solid rgba(59, 130, 246, 0.4);
+        }
+
+        /* 滾動條樣式優化 */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e1e1e;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #444;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
     </style>
 </head>
 <body class="min-h-screen p-4 md:p-8 text-base">
@@ -39,10 +138,13 @@
 
     <!-- 頂部導覽列 -->
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 pb-4 border-b border-gray-700 gap-4">
-        <h1 class="text-2xl md:text-3xl font-bold text-white flex items-center gap-2" data-i18n="appTitle">📊 烤漆作業順序看板</h1>
+        <h1 class="text-2xl md:text-3xl font-bold text-white flex items-center gap-2" data-i18n="appTitle">
+            📊 烤漆作業順序看板
+        </h1>
         <div class="flex items-center gap-3 flex-wrap">
             <a href="烤漆順序管理.html" class="bg-gray-700 hover:bg-gray-600 text-green-400 px-4 py-2 rounded-md flex items-center gap-2 font-medium shadow">
-                <i class="fa-solid fa-pen-to-square"></i> 切換至建立紀錄
+                <i class="fa-solid fa-pen-to-square"></i>
+                <span data-i18n="btnSwitchToManage">切換至建立紀錄</span>
             </a>
             <div class="flex items-center gap-2 ml-2">
                 <span class="text-sm text-gray-400" data-i18n="langLabel">語言 / Ngôn ngữ:</span>
@@ -56,14 +158,91 @@
 
     <div class="grid grid-cols-1 gap-8">
 
-        <!-- 區塊 1: 作業資料看板 (過 16:30 自動顯示隔天) -->
+        <!-- 區塊 1: 總排程看板 (每10分鐘即時更新，讀取 Google Sheets 工作表 1) -->
+        <div class="card border-l-4 border-l-amber-500 shadow-lg">
+            <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-5 gap-4">
+                <div>
+                    <h2 class="text-xl md:text-2xl font-bold text-amber-400 flex items-center flex-wrap gap-2">
+                        <i class="fa-solid fa-table-list mr-1"></i>
+                        <span data-i18n="masterBoardTitle">總排程看板 (工作表1)</span>
+                        <span id="master-count-badge" class="text-xs bg-amber-900/60 text-amber-300 border border-amber-600 px-2.5 py-0.5 rounded-full font-normal">
+                            0 筆資料
+                        </span>
+                    </h2>
+                    <p class="text-xs text-gray-400 mt-1" data-i18n="masterSubTitle">
+                        即時讀取 Google 試算表 (工作表1)，包含所有欄位資料
+                    </p>
+                </div>
+
+                <!-- 狀態資訊與控制按鈕 -->
+                <div class="flex items-center gap-3 flex-wrap text-sm">
+                    <div class="flex items-center gap-2 badge-live px-3 py-1.5 rounded-md text-xs font-semibold">
+                        <i class="fa-solid fa-sync animate-spin"></i>
+                        <span data-i18n="masterAutoSync">每10分鐘自動更新</span>
+                    </div>
+
+                    <div class="flex items-center gap-1.5 badge-timer px-3 py-1.5 rounded-md text-xs font-mono">
+                        <i class="fa-solid fa-clock"></i>
+                        <span data-i18n="masterNextSync">下次更新:</span>
+                        <span id="countdown-timer" class="font-bold text-blue-300">10:00</span>
+                    </div>
+
+                    <button id="btn-refresh-master" class="bg-amber-600 hover:bg-amber-500 text-white px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1.5 shadow transition-colors">
+                        <i class="fa-solid fa-arrows-rotate" id="refresh-icon"></i>
+                        <span data-i18n="btnMasterRefresh">立即刷新</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 控制列與關鍵字過濾 -->
+            <div class="flex flex-col md:flex-row justify-between items-center gap-4 mb-4 bg-gray-800/50 p-3 rounded-lg border border-gray-700">
+                <div class="w-full md:w-1/3">
+                    <div class="relative">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                        <input type="text" id="master-search-input" class="pl-9 pr-3 py-1.5 text-sm rounded bg-gray-900 text-white border border-gray-600 w-full" placeholder="搜尋總排程關鍵字..." data-i18n-ph="phMasterSearch">
+                    </div>
+                </div>
+
+                <div class="text-xs text-gray-400 flex items-center gap-2">
+                    <i class="fa-solid fa-circle-info text-amber-400"></i>
+                    <span data-i18n="lastUpdatedLabel">上次更新時間:</span>
+                    <span id="last-updated-time" class="text-amber-200 font-mono">載入中...</span>
+                </div>
+            </div>
+
+            <!-- 總排程資料表格容器 -->
+            <div class="master-table-container">
+                <table class="min-w-full text-sm">
+                    <thead id="master-thead">
+                        <tr>
+                            <th class="text-center py-4 text-gray-400" data-i18n="msgLoadingMaster">
+                                <i class="fa-solid fa-spinner fa-spin mr-2"></i>資料載入中...
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody id="master-tbody">
+                        <tr>
+                            <td class="text-center text-gray-500 py-8" data-i18n="msgLoadingMasterSub">
+                                正在讀取總排程工作表資料，請稍候...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 區塊 2: 作業資料看板 (過 16:30 自動顯示隔天) -->
         <div class="card border-l-4 border-l-green-500 shadow-lg">
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-5 gap-2">
                 <h2 class="text-xl font-bold text-green-400 flex items-center flex-wrap gap-2">
-                    <i class="fa-solid fa-calendar-day mr-1"></i><span id="board-title-text" data-i18n="todayTitle">今日作業資料</span>
+                    <i class="fa-solid fa-calendar-day mr-1"></i>
+                    <span id="board-title-text" data-i18n="todayTitle">今日作業資料</span>
                     <span id="today-date-display" class="text-white bg-gray-700 px-3 py-1 rounded text-base font-normal"></span>
                 </h2>
-                <span class="text-sm text-gray-400 bg-gray-800 px-2 py-1 rounded"><i class="fa-solid fa-rotate animate-spin mr-2"></i>即時同步 (16:30自動切換次日)</span>
+                <span class="text-sm text-gray-400 bg-gray-800 px-2 py-1 rounded">
+                    <i class="fa-solid fa-rotate animate-spin mr-2"></i>
+                    <span data-i18n="todayAutoSwitchNotice">即時同步 (16:30自動切換次日)</span>
+                </span>
             </div>
             <div class="overflow-x-auto">
                 <table class="min-w-full">
@@ -77,15 +256,19 @@
                         </tr>
                     </thead>
                     <tbody id="today-tbody">
-                        <tr><td colspan="5" class="text-center text-gray-500 py-6" data-i18n="msgLoading">載入中...</td></tr>
+                        <tr>
+                            <td colspan="5" class="text-center text-gray-500 py-6" data-i18n="msgLoading">載入中...</td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
         </div>
 
-        <!-- 區塊 2: 歷史記錄查詢 -->
+        <!-- 區塊 3: 歷史記錄查詢 -->
         <div class="card border-l-4 border-l-blue-500">
-            <h2 class="text-xl font-bold text-blue-400 mb-5 flex items-center gap-2" data-i18n="searchTitle"><i class="fa-solid fa-magnifying-glass"></i> 歷史記錄查詢</h2>
+            <h2 class="text-xl font-bold text-blue-400 mb-5 flex items-center gap-2" data-i18n="searchTitle">
+                <i class="fa-solid fa-magnifying-glass"></i> 歷史記錄查詢
+            </h2>
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end mb-6">
                 <div>
                     <label class="block text-sm text-gray-400 mb-1 font-medium" data-i18n="lblDate">日期 (Ngày)</label>
@@ -100,8 +283,14 @@
                     <input type="text" id="search-model" data-i18n-ph="phSearchModel" placeholder="輸入機型查詢...">
                 </div>
                 <div class="flex gap-2">
-                    <button id="btn-search" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-3 rounded shadow font-bold flex items-center justify-center gap-2"><i class="fa-solid fa-magnifying-glass"></i> <span data-i18n="btnSearch">查詢</span></button>
-                    <button id="btn-reset-search" class="w-full bg-gray-600 hover:bg-gray-700 text-white py-2 px-3 rounded shadow font-bold flex items-center justify-center gap-2"><i class="fa-solid fa-rotate-left"></i> <span data-i18n="btnReset">重設</span></button>
+                    <button id="btn-search" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-3 rounded shadow font-bold flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <span data-i18n="btnSearch">查詢</span>
+                    </button>
+                    <button id="btn-reset-search" class="w-full bg-gray-600 hover:bg-gray-700 text-white py-2 px-3 rounded shadow font-bold flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-rotate-left"></i>
+                        <span data-i18n="btnReset">重設</span>
+                    </button>
                 </div>
             </div>
 
@@ -119,7 +308,9 @@
                         </tr>
                     </thead>
                     <tbody id="history-tbody">
-                        <tr><td colspan="6" class="text-center text-gray-500 py-6" data-i18n="msgNoData">請設定條件進行查詢</td></tr>
+                        <tr>
+                            <td colspan="6" class="text-center text-gray-500 py-6" data-i18n="msgNoData">請設定條件進行查詢</td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
@@ -151,6 +342,14 @@
         let isEditingToday = null;
         let isEditingHistory = null;
 
+        // 總排程 Google 試算表設定 (工作表 1)
+        const MASTER_SHEET_ID = "1Xo-KJND3rkrv02Wl3CdnrJh7g1kyV2gIaOUl0vYKrAk";
+        let masterRawHeaders = [];
+        let masterRawRows = [];
+        let countdownSeconds = 600; // 10分鐘倒數 (600秒)
+        let masterTimerId = null;
+        let countdownTimerId = null;
+
         const holidays = new Set([
             "2026-01-01", "2026-02-16", "2026-02-17", "2026-02-18", "2026-02-19", "2026-02-20", 
             "2026-02-28", "2026-04-03", "2026-04-06", "2026-05-01", "2026-06-19", "2026-09-25", "2026-10-09"
@@ -172,7 +371,7 @@
 
         function translateContent(text, targetLang) {
             if (!text) return '';
-            let result = text;
+            let result = String(text);
             if (targetLang === 'vi') {
                 for (const [zh, vi] of Object.entries(contentDict)) {
                     result = result.split(zh).join(vi);
@@ -187,20 +386,84 @@
 
         const i18n = {
             zh: {
-                appTitle: "📊 烤漆作業順序看板", langLabel: "語言 / Ngôn ngữ:", searchTitle: "歷史記錄查詢",
-                lblDate: "日期 (Ngày)", lblColor: "顏色 (Màu sắc)", lblModel: "Model (機型)",
-                btnSearch: "查詢", btnReset: "重設", msgNoData: "尚無符合條件的資料", msgLoading: "載入中...",
-                todayTitle: "今日作業資料", nextDayTitle: "次日作業排程 (已過16:30)", thDate: "日期", thNo: "序號", thColor: "顏色", thModel: "機型", thRemark: "備註", thAction: "操作",
-                phSearchColor: "輸入顏色查詢...", phSearchModel: "輸入機型查詢...",
-                btnEdit: "編輯", btnSave: "儲存", btnCancel: "取消", msgUpdateOk: "資料更新成功！", msgUpdateErr: "資料更新失敗："
+                appTitle: "📊 烤漆作業順序看板",
+                langLabel: "語言 / Ngôn ngữ:",
+                searchTitle: "歷史記錄查詢",
+                btnSwitchToManage: "切換至建立紀錄",
+                lblDate: "日期 (Ngày)",
+                lblColor: "顏色 (Màu sắc)",
+                lblModel: "Model (機型)",
+                btnSearch: "查詢",
+                btnReset: "重設",
+                msgNoData: "尚無符合條件的資料",
+                msgLoading: "載入中...",
+                todayTitle: "今日作業資料",
+                nextDayTitle: "次日作業排程 (已過16:30)",
+                todayAutoSwitchNotice: "即時同步 (16:30自動切換次日)",
+                thDate: "日期",
+                thNo: "序號",
+                thColor: "顏色",
+                thModel: "機型",
+                thRemark: "備註",
+                thAction: "操作",
+                phSearchColor: "輸入顏色查詢...",
+                phSearchModel: "輸入機型查詢...",
+                btnEdit: "編輯",
+                btnSave: "儲存",
+                btnCancel: "取消",
+                msgUpdateOk: "資料更新成功！",
+                msgUpdateErr: "資料更新失敗：",
+                masterBoardTitle: "總排程看板 (工作表1)",
+                masterSubTitle: "即時讀取 Google 試算表 (工作表1)，包含所有欄位資料",
+                masterAutoSync: "每10分鐘自動更新",
+                masterNextSync: "下次更新:",
+                btnMasterRefresh: "立即刷新",
+                phMasterSearch: "搜尋總排程關鍵字...",
+                lastUpdatedLabel: "上次更新時間:",
+                msgLoadingMaster: "資料載入中...",
+                msgLoadingMasterSub: "正在讀取總排程工作表資料，請稍候...",
+                msgMasterEmpty: "總排程看板暫無資料",
+                msgMasterError: "無法載入總排程資料，請確認試算表共用權限或網路連線。"
             },
             vi: {
-                appTitle: "📊 Bảng Thứ tự Sơn", langLabel: "Ngôn ngữ / 語言:", searchTitle: "Tra cứu lịch sử",
-                lblDate: "Ngày (日期)", lblColor: "Màu sắc (顏色)", lblModel: "Model (機型)",
-                btnSearch: "Tìm kiếm", btnReset: "Đặt lại", msgNoData: "Không có dữ liệu", msgLoading: "Đang tải...",
-                todayTitle: "Dữ liệu làm việc hôm nay", nextDayTitle: "Lịch trình ngày mai (Đã qua 16:30)", thDate: "Ngày", thNo: "STT", thColor: "Màu sắc", thModel: "Model", thRemark: "Ghi chú", thAction: "Thao tác",
-                phSearchColor: "Nhập màu sắc...", phSearchModel: "Nhập model...",
-                btnEdit: "Sửa", btnSave: "Lưu", btnCancel: "Hủy", msgUpdateOk: "Cập nhật thành công!", msgUpdateErr: "Cập nhật thất bại: "
+                appTitle: "📊 Bảng Thứ tự Sơn",
+                langLabel: "Ngôn ngữ / 語言:",
+                searchTitle: "Tra cứu lịch sử",
+                btnSwitchToManage: "Chuyển sang Tạo Lịch",
+                lblDate: "Ngày (日期)",
+                lblColor: "Màu sắc (顏色)",
+                lblModel: "Model (機型)",
+                btnSearch: "Tìm kiếm",
+                btnReset: "Đặt lại",
+                msgNoData: "Không có dữ liệu",
+                msgLoading: "Đang tải...",
+                todayTitle: "Dữ liệu làm việc hôm nay",
+                nextDayTitle: "Lịch trình ngày mai (Đã qua 16:30)",
+                todayAutoSwitchNotice: "Đồng bộ (Tự động chuyển ngày sau 16:30)",
+                thDate: "Ngày",
+                thNo: "STT",
+                thColor: "Màu sắc",
+                thModel: "Model",
+                thRemark: "Ghi chú",
+                thAction: "Thao tác",
+                phSearchColor: "Nhập màu sắc...",
+                phSearchModel: "Nhập model...",
+                btnEdit: "Sửa",
+                btnSave: "Lưu",
+                btnCancel: "Hủy",
+                msgUpdateOk: "Cập nhật thành công!",
+                msgUpdateErr: "Cập nhật thất bại: ",
+                masterBoardTitle: "Bảng Tiến Độ Tổng (Trang 1)",
+                masterSubTitle: "Tự động đọc Google Sheet (Trang 1), tất cả các cột",
+                masterAutoSync: "Tự động cập nhật mỗi 10 phút",
+                masterNextSync: "Cập nhật tiếp:",
+                btnMasterRefresh: "Làm mới ngay",
+                phMasterSearch: "Tìm kiếm từ khóa tiến độ...",
+                lastUpdatedLabel: "Thời gian cập nhật:",
+                msgLoadingMaster: "Đang tải dữ liệu...",
+                msgLoadingMasterSub: "Đang đọc trang tiến độ tổng, vui lòng chờ...",
+                msgMasterEmpty: "Chưa có dữ liệu tiến độ tổng",
+                msgMasterError: "Không thể tải dữ liệu tiến độ tổng, vui lòng kiểm tra quyền chia sẻ."
             }
         };
 
@@ -244,7 +507,6 @@
             const hours = now.getHours();
             const minutes = now.getMinutes();
 
-            // 若時間超過 16:30 或是剛好 16:30 之後
             if (hours > 16 || (hours === 16 && minutes >= 30)) {
                 return getNextWorkingDate();
             } else {
@@ -258,8 +520,14 @@
 
         function applyLanguage() {
             const t = i18n[currentLang];
-            document.querySelectorAll('[data-i18n]').forEach(el => { el.innerText = t[el.getAttribute('data-i18n')]; });
-            document.querySelectorAll('[data-i18n-ph]').forEach(el => { el.placeholder = t[el.getAttribute('data-i18n-ph')]; });
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (t[key]) el.innerText = t[key];
+            });
+            document.querySelectorAll('[data-i18n-ph]').forEach(el => {
+                const key = el.getAttribute('data-i18n-ph');
+                if (t[key]) el.placeholder = t[key];
+            });
             
             currentActiveTarget = getTargetBoardDate();
             document.getElementById('board-title-text').innerText = currentActiveTarget.isNext ? t.nextDayTitle : t.todayTitle;
@@ -267,12 +535,244 @@
             
             renderTodayTable();
             renderHistoryTable();
+            renderMasterTable();
         }
 
         document.getElementById('lang-switch').addEventListener('change', (e) => {
             currentLang = e.target.value;
             applyLanguage();
         });
+
+        // ==================== 總排程看板 (Google Sheet 工作表 1) 邏輯 ====================
+        
+        async function fetchMasterSchedule() {
+            const refreshIcon = document.getElementById('refresh-icon');
+            if (refreshIcon) refreshIcon.classList.add('animate-spin');
+
+            const t = i18n[currentLang];
+            const gvizUrl = `https://docs.google.com/spreadsheets/d/${MASTER_SHEET_ID}/gviz/tq?tqx=out:json&sheet=工作表1`;
+
+            try {
+                const res = await fetch(gvizUrl);
+                const text = await res.text();
+                
+                // 解析 GViz JSON 回應格式
+                const jsonMatch = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\);/);
+                if (jsonMatch && jsonMatch[1]) {
+                    const parsed = JSON.parse(jsonMatch[1]);
+                    if (parsed.status === 'ok' && parsed.table) {
+                        parseGVizData(parsed.table);
+                    } else {
+                        throw new Error("GViz response status not ok");
+                    }
+                } else {
+                    // 若失敗則備用以 CSV 方式載入
+                    await fetchMasterScheduleCSV();
+                }
+            } catch (err) {
+                console.warn("GViz fetch failed, trying CSV fallback:", err);
+                try {
+                    await fetchMasterScheduleCSV();
+                } catch (csvErr) {
+                    console.error("Master schedule load error:", csvErr);
+                    showMasterError(t.msgMasterError);
+                }
+            } finally {
+                if (refreshIcon) refreshIcon.classList.remove('animate-spin');
+                resetCountdownTimer();
+            }
+        }
+
+        async function fetchMasterScheduleCSV() {
+            const csvUrl = `https://docs.google.com/spreadsheets/d/${MASTER_SHEET_ID}/export?format=csv&gid=0`;
+            const res = await fetch(csvUrl);
+            if (!res.ok) throw new Error(`CSV fetch failed: ${res.status}`);
+            const text = await res.text();
+            
+            const lines = parseCSVRows(text);
+            if (lines.length > 0) {
+                masterRawHeaders = lines[0];
+                masterRawRows = lines.slice(1);
+                updateMasterLastUpdated();
+                renderMasterTable();
+            } else {
+                showMasterEmpty();
+            }
+        }
+
+        function parseGVizData(table) {
+            masterRawHeaders = [];
+            masterRawRows = [];
+
+            if (table.cols) {
+                masterRawHeaders = table.cols.map((col, idx) => col.label || col.id || `欄位 ${idx + 1}`);
+            }
+
+            if (table.rows) {
+                masterRawRows = table.rows.map(row => {
+                    if (!row.c) return masterRawHeaders.map(() => "");
+                    return row.c.map(cell => {
+                        if (!cell) return "";
+                        return cell.f ? cell.f : (cell.v !== null && cell.v !== undefined ? String(cell.v) : "");
+                    });
+                });
+            }
+
+            updateMasterLastUpdated();
+            renderMasterTable();
+        }
+
+        function parseCSVRows(csvText) {
+            const result = [];
+            let row = [];
+            let insideQuote = false;
+            let currentStr = "";
+
+            for (let i = 0; i < csvText.length; i++) {
+                const char = csvText[i];
+                const nextChar = csvText[i + 1];
+
+                if (char === '"') {
+                    if (insideQuote && nextChar === '"') {
+                        currentStr += '"';
+                        i++;
+                    } else {
+                        insideQuote = !insideQuote;
+                    }
+                } else if (char === ',' && !insideQuote) {
+                    row.push(currentStr.trim());
+                    currentStr = "";
+                } else if ((char === '\r' || char === '\n') && !insideQuote) {
+                    if (char === '\r' && nextChar === '\n') i++;
+                    row.push(currentStr.trim());
+                    if (row.some(cell => cell !== "")) result.push(row);
+                    row = [];
+                    currentStr = "";
+                } else {
+                    currentStr += char;
+                }
+            }
+            if (currentStr !== "" || row.length > 0) {
+                row.push(currentStr.trim());
+                if (row.some(cell => cell !== "")) result.push(row);
+            }
+            return result;
+        }
+
+        function updateMasterLastUpdated() {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('zh-TW', { hour12: false });
+            const dateStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+            document.getElementById('last-updated-time').innerText = `${dateStr} ${timeStr}`;
+        }
+
+        function renderMasterTable() {
+            const thead = document.getElementById('master-thead');
+            const tbody = document.getElementById('master-tbody');
+            const countBadge = document.getElementById('master-count-badge');
+            const keyword = document.getElementById('master-search-input').value.trim().toLowerCase();
+            const t = i18n[currentLang];
+
+            if (masterRawHeaders.length === 0) {
+                showMasterEmpty();
+                return;
+            }
+
+            // 渲染表頭 (所有欄位資料)
+            let headerHtml = '<tr>';
+            headerHtml += `<th class="w-seq text-center">#</th>`;
+            masterRawHeaders.forEach(h => {
+                headerHtml += `<th>${translateContent(h, currentLang)}</th>`;
+            });
+            headerHtml += '</tr>';
+            thead.innerHTML = headerHtml;
+
+            // 過濾列資料
+            let filteredRows = masterRawRows;
+            if (keyword !== '') {
+                filteredRows = masterRawRows.filter(row => {
+                    return row.some(cell => String(cell).toLowerCase().includes(keyword));
+                });
+            }
+
+            countBadge.innerText = `${filteredRows.length} 筆資料`;
+
+            if (filteredRows.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="${masterRawHeaders.length + 1}" class="text-center text-gray-500 py-8">${t.msgNoData}</td></tr>`;
+                return;
+            }
+
+            // 渲染表身
+            let bodyHtml = '';
+            filteredRows.forEach((row, rIdx) => {
+                bodyHtml += `<tr class="hover:bg-gray-800/80 transition-colors">`;
+                bodyHtml += `<td class="text-center font-bold text-amber-400/80 text-xs">${rIdx + 1}</td>`;
+                
+                masterRawHeaders.forEach((_, cIdx) => {
+                    const val = row[cIdx] !== undefined ? row[cIdx] : "";
+                    const translatedVal = translateContent(val, currentLang);
+                    bodyHtml += `<td class="text-gray-200">${translatedVal}</td>`;
+                });
+
+                bodyHtml += `</tr>`;
+            });
+
+            tbody.innerHTML = bodyHtml;
+        }
+
+        function showMasterEmpty() {
+            const thead = document.getElementById('master-thead');
+            const tbody = document.getElementById('master-tbody');
+            const countBadge = document.getElementById('master-count-badge');
+            const t = i18n[currentLang];
+
+            thead.innerHTML = `<tr><th class="text-center py-2">${t.masterBoardTitle}</th></tr>`;
+            tbody.innerHTML = `<tr><td class="text-center text-gray-500 py-8">${t.msgMasterEmpty}</td></tr>`;
+            countBadge.innerText = `0 筆資料`;
+        }
+
+        function showMasterError(msg) {
+            const thead = document.getElementById('master-thead');
+            const tbody = document.getElementById('master-tbody');
+            thead.innerHTML = `<tr><th class="text-center py-2 text-red-400">載入失敗</th></tr>`;
+            tbody.innerHTML = `<tr><td class="text-center text-red-400 py-8"><i class="fa-solid fa-triangle-exclamation mr-2"></i>${msg}</td></tr>`;
+        }
+
+        // 倒數計時與每10分鐘自動更新邏輯
+        function resetCountdownTimer() {
+            countdownSeconds = 600; // 10 mins = 600 seconds
+            updateTimerDisplay();
+        }
+
+        function updateTimerDisplay() {
+            const min = String(Math.floor(countdownSeconds / 60)).padStart(2, '0');
+            const sec = String(countdownSeconds % 60).padStart(2, '0');
+            const timerEl = document.getElementById('countdown-timer');
+            if (timerEl) timerEl.innerText = `${min}:${sec}`;
+        }
+
+        function startMasterTimers() {
+            // 每秒觸發倒數計時
+            if (countdownTimerId) clearInterval(countdownTimerId);
+            countdownTimerId = setInterval(() => {
+                countdownSeconds--;
+                if (countdownSeconds <= 0) {
+                    fetchMasterSchedule();
+                } else {
+                    updateTimerDisplay();
+                }
+            }, 1000);
+        }
+
+        document.getElementById('btn-refresh-master').addEventListener('click', () => {
+            fetchMasterSchedule();
+        });
+
+        document.getElementById('master-search-input').addEventListener('input', () => {
+            renderMasterTable();
+        });
+
+        // ==================== 原有 今日與歷史紀錄 邏輯 ====================
 
         function renderTodayTable() {
             const tbody = document.getElementById('today-tbody');
@@ -485,6 +985,8 @@
         document.addEventListener('DOMContentLoaded', () => {
             applyLanguage();
             listenActiveSchedule();
+            fetchMasterSchedule();
+            startMasterTimers();
         });
     </script>
 </body>

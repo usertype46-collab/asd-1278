@@ -3,204 +3,41 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>總排程看板 - 即時同步系統</title>
+    <title>總排程看板 - 完美整合烤漆順序看板</title>
     
-    <!-- 引入 Tailwind CSS (用於快速佈局與基礎樣式) -->
+    <!-- 引入 Tailwind CSS 與 FontAwesome 圖標庫 -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- 引入 FontAwesome (用於高質感圖示) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- 引入 Google Fonts (提升字體可讀性與質感) -->
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
-    
-    <!-- 自定義樣式設定，延續深色高質感風格，並加入特定狀態色彩 -->
+    <!-- 自定義樣式設定：延續深色高質感工業風視覺設計 -->
     <style>
         :root {
-            /* 基礎介面顏色定義 */
             --bg-main: #121212;
             --bg-card: #1e1e1e;
             --bg-header: #181818;
-            --border-color: #333333;
-            --border-light: #444444;
+            --border-color: #2d2d2d;
             --text-main: #f3f4f6;
             --text-muted: #9ca3af;
             --accent-blue: #3b82f6;
-            --accent-blue-hover: #2563eb;
             
-            /* 狀態填滿顏色定義 (嚴格依照需求設定) */
-            --status-red: #dc2626;         /* 排版, 倉庫, 採購, 完成 */
-            --status-violet: #8b5cf6;      /* 作業中 */
-            --status-orange: #f97316;      /* 完成-先挪庫存料 */
-            --status-default: #4b5563;     /* 其他未定義狀態預設色 */
+            /* 狀態填滿顏色定義 */
+            --status-red: #dc2626;      /* 排版, 倉庫, 採購, 完成 */
+            --status-violet: #8b5cf6;   /* 作業中 */
+            --status-orange: #f97316;   /* 完成-先挪庫存料 */
         }
 
-        /* 全域基礎設定 */
         body { 
             background-color: var(--bg-main); 
             color: var(--text-main); 
-            font-family: 'Noto Sans TC', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
             margin: 0;
             padding: 0;
             overflow-x: hidden;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
         }
 
-        /* ==========================================
-           元件樣式：卡片與容器
-           ========================================== */
-        .card { 
-            background-color: var(--bg-card); 
-            border: 1px solid var(--border-color); 
-            border-radius: 0.75rem; 
-            padding: 1.5rem; 
-            margin-bottom: 1.5rem; 
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.3); 
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-        
-        .card:hover {
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.6), 0 10px 10px -5px rgba(0, 0, 0, 0.4);
-        }
-
-        /* ==========================================
-           元件樣式：表格設計
-           ========================================== */
-        .table-container {
-            overflow-x: auto;
-            border-radius: 0.5rem;
-            border: 1px solid var(--border-light);
-            background-color: #1a1a1a;
-            max-height: calc(100vh - 280px); /* 確保在大數據量下可以內部捲動 */
-        }
-
-        table { 
-            width: 100%; 
-            border-collapse: collapse; 
-            table-layout: auto; 
-            font-size: 0.95rem;
-        }
-        
-        thead {
-            position: sticky;
-            top: 0;
-            z-index: 20;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-        }
-
-        th { 
-            background-color: #262626; 
-            color: #ffffff; 
-            white-space: nowrap; 
-            font-weight: 700; 
-            text-align: left; 
-            padding: 1rem 1.25rem;
-            border-bottom: 2px solid var(--accent-blue);
-            cursor: pointer;
-            transition: background-color 0.2s, color 0.2s;
-            user-select: none;
-            letter-spacing: 0.05em;
-        }
-
-        th:hover {
-            background-color: #333333;
-            color: var(--accent-blue);
-        }
-
-        th i {
-            margin-left: 0.5rem;
-            color: var(--text-muted);
-            font-size: 0.8rem;
-        }
-
-        td { 
-            border-bottom: 1px solid var(--border-color); 
-            padding: 0.875rem 1.25rem; 
-            vertical-align: middle; 
-            transition: background-color 0.2s ease;
-            line-height: 1.5;
-        }
-
-        tbody tr {
-            transition: background-color 0.2s;
-        }
-
-        tbody tr:hover {
-            background-color: rgba(255, 255, 255, 0.04);
-        }
-
-        tbody tr:last-child td {
-            border-bottom: none;
-        }
-
-        /* ==========================================
-           元件樣式：狀態標籤 (嚴格遵循需求邏輯)
-           ========================================== */
-        .status-badge {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            padding: 0.35rem 0.85rem;
-            border-radius: 9999px;
-            font-weight: 700;
-            font-size: 0.85rem;
-            text-align: center;
-            white-space: nowrap;
-            color: #ffffff;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-            text-shadow: 0 1px 2px rgba(0,0,0,0.4);
-            transition: transform 0.2s;
-        }
-
-        .status-badge:hover {
-            transform: scale(1.05);
-        }
-
-        .status-red { 
-            background-color: var(--status-red); 
-            border: 1px solid #f87171; 
-            box-shadow: 0 0 10px rgba(220, 38, 38, 0.3);
-        }
-        
-        .status-violet { 
-            background-color: var(--status-violet); 
-            border: 1px solid #c4b5fd; 
-            box-shadow: 0 0 10px rgba(139, 92, 246, 0.3);
-        }
-        
-        .status-orange { 
-            background-color: var(--status-orange); 
-            border: 1px solid #fdba74; 
-            box-shadow: 0 0 10px rgba(249, 115, 22, 0.3);
-        }
-        
-        .status-default { 
-            background-color: var(--status-default); 
-            border: 1px solid #9ca3af; 
-        }
-
-        /* ==========================================
-           元件樣式：烤漆顏色字樣標示
-           ========================================== */
-        .color-text-highlight {
-            font-weight: 900;
-            padding: 0.25rem 0.5rem;
-            border-radius: 0.375rem;
-            background-color: rgba(0, 0, 0, 0.4);
-            text-shadow: 1px 1px 3px rgba(0,0,0,0.9);
-            letter-spacing: 0.05em;
-            display: inline-block;
-            border: 1px solid rgba(255,255,255,0.1);
-            box-shadow: inset 0 0 5px rgba(0,0,0,0.5);
-        }
-
-        /* ==========================================
-           元件樣式：頂部導覽列與自動計時器
-           ========================================== */
+        /* 頂部浮動導覽列與計時器區域 */
         .header-bar {
-            background: linear-gradient(180deg, var(--bg-header) 0%, var(--bg-main) 100%);
+            background: linear-gradient(180deg, #181818 0%, #121212 100%);
             border-bottom: 1px solid var(--border-color);
             position: sticky;
             top: 0;
@@ -213,30 +50,28 @@
         }
 
         .system-title {
-            font-size: 1.6rem;
-            font-weight: 900;
+            font-size: 1.5rem;
+            font-weight: 800;
             color: #ffffff;
             display: flex;
             align-items: center;
             gap: 0.75rem;
-            letter-spacing: 0.05em;
+            letter-spacing: 0.03em;
         }
 
         .system-title i {
             color: var(--accent-blue);
-            filter: drop-shadow(0 0 5px rgba(59, 130, 246, 0.5));
         }
 
-        /* 圓形進度條設計 (倒數計時) */
+        /* 圓形進度條與自動倒數計時器 */
         .timer-container {
             display: flex;
             align-items: center;
-            gap: 1rem;
+            gap: 0.875rem;
             background-color: rgba(0, 0, 0, 0.5);
             padding: 0.5rem 1.25rem;
             border-radius: 9999px;
-            border: 1px solid var(--border-light);
-            box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+            border: 1px solid #333333;
         }
 
         .progress-ring {
@@ -255,48 +90,47 @@
             font-family: 'Courier New', Courier, monospace;
             font-weight: 700;
             font-size: 1.15rem;
-            color: #4ade80; /* 預設為安全綠色 */
-            letter-spacing: 1px;
-            min-width: 55px;
-            text-align: center;
+            color: #4ade80;
         }
 
-        .timer-warning { color: #facc15; }
-        .timer-danger { color: #f87171; animation: pulse-danger 1s infinite; }
-
-        @keyframes pulse-danger {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.8; transform: scale(1.05); }
+        .timer-warning { 
+            color: #facc15; 
         }
 
-        /* ==========================================
-           元件樣式：操作按鈕
-           ========================================== */
+        .timer-danger { 
+            color: #f87171; 
+            animation: pulse 1s infinite; 
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        /* 按鈕視覺與互動效果 */
         .btn-refresh {
             background-color: var(--accent-blue);
-            color: white;
+            color: #ffffff;
             border: none;
-            padding: 0.65rem 1.25rem;
+            padding: 0.6rem 1.25rem;
             border-radius: 0.5rem;
-            font-weight: 700;
+            font-weight: 600;
             cursor: pointer;
             display: flex;
             align-items: center;
             gap: 0.5rem;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.2s ease-in-out;
             box-shadow: 0 4px 6px rgba(59, 130, 246, 0.3);
-            letter-spacing: 0.05em;
         }
 
         .btn-refresh:hover {
-            background-color: var(--accent-blue-hover);
+            background-color: #2563eb;
             transform: translateY(-2px);
-            box-shadow: 0 6px 12px rgba(59, 130, 246, 0.5);
+            box-shadow: 0 6px 12px rgba(59, 130, 246, 0.4);
         }
         
         .btn-refresh:active {
             transform: translateY(1px);
-            box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
         }
 
         .spin-anim {
@@ -308,13 +142,184 @@
             to { transform: rotate(360deg); }
         }
 
-        /* ==========================================
-           元件樣式：載入中骨架屏動畫 (Skeleton Loading)
-           ========================================== */
+        /* 統計資訊卡片區塊 */
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.25rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .stat-box {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-left: 5px solid var(--accent-blue);
+            padding: 1.25rem;
+            border-radius: 0.75rem;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+            transition: transform 0.2s ease;
+        }
+
+        .stat-box:hover {
+            transform: translateY(-3px);
+        }
+        
+        .stat-title {
+            color: var(--text-muted);
+            font-size: 0.875rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.35rem;
+        }
+        
+        .stat-value {
+            color: #ffffff;
+            font-size: 2rem;
+            font-weight: 800;
+            line-height: 1;
+        }
+
+        /* 主要卡片與表格容器 */
+        .card { 
+            background-color: var(--bg-card); 
+            border: 1px solid var(--border-color); 
+            border-radius: 0.75rem; 
+            padding: 1.5rem; 
+            margin-bottom: 1.5rem; 
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5); 
+        }
+
+        .table-container {
+            overflow-x: auto;
+            border-radius: 0.5rem;
+            border: 1px solid var(--border-color);
+            max-height: 72vh;
+        }
+
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            table-layout: auto; 
+            font-size: 0.925rem;
+        }
+        
+        thead {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        th { 
+            background-color: #252526; 
+            color: #ffffff; 
+            white-space: nowrap; 
+            font-weight: 700; 
+            text-align: left; 
+            padding: 1rem 1.25rem;
+            border-bottom: 2px solid #444444;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            user-select: none;
+        }
+
+        th:hover {
+            background-color: #333333;
+        }
+
+        th i {
+            margin-left: 0.5rem;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+        }
+
+        td { 
+            border-bottom: 1px solid #2d2d2d; 
+            padding: 0.875rem 1.25rem; 
+            vertical-align: middle; 
+            white-space: nowrap;
+            transition: background-color 0.15s;
+        }
+
+        tbody tr:nth-child(even) {
+            background-color: rgba(255, 255, 255, 0.015);
+        }
+
+        tbody tr:hover td {
+            background-color: rgba(255, 255, 255, 0.06) !important;
+        }
+
+        /* 狀態標籤與填滿邏輯 */
+        .status-badge {
+            display: inline-block;
+            padding: 0.4rem 0.875rem;
+            border-radius: 0.375rem;
+            font-weight: 700;
+            font-size: 0.875rem;
+            text-align: center;
+            white-space: nowrap;
+            color: #ffffff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+            letter-spacing: 0.025em;
+        }
+
+        /* 1. 排版, 倉庫, 採購, 完成 -> 紅色填滿 */
+        .status-red { 
+            background-color: var(--status-red); 
+            border: 1px solid #ef4444; 
+        }
+
+        /* 2. 作業中 -> 紫羅蘭色填滿 */
+        .status-violet { 
+            background-color: var(--status-violet); 
+            border: 1px solid #a78bfa; 
+        }
+
+        /* 3. 完成-先挪庫存料 -> 橙色填滿 */
+        .status-orange { 
+            background-color: var(--status-orange); 
+            border: 1px solid #fb923c; 
+        }
+
+        /* 烤漆顏色高亮標籤 */
+        .color-text-highlight {
+            font-weight: 800;
+            padding: 0.25rem 0.6rem;
+            border-radius: 0.375rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.375rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.2);
+            letter-spacing: 0.05em;
+        }
+
+        /* 搜尋過濾輸入框 */
+        .search-input {
+            background-color: #121212;
+            border: 1px solid #3c3c3c;
+            color: #ffffff;
+            padding: 0.5rem 1rem 0.5rem 2.5rem;
+            border-radius: 0.5rem;
+            outline: none;
+            transition: all 0.2s;
+            width: 100%;
+            max-width: 320px;
+        }
+
+        .search-input:focus {
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+        }
+
+        /* 載入中骨架屏動畫 */
         .skeleton {
-            background: linear-gradient(90deg, #2d2d2d 25%, #444444 50%, #2d2d2d 75%);
+            background: linear-gradient(90deg, #252526 25%, #383838 50%, #252526 75%);
             background-size: 200% 100%;
-            animation: skeleton-loading 1.5s infinite ease-in-out;
+            animation: skeleton-loading 1.5s infinite;
             border-radius: 0.25rem;
             height: 1.25rem;
             width: 100%;
@@ -325,98 +330,21 @@
             100% { background-position: -200% 0; }
         }
 
-        /* ==========================================
-           元件樣式：自定義捲軸 (美化瀏覽器預設捲軸)
-           ========================================== */
+        /* 自定義捲軸 */
         ::-webkit-scrollbar {
-            width: 10px;
-            height: 10px;
+            width: 8px;
+            height: 8px;
         }
         ::-webkit-scrollbar-track {
             background: #121212;
-            border-radius: 5px;
         }
         ::-webkit-scrollbar-thumb {
-            background: #444444;
-            border-radius: 5px;
-            border: 2px solid #121212;
+            background: #3c3c3c;
+            border-radius: 4px;
         }
         ::-webkit-scrollbar-thumb:hover {
-            background: #666666;
+            background: #555555;
         }
-        
-        /* ==========================================
-           元件樣式：狀態統計區塊 (Dashboard Metrics)
-           ========================================== */
-        .stat-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 1.25rem;
-            margin-bottom: 1.5rem;
-        }
-        
-        .stat-box {
-            background: linear-gradient(135deg, #262626 0%, #1e1e1e 100%);
-            border-left: 5px solid var(--accent-blue);
-            padding: 1.25rem;
-            border-radius: 0.5rem;
-            display: flex;
-            flex-direction: column;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-            transition: transform 0.2s;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .stat-box::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            right: 0;
-            width: 50px;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.03));
-            transform: skewX(-15deg);
-        }
-
-        .stat-box:hover {
-            transform: translateY(-3px);
-        }
-        
-        .stat-title {
-            color: var(--text-muted);
-            font-size: 0.85rem;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            margin-bottom: 0.5rem;
-            font-weight: 700;
-        }
-        
-        .stat-value {
-            color: white;
-            font-size: 2rem;
-            font-weight: 900;
-            display: flex;
-            align-items: baseline;
-            gap: 0.5rem;
-        }
-
-        .stat-unit {
-            font-size: 0.9rem;
-            color: #6b7280;
-            font-weight: 400;
-        }
-        
-        /* 頁尾資訊 */
-        footer {
-            margin-top: auto;
-            text-align: center;
-            padding: 1rem;
-            color: #555;
-            font-size: 0.8rem;
-            border-top: 1px solid var(--border-color);
-        }
-
     </style>
 </head>
 <body>
@@ -424,247 +352,184 @@
     <!-- 頂部浮動導覽列 -->
     <header class="header-bar">
         <div class="system-title">
-            <i class="fa-solid fa-server"></i>
+            <i class="fa-solid fa-chart-gantt"></i>
             總排程看板
-            <span class="text-xs font-normal text-blue-200 ml-3 bg-blue-900/50 border border-blue-700/50 px-2 py-1 rounded-full shadow-inner">
-                <i class="fa-solid fa-bolt mr-1 text-yellow-400"></i> 即時同步引擎
-            </span>
+            <span class="text-xs font-semibold text-gray-400 bg-gray-800 px-2.5 py-1 rounded-full border border-gray-700">整合烤漆順序看板</span>
         </div>
         
         <div class="flex items-center gap-5">
-            <!-- 網路連線狀態提示 -->
-            <div id="connection-status" class="text-sm flex items-center gap-2 text-green-400 bg-gray-800/50 px-3 py-1.5 rounded-full border border-gray-700">
-                <i class="fa-solid fa-circle-check"></i> <span>系統已連線</span>
+            <!-- 連線狀態提示 -->
+            <div id="connection-status" class="text-sm flex items-center gap-2 text-green-400 font-medium">
+                <i class="fa-solid fa-circle-check"></i> 已連線
             </div>
 
-            <!-- 自動更新計時器 (每10分鐘) -->
-            <div class="timer-container" title="系統每 10 分鐘自動抓取最新資料">
-                <span class="text-xs text-gray-400 font-bold tracking-wider">自動更新倒數</span>
+            <!-- 自動更新計時器 (預設10分鐘 = 600秒) -->
+            <div class="timer-container" title="系統每 10 分鐘自動背景更新資料">
+                <span class="text-xs text-gray-400 font-medium">10分鐘自動更新</span>
                 <svg class="progress-ring" width="36" height="36">
-                    <circle class="progress-ring__circle_bg" stroke="#333" stroke-width="3" fill="transparent" r="14" cx="18" cy="18"/>
-                    <!-- 動態進度條 -->
-                    <circle id="progress-circle" class="progress-ring__circle" stroke="#3b82f6" stroke-width="3" fill="transparent" r="14" cx="18" cy="18" stroke-dasharray="87.96" stroke-dashoffset="0"/>
+                    <circle class="progress-ring__circle_bg" stroke="#2a2a2a" stroke-width="3.5" fill="transparent" r="14" cx="18" cy="18"/>
+                    <circle id="progress-circle" class="progress-ring__circle" stroke="#3b82f6" stroke-width="3.5" fill="transparent" r="14" cx="18" cy="18" stroke-dasharray="87.96" stroke-dashoffset="0"/>
                 </svg>
                 <span id="countdown-text" class="timer-text">10:00</span>
             </div>
 
-            <!-- 手動強制更新按鈕 -->
+            <!-- 強制手動更新按鈕 -->
             <button id="btn-force-refresh" class="btn-refresh">
                 <i id="refresh-icon" class="fa-solid fa-arrows-rotate"></i>
-                強制同步
+                即時同步
             </button>
         </div>
     </header>
 
-    <!-- 主要內容區塊 -->
-    <main class="p-4 md:p-6 lg:p-8 w-full max-w-[1920px] mx-auto">
+    <main class="p-4 md:p-8 max-w-[1920px] mx-auto">
         
-        <!-- 狀態統計區塊 (Dashboard Metrics) -->
+        <!-- 狀態數據統計看板區塊 -->
         <div class="stat-grid" id="statistics-container">
-            <!-- 總排程數量 (基礎資料) -->
-            <div class="stat-box" style="border-left-color: #6b7280;">
-                <span class="stat-title"><i class="fa-solid fa-list-ol mr-1"></i> 總排程筆數</span>
-                <span class="stat-value">
-                    <span id="stat-total">0</span>
-                    <span class="stat-unit">筆資料</span>
-                </span>
+            <div class="stat-box" style="border-left-color: #3b82f6;">
+                <span class="stat-title">總排程項目數</span>
+                <span class="stat-value" id="stat-total">0</span>
             </div>
-            
-            <!-- 紅色狀態統計 (排版, 倉庫, 採購, 完成) -->
             <div class="stat-box" style="border-left-color: var(--status-red);">
-                <span class="stat-title"><i class="fa-solid fa-flag text-red-400 mr-1"></i> 需關注 / 完成</span>
-                <span class="stat-value text-red-100">
-                    <span id="stat-red">0</span>
-                    <span class="stat-unit">筆</span>
-                </span>
+                <span class="stat-title">排版 / 倉庫 / 採購 / 完成</span>
+                <span class="stat-value text-red-500" id="stat-red">0</span>
             </div>
-            
-            <!-- 紫羅蘭色狀態統計 (作業中) -->
             <div class="stat-box" style="border-left-color: var(--status-violet);">
-                <span class="stat-title"><i class="fa-solid fa-gears text-violet-400 mr-1"></i> 產線作業中</span>
-                <span class="stat-value text-violet-100">
-                    <span id="stat-violet">0</span>
-                    <span class="stat-unit">筆</span>
-                </span>
+                <span class="stat-title">作業中項目</span>
+                <span class="stat-value text-purple-400" id="stat-violet">0</span>
             </div>
-            
-            <!-- 橙色狀態統計 (完成-先挪庫存料) -->
             <div class="stat-box" style="border-left-color: var(--status-orange);">
-                <span class="stat-title"><i class="fa-solid fa-box-open text-orange-400 mr-1"></i> 已挪用庫存</span>
-                <span class="stat-value text-orange-100">
-                    <span id="stat-orange">0</span>
-                    <span class="stat-unit">筆</span>
-                </span>
+                <span class="stat-title">完成 - 先挪庫存料</span>
+                <span class="stat-value text-orange-400" id="stat-orange">0</span>
             </div>
         </div>
 
-        <!-- 主要資料表呈現區域 -->
+        <!-- 主要資料表格區域 -->
         <div class="card">
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-4 gap-4">
-                
-                <!-- 表格標題與同步時間 -->
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-5">
                 <div>
-                    <h2 class="text-2xl font-black text-white flex items-center gap-3 tracking-wide">
-                        <i class="fa-solid fa-table-list text-blue-500"></i>
-                        總排程明細資料庫
+                    <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-table text-blue-500"></i>
+                        工作表 1 總排程資料列表
                     </h2>
-                    <p class="text-sm text-gray-400 mt-2 flex items-center gap-2">
-                        <i class="fa-brands fa-google-drive"></i> 資料來源：Google Sheets (唯讀模式)
-                        <span class="text-gray-600">|</span>
-                        <span id="last-update-time" class="text-blue-300 font-bold bg-blue-900/30 px-2 py-0.5 rounded">
-                            等待同步中...
-                        </span>
+                    <p class="text-xs text-gray-400 mt-1">
+                        資料來源：Google Sheets (唯讀) ｜ 上次讀取時間：
+                        <span id="last-update-time" class="text-blue-400 font-mono font-bold">載入中...</span>
                     </p>
                 </div>
-                
-                <!-- 狀態顏色圖例說明 (Legend) -->
-                <div class="flex gap-2">
-                    <div class="text-xs bg-gray-800/80 p-2.5 rounded-lg border border-gray-700 flex flex-col gap-1.5 shadow-lg">
-                        <span class="font-black text-gray-300 border-b border-gray-600 pb-1 mb-1 tracking-widest text-center">
-                            狀態顏色圖例
-                        </span>
-                        <!-- 圖例：紅色 -->
-                        <span class="text-red-400 flex items-center gap-2 font-bold">
-                            <span class="w-3 h-3 rounded-full bg-red-600 shadow-[0_0_5px_rgba(220,38,38,0.8)]"></span>
-                            排版 / 倉庫 / 採購 / 完成
-                        </span>
-                        <!-- 圖例：紫羅蘭色 -->
-                        <span class="text-violet-400 flex items-center gap-2 font-bold">
-                            <span class="w-3 h-3 rounded-full bg-violet-500 shadow-[0_0_5px_rgba(139,92,246,0.8)]"></span>
-                            作業中
-                        </span>
-                        <!-- 圖例：橙色 -->
-                        <span class="text-orange-400 flex items-center gap-2 font-bold">
-                            <span class="w-3 h-3 rounded-full bg-orange-500 shadow-[0_0_5px_rgba(249,115,22,0.8)]"></span>
-                            完成-先挪庫存料
-                        </span>
+
+                <div class="flex flex-wrap items-center gap-4 w-full md:w-auto">
+                    <!-- 搜尋過濾框 -->
+                    <div class="relative flex-1 md:flex-initial">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm"></i>
+                        <input type="text" id="search-input" class="search-input text-sm" placeholder="搜尋任意關鍵字...">
+                    </div>
+
+                    <!-- 狀態填色圖例說明 -->
+                    <div class="text-xs bg-black/40 p-2.5 rounded-lg border border-gray-800 flex items-center gap-3">
+                        <span class="text-gray-400 font-bold border-r border-gray-700 pr-2">狀態圖例</span>
+                        <span class="flex items-center gap-1 text-red-400 font-bold"><i class="fa-solid fa-square"></i> 排版/倉庫/採購/完成</span>
+                        <span class="flex items-center gap-1 text-violet-400 font-bold"><i class="fa-solid fa-square"></i> 作業中</span>
+                        <span class="flex items-center gap-1 text-orange-400 font-bold"><i class="fa-solid fa-square"></i> 完成-先挪庫存料</span>
                     </div>
                 </div>
             </div>
 
-            <!-- 資料表容器 -->
+            <!-- 資料表格容器 -->
             <div class="table-container">
                 <table id="schedule-table">
-                    <!-- 表頭 -->
                     <thead id="table-head">
                         <tr>
-                            <th><i class="fa-solid fa-spinner fa-spin mr-2"></i> 系統初始化中...</th>
+                            <th>載入中...</th>
                         </tr>
                     </thead>
-                    <!-- 表身 -->
                     <tbody id="table-body">
-                        <!-- 預設顯示載入骨架屏 (Skeleton Loading) -->
-                        <tr><td colspan="15"><div class="skeleton"></div></td></tr>
-                        <tr><td colspan="15"><div class="skeleton" style="animation-delay: 0.1s"></div></td></tr>
-                        <tr><td colspan="15"><div class="skeleton" style="animation-delay: 0.2s"></div></td></tr>
-                        <tr><td colspan="15"><div class="skeleton" style="animation-delay: 0.3s"></div></td></tr>
-                        <tr><td colspan="15"><div class="skeleton" style="animation-delay: 0.4s"></div></td></tr>
-                        <tr><td colspan="15"><div class="skeleton" style="animation-delay: 0.5s"></div></td></tr>
+                        <!-- 載入時骨架屏樣式 -->
+                        <tr><td colspan="12"><div class="skeleton"></div></td></tr>
+                        <tr><td colspan="12"><div class="skeleton"></div></td></tr>
+                        <tr><td colspan="12"><div class="skeleton"></div></td></tr>
+                        <tr><td colspan="12"><div class="skeleton"></div></td></tr>
+                        <tr><td colspan="12"><div class="skeleton"></div></td></tr>
                     </tbody>
                 </table>
             </div>
             
-            <!-- 錯誤提示區塊 (當無法讀取 Google Sheets 時顯示) -->
-            <div id="error-message" class="hidden text-center py-16 bg-gray-900/50 rounded-lg border border-red-900/30 mt-4">
-                <i class="fa-solid fa-triangle-exclamation text-5xl text-yellow-500 mb-4 drop-shadow-[0_0_10px_rgba(234,179,8,0.5)]"></i>
-                <h3 class="text-xl font-bold text-white mb-2">無法讀取排程資料</h3>
-                <p class="text-gray-400 max-w-md mx-auto" id="error-text">
-                    請檢查您的網路連線，或確認 Google Sheets 是否已經正確設定為「發佈到網頁 (CSV格式)」。
-                </p>
-                <button onclick="fetchSheetData()" class="mt-6 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded text-white font-bold transition">
-                    <i class="fa-solid fa-rotate-right mr-1"></i> 再試一次
-                </button>
+            <!-- 無資料或連線異常提示區塊 -->
+            <div id="error-message" class="hidden text-center py-12">
+                <i class="fa-solid fa-triangle-exclamation text-5xl text-yellow-500 mb-4"></i>
+                <h3 class="text-lg font-bold text-white">無法讀取 Google Sheets 資料</h3>
+                <p class="text-sm text-gray-400 mt-2" id="error-text">請檢查網路連線或該試算表是否已設為公開發佈。</p>
             </div>
         </div>
     </main>
 
-    <footer>
-        <p>&copy; 2026 總排程看板系統. 自動同步機制運行中. All rights reserved.</p>
-    </footer>
-
-    <!-- ==========================================
-         核心 JavaScript 邏輯區
-         負責資料抓取、解析、顏色運算、DOM 渲染與計時器
-         ========================================== -->
     <script>
         /**
-         * 1. 系統常數與設定
-         * 包含 Google Sheets ID、更新頻率等核心參數
+         * 總排程看板 + 烤漆順序看板 核心腳本
+         * 包含：即時CSV解析引擎、狀態邏輯判斷、烤漆顏色映射、動態表格渲染與高頻計時器
          */
+
+        // ==========================================
+        // 1. 系統全域設定與變數
+        // ==========================================
         const SPREADSHEET_ID = '1Xo-KJND3rkrv02Wl3CdnrJh7g1kyV2gIaOUl0vYKrAk';
-        const GID = '0'; // 讀取工作表 1
+        const GID = '0'; // 工作表1的特定識別碼 gid=0
         
-        // 轉換為 CSV 匯出端點以確保純資料讀取 (無視格式與圖片，只取文字)
+        // 透過 Google Sheets 發佈端點下載 CSV 格式資料
         const CSV_URL = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/export?format=csv&gid=${GID}`;
         
-        // 設定每 10 分鐘 (600 秒) 更新一次資料
-        const REFRESH_INTERVAL_SECONDS = 600; 
-        
-        // 系統全域變數
+        const REFRESH_INTERVAL_SECONDS = 600; // 10 分鐘 = 600 秒
         let remainingSeconds = REFRESH_INTERVAL_SECONDS;
         let timerInterval = null;
-        let tableData = [];    // 儲存從 CSV 解析出來的二維資料陣列 (不含表頭)
-        let tableHeaders = []; // 儲存表頭陣列
-        let currentSortCol = -1; // 記錄目前排序的欄位索引
-        let isAscending = true;  // 記錄目前排序方向 (升冪/降冪)
+        
+        let rawTableHeaders = []; // 原始表頭
+        let rawTableData = [];    // 原始二維陣列資料
+        let filteredTableData = []; // 篩選後的資料
+        
+        let currentSortCol = -1;
+        let isAscending = true;
 
-        // 取得 SVG 圓形進度條元素並初始化長度
+        // SVG 圓形倒數計時器元件
         const circle = document.getElementById('progress-circle');
         const radius = circle.r.baseVal.value;
         const circumference = radius * 2 * Math.PI;
         circle.style.strokeDasharray = `${circumference} ${circumference}`;
         circle.style.strokeDashoffset = 0;
 
-
-        /**
-         * 2. 極致擴充的烤漆顏色字典 (COLOR_DICTIONARY)
-         * 系統將透過此字典比對儲存格文字，若符合則將文字背景標示為對應的真實顏色。
-         * 支援基礎色、金屬色、珍珠色、消光色、糖果色等各種常見汽車/工業烤漆顏色。
-         */
+        // ==========================================
+        // 2. 擴充版烤漆顏色字典 (支援顏色文字自動高亮)
+        // ==========================================
         const COLOR_DICTIONARY = {
-            // --- 基礎單色系 (Solid Colors) ---
-            '紅': '#ff0000', '紅色': '#ff0000', '正紅': '#d90000',
-            '藍': '#0000ff', '藍色': '#0000ff', '正藍': '#0047ab',
-            '黃': '#ffd700', '黃色': '#ffd700', '正黃': '#ffcc00',
-            '綠': '#008000', '綠色': '#008000', '正綠': '#00a86b',
-            '黑': '#000000', '黑色': '#000000', '純黑': '#050505',
-            '白': '#ffffff', '白色': '#ffffff', '純白': '#f8f9fa',
-            '灰': '#808080', '灰色': '#808080', '中灰': '#708090',
-            '紫': '#800080', '紫色': '#800080',
-            '橘': '#ffa500', '橘色': '#ffa500', '橙色': '#ff8c00',
-            '粉': '#ffc0cb', '粉紅': '#ffb6c1', '粉紅色': '#ff69b4',
-            '棕': '#a52a2a', '棕色': '#a52a2a', '咖啡': '#6f4e37', '咖啡色': '#4b3621',
+            // 基本顏色
+            '紅': '#ef4444', '紅色': '#ef4444',
+            '藍': '#3b82f6', '藍色': '#3b82f6',
+            '黃': '#eab308', '黃色': '#eab308',
+            '綠': '#22c55e', '綠色': '#22c55e',
+            '黑': '#18181b', '黑色': '#18181b', '亮黑': '#09090b', '消光黑': '#27272a', '平光黑': '#27272a',
+            '白': '#ffffff', '白色': '#ffffff', '珍珠白': '#f8fafc', '亮白': '#f1f5f9',
+            '灰': '#9ca3af', '灰色': '#9ca3af', '水泥灰': '#6b7280', '深灰': '#374151', '淺灰': '#e5e7eb',
+            '銀': '#cbd5e1', '銀色': '#cbd5e1', '亮銀': '#f1f5f9', '鈦銀': '#94a3b8',
+            '紫': '#a855f7', '紫色': '#a855f7', '紫羅蘭': '#8b5cf6',
+            '橘': '#f97316', '橘色': '#f97316', '橙': '#f97316', '橙色': '#f97316',
+            '棕': '#78350f', '棕色': '#78350f', '咖啡': '#451a03', '卡其': '#d97706',
+            '粉': '#ec4899', '粉紅': '#ec4899', '玫瑰金': '#fb7185',
+            '金': '#f59e0b', '金色': '#f59e0b', '香檳金': '#fef3c7',
             
-            // --- 金屬/特珠質感色系 (Metallic & Pearl) ---
-            '銀': '#c0c0c0', '銀色': '#c0c0c0', '亮銀': '#e5e4e2', '金屬銀': '#aaa9ad',
-            '金': '#ffd700', '金色': '#ffd700', '香檳金': '#f7e7ce', '玫瑰金': '#b76e79',
-            '珍珠白': '#f3e8ea', '金屬黑': '#333333', '曜石黑': '#1a1a1a',
-            '鈦銀': '#878681', '古銅': '#cd7f32', '古銅色': '#b87333',
-            '水泥灰': '#6b7280', '鐵灰': '#555555', '深灰': '#4b5563', '淺灰': '#d3d3d3',
-            '寶石藍': '#0f52ba', '天空藍': '#87ceeb', '深海藍': '#000080', '海軍藍': '#000080',
-            
-            // --- 消光/平光色系 (Matte Colors) ---
-            '消光黑': '#2b2b2b', '平光黑': '#222222', '啞光黑': '#2c2c2c',
-            '消光白': '#f0f0f0', '平光白': '#eeeeee',
-            '消光灰': '#595959',
-            
-            // --- 糖果色/螢光色系 (Candy & Fluorescent) ---
-            '糖果紅': '#cc0000', '酒紅': '#722f37', '酒紅色': '#722f37', '櫻桃紅': '#de3163',
-            '青蘋果綠': '#8db600', '墨綠': '#013220', '墨綠色': '#013220', '軍綠': '#4b5320',
-            '螢光黃': '#ccff00', '螢光綠': '#39ff14', '螢光橘': '#ff6700', '螢光粉': '#ff1493',
-            '紫羅蘭': '#8a2be2', '紫羅蘭色': '#8a2be2', '薰衣草紫': '#e6e6fa'
+            // 進階與特調烤漆色系
+            '糖果紅': '#dc2626', '酒紅': '#881337',
+            '寶石藍': '#1d4ed8', '天空藍': '#38bdf8', '深海藍': '#1e3a8a',
+            '青蘋果綠': '#84cc16', '墨綠': '#14532d', '軍綠': '#3f6212',
+            '螢光黃': '#a3e635', '螢光綠': '#4ade80', '螢光橘': '#ff6b00',
+            '古銅': '#b45309'
         };
 
+        // ==========================================
+        // 3. 核心工具函式
+        // ==========================================
 
         /**
-         * 3. 核心工具函式區 (Utilities)
-         */
-
-        /**
-         * 解析 CSV 格式字串並轉為二維陣列
-         * 具備完整的狀態機邏輯，能完美處理欄位內包含換行 (\n) 或逗號 (,) 的複雜情況
-         * @param {string} text - 原始 CSV 文本
-         * @returns {Array<Array<string>>} - 解析後的二維陣列
+         * 嚴格 CSV 語法解析器 (可處理引號內含逗號與跨行字串)
+         * @param {string} text CSV 文本數據
+         * @returns {Array<Array<string>>}
          */
         function parseCSV(text) {
             const result = [];
@@ -676,52 +541,35 @@
                 const char = text[i];
                 const nextChar = text[i + 1];
 
-                // 處理雙引號
                 if (char === '"') {
                     if (inQuotes && nextChar === '"') {
-                        // 雙引號跳脫 (CSV 中的 "" 代表一個真正的雙引號)
                         cell += '"';
-                        i++; // 跳過下一個字元
+                        i++;
                     } else {
-                        // 切換引號內/外模式
                         inQuotes = !inQuotes;
                     }
-                } 
-                // 處理逗號 (欄位分隔)
-                else if (char === ',' && !inQuotes) {
+                } else if (char === ',' && !inQuotes) {
                     row.push(cell.trim());
                     cell = '';
-                } 
-                // 處理換行 (行分隔)
-                else if ((char === '\n' || char === '\r') && !inQuotes) {
-                    if (char === '\r' && nextChar === '\n') {
-                        i++; // 處理 Windows CRLF (\r\n)
-                    }
+                } else if ((char === '\n' || char === '\r') && !inQuotes) {
+                    if (char === '\r' && nextChar === '\n') i++;
                     row.push(cell.trim());
                     result.push(row);
                     row = [];
                     cell = '';
-                } 
-                // 處理一般字元
-                else {
+                } else {
                     cell += char;
                 }
             }
-            
-            // 推入檔案最後一行的最後一個欄位
             if (cell !== '' || row.length > 0) {
                 row.push(cell.trim());
                 result.push(row);
             }
-            
-            // 過濾掉完全空白的行 (避免 Google Sheets 結尾空列干擾)
             return result.filter(r => r.some(c => c !== ''));
         }
 
         /**
-         * 基礎的 HTML 實體跳脫，防止資料中包含 HTML 標籤導致版面破壞或 XSS 攻擊
-         * @param {string} str - 欲跳脫的字串
-         * @returns {string} - 安全的 HTML 字串
+         * HTML 轉義字串防 XSS
          */
         function escapeHTML(str) {
             if (!str) return '';
@@ -732,13 +580,12 @@
                     '>': '&gt;',
                     "'": '&#39;',
                     '"': '&quot;'
-                }[tag] || tag)
+                }[tag])
             );
         }
 
         /**
-         * 取得當前時間的格式化字串 (HH:MM:SS)
-         * @returns {string} - 格式化時間
+         * 取得格式化當前時間
          */
         function getCurrentTimeStr() {
             const now = new Date();
@@ -749,223 +596,158 @@
         }
 
         /**
-         * 在字串中尋找相符的烤漆顏色 HEX 色碼
-         * 採用「最長匹配優先」演算法，例如「消光黑」會優先於「黑」被匹配
-         * @param {string} text - 儲存格內容
-         * @returns {string|null} - 若找到則回傳 HEX 色碼，否則回傳 null
+         * 搜尋匹配烤漆顏色的 HEX 色碼
          */
         function findColorHex(text) {
-            if (!text || typeof text !== 'string') return null;
-            
-            // 1. 若完全等於字典的 key，直接回傳 (最快)
+            if (!text) return null;
             if (COLOR_DICTIONARY[text]) return COLOR_DICTIONARY[text];
             
-            // 2. 進行模糊搜尋 (最長匹配優先)
             let matchedHex = null;
-            let longestMatchLength = 0;
-            
-            for (const [colorName, hexCode] of Object.entries(COLOR_DICTIONARY)) {
-                if (text.includes(colorName) && colorName.length > longestMatchLength) {
-                    longestMatchLength = colorName.length;
-                    matchedHex = hexCode;
+            let longestMatch = 0;
+            for (const [colorName, hex] of Object.entries(COLOR_DICTIONARY)) {
+                if (text.includes(colorName) && colorName.length > longestMatch) {
+                    longestMatch = colorName.length;
+                    matchedHex = hex;
                 }
             }
             return matchedHex;
         }
 
         /**
-         * 計算 HEX 顏色的亮度，判斷是否為深色
-         * 用於決定在背景色上，文字應該顯示為白色或黑色，確保最高對比度與可讀性
-         * @param {string} hex - HEX 色碼 (例: #ff0000)
-         * @returns {boolean} - true 表示深色(應配白字)，false 表示淺色(應配黑字)
+         * 計算背景色明亮度以決定文字前景色 (黑色或白色)
          */
         function isDarkColor(hex) {
-            if (!hex) return true; // 預設深色
-            
-            // 移除 # 符號
+            if (!hex) return true;
             hex = hex.replace('#', '');
-            
-            // 處理 3 碼縮寫 (如 #fff -> ffffff)
-            if (hex.length === 3) {
-                hex = hex.split('').map(c => c + c).join('');
-            }
-            
-            // 轉換為 RGB 數值
+            if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
             const r = parseInt(hex.substring(0, 2), 16);
             const g = parseInt(hex.substring(2, 4), 16);
             const b = parseInt(hex.substring(4, 6), 16);
-            
-            // 使用 SMPTE C, Rec. 709 公式計算亮度 (Luma)
-            const luma = 0.2126 * r + 0.7152 * g + 0.0722 * b; 
-            
-            // 亮度小於 128 視為深色
-            return luma < 128;
+            const luma = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+            return luma < 140;
         }
 
+        // ==========================================
+        // 4. 表格與統計數據渲染 Engine
+        // ==========================================
 
         /**
-         * 4. 核心渲染與邏輯引擎 (Render Engine)
-         */
-
-        /**
-         * 將解析後的 tableData 與 tableHeaders 渲染到 HTML DOM 中
-         * 包含所有核心的狀態填色邏輯與文字顏色邏輯
+         * 渲染主表格與邏輯判斷
          */
         function renderTable() {
             const thead = document.getElementById('table-head');
             const tbody = document.getElementById('table-body');
+            const statTotal = document.getElementById('stat-total');
             const statRed = document.getElementById('stat-red');
             const statViolet = document.getElementById('stat-violet');
             const statOrange = document.getElementById('stat-orange');
-            const statTotal = document.getElementById('stat-total');
 
-            // 清空現有表格內容
             thead.innerHTML = '';
             tbody.innerHTML = '';
 
-            // 防呆處理：無資料時的顯示
-            if (!tableHeaders || tableHeaders.length === 0 || tableData.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="15" class="text-center py-10 text-gray-500 font-bold"><i class="fa-solid fa-folder-open text-2xl block mb-2"></i> 目前尚無排程資料</td></tr>`;
-                
-                // 重置統計
-                statTotal.textContent = '0';
-                statRed.textContent = '0';
-                statViolet.textContent = '0';
-                statOrange.textContent = '0';
+            if (rawTableHeaders.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="12" class="text-center py-8 text-gray-400">目前尚無資料</td></tr>`;
                 return;
             }
 
-            // --- 步驟 1: 動態渲染表頭 (Thead) ---
+            // 1. 渲染表頭
             const trHead = document.createElement('tr');
-            tableHeaders.forEach((header, index) => {
+            rawTableHeaders.forEach((header, index) => {
                 const th = document.createElement('th');
-                // 加入排序圖示
-                let sortIcon = '<i class="fa-solid fa-sort text-gray-600"></i>';
-                if (currentSortCol === index) {
-                    sortIcon = isAscending 
-                        ? '<i class="fa-solid fa-sort-up text-blue-400"></i>' 
-                        : '<i class="fa-solid fa-sort-down text-blue-400"></i>';
-                }
-                
-                th.innerHTML = `${escapeHTML(header)} ${sortIcon}`;
-                
-                // 綁定點擊排序事件
+                th.innerHTML = `${escapeHTML(header)} <i class="fa-solid fa-sort"></i>`;
                 th.onclick = () => sortTable(index);
                 trHead.appendChild(th);
             });
             thead.appendChild(trHead);
 
-            // 宣告狀態統計計數器
+            // 統計計數器
             let countRed = 0;
             let countViolet = 0;
             let countOrange = 0;
 
-            // --- 步驟 2: 動態渲染表身與狀態邏輯 (Tbody) ---
-            const fragment = document.createDocumentFragment(); // 使用 Fragment 提升渲染效能
+            // 計算整體資料的統計（基於篩選後的結果）
+            filteredTableData.forEach(row => {
+                const rowStr = row.join(' ');
+                if (/排版|倉庫|採購|完成(?!-先挪庫存料)/.test(rowStr)) countRed++;
+                if (/作業中/.test(rowStr)) countViolet++;
+                if (/完成-先挪庫存料/.test(rowStr)) countOrange++;
+            });
 
-            tableData.forEach(row => {
+            // 2. 渲染每一行資料
+            filteredTableData.forEach(row => {
                 const tr = document.createElement('tr');
-                
-                // 先為了「統計看板」計算整列中是否包含特定狀態字眼
-                // 使用分隔符號組合整列文字，避免跨欄位誤判
-                const fullRowText = row.join('|||');
-                
-                // 嚴謹的正則表達式判斷統計數量
-                // 紅色：包含 排版, 倉庫, 採購, 完成 (且不能是 "完成-先挪庫存料")
-                const hasRedStatus = /排版|倉庫|採購|完成(?!-先挪庫存料)/.test(fullRowText);
-                const hasVioletStatus = /作業中/.test(fullRowText);
-                const hasOrangeStatus = /完成-先挪庫存料/.test(fullRowText);
 
-                if (hasRedStatus) countRed++;
-                if (hasVioletStatus) countViolet++;
-                if (hasOrangeStatus) countOrange++;
-
-                // 逐欄渲染儲存格
                 row.forEach((cell, colIndex) => {
                     const td = document.createElement('td');
                     const cellText = escapeHTML(cell);
-                    const headerName = tableHeaders[colIndex] || '';
-                    
-                    // ==========================================
-                    // 核心邏輯 A：狀態填滿顏色判斷
-                    // ==========================================
-                    const isStatusRed = ["排版", "倉庫", "採購", "完成"].includes(cellText);
-                    const isStatusViolet = (cellText === "作業中");
-                    const isStatusOrange = (cellText === "完成-先挪庫存料");
+                    const headerName = rawTableHeaders[colIndex] || '';
 
-                    if (isStatusRed || isStatusViolet || isStatusOrange) {
-                        let badgeClass = 'status-default';
-                        if (isStatusRed) badgeClass = 'status-red';
-                        if (isStatusViolet) badgeClass = 'status-violet';
-                        if (isStatusOrange) badgeClass = 'status-orange';
-                        
+                    // ----------------------------------------------------
+                    // 總排程看板關鍵邏輯變更：
+                    // 排版, 倉庫, 採購, 完成 -> 紅色填滿
+                    // 作業中 -> 紫羅蘭色填滿
+                    // 完成-先挪庫存料 -> 橙色填滿
+                    // ----------------------------------------------------
+                    const isRed = ["排版", "倉庫", "採購", "完成"].includes(cellText);
+                    const isViolet = cellText === "作業中";
+                    const isOrange = cellText === "完成-先挪庫存料";
+
+                    if (isRed || isViolet || isOrange) {
+                        let badgeClass = '';
+                        if (isRed) badgeClass = 'status-red';
+                        if (isViolet) badgeClass = 'status-violet';
+                        if (isOrange) badgeClass = 'status-orange';
+
                         td.innerHTML = `<span class="status-badge ${badgeClass}">${cellText}</span>`;
-                    } 
-                    // ==========================================
-                    // 核心邏輯 B：烤漆顏色字樣標示判斷
-                    // 條件：表頭包含「顏色」或「烤漆」字眼
-                    // ==========================================
+                    }
+                    // 烤漆顏色欄位渲染邏輯
                     else if (headerName.includes('顏色') || headerName.includes('烤漆')) {
                         const hexColor = findColorHex(cell);
                         if (hexColor) {
-                            // 動態計算文字應為黑色或白色
                             const textColor = isDarkColor(hexColor) ? '#ffffff' : '#000000';
-                            td.innerHTML = `<span class="color-text-highlight" style="background-color: ${hexColor}; color: ${textColor};">${cellText}</span>`;
+                            td.innerHTML = `<span class="color-text-highlight" style="background-color: ${hexColor}; color: ${textColor};"><i class="fa-solid fa-palette text-xs"></i> ${cellText}</span>`;
                         } else {
-                            // 找不到對應顏色，正常輸出
                             td.textContent = cellText;
                         }
-                    } 
-                    // ==========================================
-                    // 一般文字處理
-                    // ==========================================
+                    }
+                    // 普通純文字與換行處理
                     else {
-                        // 處理儲存格內的換行字元，轉換為 <br> 保持版面格式
                         td.innerHTML = cellText.replace(/\n/g, '<br>');
                     }
-                    
+
                     tr.appendChild(td);
                 });
-                
-                fragment.appendChild(tr);
+                tbody.appendChild(tr);
             });
-            
-            tbody.appendChild(fragment);
 
-            // --- 步驟 3: 更新頂部狀態統計看板 ---
-            statTotal.textContent = tableData.length;
+            // 更新統計數值
+            statTotal.textContent = filteredTableData.length;
+            statRed.textContent = countRed;
+            statViolet.textContent = countViolet;
+            statOrange.textContent = countOrange;
             
-            // 加入動態跳動效果 (Count Up Animation 簡易版)
-            animateValue(statRed, 0, countRed, 500);
-            animateValue(statViolet, 0, countViolet, 500);
-            animateValue(statOrange, 0, countOrange, 500);
-            
-            // 更新最後同步時間顯示
-            document.getElementById('last-update-time').innerHTML = `<i class="fa-regular fa-clock"></i> 最後同步: ${getCurrentTimeStr()}`;
+            document.getElementById('last-update-time').textContent = getCurrentTimeStr();
         }
 
         /**
-         * 數字跳動動畫效果 (用於統計看板)
+         * 關鍵字即時搜尋過濾
          */
-        function animateValue(obj, start, end, duration) {
-            let startTimestamp = null;
-            const step = (timestamp) => {
-                if (!startTimestamp) startTimestamp = timestamp;
-                const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-                obj.innerHTML = Math.floor(progress * (end - start) + start);
-                if (progress < 1) {
-                    window.requestAnimationFrame(step);
-                }
-            };
-            window.requestAnimationFrame(step);
+        function filterData(keyword) {
+            if (!keyword.trim()) {
+                filteredTableData = [...rawTableData];
+            } else {
+                const lowerKwd = keyword.toLowerCase();
+                filteredTableData = rawTableData.filter(row => 
+                    row.some(cell => cell.toLowerCase().includes(lowerKwd))
+                );
+            }
+            renderTable();
         }
 
         /**
-         * 點擊表頭進行欄位排序的邏輯
-         * @param {number} colIndex - 被點擊的欄位索引
+         * 多欄位排序邏輯
          */
         function sortTable(colIndex) {
-            // 如果點擊相同欄位，切換升降冪；點擊不同欄位，預設升冪
             if (currentSortCol === colIndex) {
                 isAscending = !isAscending;
             } else {
@@ -973,185 +755,136 @@
                 isAscending = true;
             }
 
-            // 執行排序
-            tableData.sort((rowA, rowB) => {
-                let valA = rowA[colIndex] || '';
-                let valB = rowB[colIndex] || '';
+            filteredTableData.sort((a, b) => {
+                let valA = a[colIndex] || '';
+                let valB = b[colIndex] || '';
                 
-                // 嘗試將字串轉換為數字進行數值排序 (例如排程編號)
-                const numA = parseFloat(valA.replace(/,/g, ''));
-                const numB = parseFloat(valB.replace(/,/g, ''));
+                const numA = parseFloat(valA);
+                const numB = parseFloat(valB);
                 
                 if (!isNaN(numA) && !isNaN(numB)) {
-                    // 數值排序
                     return isAscending ? numA - numB : numB - numA;
-                } else {
-                    // 字串排序 (使用 localeCompare 支援中文正確排序)
-                    return isAscending 
-                        ? valA.localeCompare(valB, 'zh-TW') 
-                        : valB.localeCompare(valA, 'zh-TW');
                 }
+                
+                return isAscending 
+                    ? valA.localeCompare(valB, 'zh-TW') 
+                    : valB.localeCompare(valA, 'zh-TW');
             });
 
-            // 排序完成後重新渲染表格
             renderTable();
         }
 
+        // ==========================================
+        // 5. Google Sheets 資料擷取與排程器
+        // ==========================================
 
         /**
-         * 5. API 呼叫與自動更新機制 (Network & Timer)
-         */
-
-        /**
-         * 透過 Fetch API 從 Google Sheets CSV 端點獲取最新資料
+         * 從 Google Sheets API / CSV 匯出端點讀取資料
          */
         async function fetchSheetData() {
             const refreshIcon = document.getElementById('refresh-icon');
             const errorContainer = document.getElementById('error-message');
             const tableContainer = document.querySelector('.table-container');
             const statusText = document.getElementById('connection-status');
-            const btnRefresh = document.getElementById('btn-force-refresh');
             
-            // --- UI 狀態：進入同步中 ---
             refreshIcon.classList.add('spin-anim');
-            btnRefresh.disabled = true;
-            btnRefresh.style.opacity = '0.7';
-            
-            statusText.innerHTML = `<i class="fa-solid fa-cloud-arrow-down fa-bounce"></i> <span>同步資料中...</span>`;
-            statusText.className = "text-sm flex items-center gap-2 text-blue-400 bg-blue-900/40 px-3 py-1.5 rounded-full border border-blue-800";
+            statusText.innerHTML = `<i class="fa-solid fa-cloud-arrow-down"></i> 同步資料中...`;
+            statusText.className = "text-sm flex items-center gap-2 text-blue-400 font-medium";
 
             try {
-                // 加上時間戳 (t=timestamp) 參數，強制瀏覽器不使用快取，確保取得最新資料
-                const requestUrl = `${CSV_URL}&t=${new Date().getTime()}`;
-                const response = await fetch(requestUrl);
+                // 加上時間戳記強制避免瀏覽器快取
+                const response = await fetch(`${CSV_URL}&t=${new Date().getTime()}`);
                 
                 if (!response.ok) {
-                    throw new Error(`HTTP 錯誤狀態: ${response.status}`);
+                    throw new Error(`無法連線至 Google Sheets (HTTP ${response.status})`);
                 }
                 
                 const csvText = await response.text();
                 
-                // 安全檢查：如果回傳的是 HTML 頁面 (通常代表權限錯誤或網址錯誤)，拋出例外
-                if (csvText.trim().toLowerCase().startsWith('<!doctype html>')) {
-                    throw new Error('存取遭拒。請確認 Google Sheets 已正確執行「發佈到網頁」且格式為 CSV。');
+                if (csvText.trim().startsWith('<!DOCTYPE html>')) {
+                    throw new Error('Google 試算表尚未發佈為網頁或權限不足，請確認工作表權限。');
                 }
 
-                // 執行 CSV 解析
                 const parsedData = parseCSV(csvText);
                 
-                // 分離表頭與資料主體
                 if (parsedData.length > 0) {
-                    tableHeaders = parsedData[0];      // 第一列視為表頭
-                    tableData = parsedData.slice(1);   // 第二列開始視為資料
-                    
-                    // 若有保留上次的排序設定，取得新資料後自動重新排序
-                    if (currentSortCol !== -1) {
-                        // 暫存排序方向並反轉一次，讓 sortTable 執行後恢復原方向
-                        isAscending = !isAscending;
-                        sortTable(currentSortCol); 
-                        return; // sortTable 內已包含 renderTable()，直接結束
-                    }
+                    rawTableHeaders = parsedData[0]; // 第一列為欄位標頭
+                    rawTableData = parsedData.slice(1);  // 剩餘列為實體資料
                 } else {
-                    tableHeaders = [];
-                    tableData = [];
+                    rawTableHeaders = [];
+                    rawTableData = [];
                 }
 
-                // --- UI 狀態：同步成功 ---
+                // 更新現有篩選資料並渲染
+                const searchKwd = document.getElementById('search-input').value;
+                if (searchKwd) {
+                    filterData(searchKwd);
+                } else {
+                    filteredTableData = [...rawTableData];
+                    renderTable();
+                }
+
                 errorContainer.classList.add('hidden');
                 tableContainer.classList.remove('hidden');
                 
-                // 渲染畫面
-                renderTable();
-
-                // 恢復連線狀態顯示
-                statusText.innerHTML = `<i class="fa-solid fa-circle-check"></i> <span>即時同步中</span>`;
-                statusText.className = "text-sm flex items-center gap-2 text-green-400 bg-gray-800/50 px-3 py-1.5 rounded-full border border-gray-700 shadow-[0_0_10px_rgba(74,222,128,0.2)]";
+                statusText.innerHTML = `<i class="fa-solid fa-circle-check"></i> 已連線`;
+                statusText.className = "text-sm flex items-center gap-2 text-green-400 font-medium";
 
             } catch (error) {
-                console.error("讀取 Google Sheets 發生嚴重錯誤:", error);
-                
-                // --- UI 狀態：同步失敗 ---
+                console.error("資料同步失敗:", error);
                 tableContainer.classList.add('hidden');
                 errorContainer.classList.remove('hidden');
+                document.getElementById('error-text').textContent = error.message || '讀取 Google Sheets 發生未知錯誤';
                 
-                // 顯示錯誤訊息給使用者
-                const errorTextEl = document.getElementById('error-text');
-                if (error.message.includes('fetch')) {
-                    errorTextEl.textContent = '網路連線失敗，請檢查您的網路狀態。';
-                } else {
-                    errorTextEl.textContent = error.message || '無法連線至資料來源，請稍後再試。';
-                }
-                
-                // 狀態顯示斷線
-                statusText.innerHTML = `<i class="fa-solid fa-circle-xmark"></i> <span>連線中斷</span>`;
-                statusText.className = "text-sm flex items-center gap-2 text-red-500 bg-red-900/30 px-3 py-1.5 rounded-full border border-red-800 shadow-[0_0_10px_rgba(239,68,68,0.3)]";
-                
+                statusText.innerHTML = `<i class="fa-solid fa-circle-xmark"></i> 連線中斷`;
+                statusText.className = "text-sm flex items-center gap-2 text-red-500 font-medium";
             } finally {
-                // 無論成功失敗，都要停止旋轉動畫與恢復按鈕狀態
-                // 設定最少旋轉 500ms 讓使用者有視覺回饋感
                 setTimeout(() => {
                     refreshIcon.classList.remove('spin-anim');
-                    btnRefresh.disabled = false;
-                    btnRefresh.style.opacity = '1';
-                }, 500); 
+                }, 600);
             }
         }
 
         /**
-         * 更新倒數計時器的文字與圓形進度條 UI
+         * 倒數計時器與圓形進度條更新
          */
         function updateTimerUI() {
             const countdownEl = document.getElementById('countdown-text');
             
-            // 計算分與秒
             const minutes = Math.floor(remainingSeconds / 60);
             const seconds = remainingSeconds % 60;
             
-            // 更新文字 (補零)
             countdownEl.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
             
-            // 圓形進度條動畫計算
-            // offset 為 0 時全滿，為 circumference 時全空
-            const progressRatio = remainingSeconds / REFRESH_INTERVAL_SECONDS;
-            const offset = circumference - (progressRatio * circumference);
+            const offset = circumference - (remainingSeconds / REFRESH_INTERVAL_SECONDS) * circumference;
             circle.style.strokeDashoffset = offset;
 
-            // 根據剩餘時間變換警告顏色
             countdownEl.classList.remove('timer-warning', 'timer-danger');
-            circle.style.stroke = 'var(--accent-blue)'; // 預設藍色
+            circle.style.stroke = '#3b82f6';
 
-            if (remainingSeconds <= 60 && remainingSeconds > 10) {
-                // 最後一分鐘，顯示黃色警告
+            if (remainingSeconds <= 60 && remainingSeconds > 15) {
                 countdownEl.classList.add('timer-warning');
-                circle.style.stroke = '#facc15'; 
-            } else if (remainingSeconds <= 10) {
-                // 最後 10 秒，顯示紅色危險動畫
+                circle.style.stroke = '#facc15';
+            } else if (remainingSeconds <= 15) {
                 countdownEl.classList.add('timer-danger');
-                circle.style.stroke = '#f87171'; 
+                circle.style.stroke = '#f87171';
             }
         }
 
         /**
-         * 啟動或重置自動更新計時器
+         * 啟動 10 分鐘自動同步排程
          */
         function startTimer() {
-            // 清除現有的計時器，避免重複觸發
-            if (timerInterval) {
-                clearInterval(timerInterval);
-            }
+            if (timerInterval) clearInterval(timerInterval);
             
-            // 重置秒數為初始值 (600秒)
             remainingSeconds = REFRESH_INTERVAL_SECONDS;
-            updateTimerUI(); // 立即更新一次 UI
+            updateTimerUI();
             
-            // 設定每秒執行一次的計時器
             timerInterval = setInterval(() => {
                 remainingSeconds--;
                 
                 if (remainingSeconds <= 0) {
-                    // 時間到！觸發自動抓取資料
                     fetchSheetData();
-                    // 重置秒數開始下一輪倒數
                     remainingSeconds = REFRESH_INTERVAL_SECONDS;
                 }
                 
@@ -1159,22 +892,25 @@
             }, 1000);
         }
 
+        // ==========================================
+        // 6. 事件驅動與初始化綁定
+        // ==========================================
 
-        /**
-         * 6. 系統初始化與事件綁定 (Initialization)
-         */
-
-        // 綁定手動「強制更新」按鈕事件
+        // 手動即時更新按鈕
         document.getElementById('btn-force-refresh').addEventListener('click', () => {
-            fetchSheetData(); // 立即獲取最新資料
-            startTimer();     // 手動更新後，重新計算 10 分鐘倒數
+            fetchSheetData();
+            startTimer();
         });
 
-        // 確保 DOM 載入完成後才執行系統初始化
+        // 搜尋輸入框即時過濾
+        document.getElementById('search-input').addEventListener('input', (e) => {
+            filterData(e.target.value);
+        });
+
+        // 頁面初次載入啟動
         document.addEventListener('DOMContentLoaded', () => {
-            console.log("總排程看板系統初始化啟動...");
-            fetchSheetData(); // 網頁載入時立刻獲取第一次資料
-            startTimer();     // 啟動 10 分鐘自動更新背景排程
+            fetchSheetData();
+            startTimer();
         });
 
     </script>

@@ -748,7 +748,9 @@
                 if (day !== 0 && day !== 6 && !holidays.has(isoStr)) break;
             }
             const nextDB = getDBDateFormat(nextDate);
-            const nextDisplay = `${nextDate.getMonth() + 1}/${nextDate.getDate()} (${currentLang === 'vi' ? 'Thứ ' : '週'}${weekdays[currentLang][nextDate.getDay()]})`;
+            const nextDisplay = currentLang === 'zh'
+                ? `${nextDate.getMonth() + 1}月${nextDate.getDate()}日 (週${weekdays[currentLang][nextDate.getDay()]})`
+                : `${nextDate.getMonth() + 1}/${nextDate.getDate()} (Thứ ${weekdays[currentLang][nextDate.getDay()]})`;
             return { dbDate: nextDB, displayDate: nextDisplay, isNext: true };
         }
 
@@ -761,7 +763,9 @@
                 return getNextWorkingDate();
             } else {
                 const todayDB = getDBDateFormat(now);
-                const todayDisplay = `${now.getMonth() + 1}/${now.getDate()} (${currentLang === 'vi' ? 'Thứ ' : '週'}${weekdays[currentLang][now.getDay()]})`;
+                const todayDisplay = currentLang === 'zh'
+                    ? `${now.getMonth() + 1}月${now.getDate()}日 (週${weekdays[currentLang][now.getDay()]})`
+                    : `${now.getMonth() + 1}/${now.getDate()} (Thứ ${weekdays[currentLang][now.getDay()]})`;
                 return { dbDate: todayDB, displayDate: todayDisplay, isNext: false };
             }
         }

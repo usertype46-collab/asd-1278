@@ -75,7 +75,7 @@
         .w-seq { width: 60px; text-align: center; }
         .w-color { width: 180px; }
         .w-model { width: 180px; }
-        .w-action { width: 120px; text-align: center; }
+        .w-action { width: 140px; text-align: center; }
 
         input[type="text"], input[type="date"], select { 
             background-color: #282828; 
@@ -103,6 +103,7 @@
             display: flex;
             align-items: center;
             gap: 0.5rem;
+            white-space: nowrap;
         }
         .tab-btn.active {
             background-color: #2563eb;
@@ -152,9 +153,9 @@
         </div>
 
         <div class="flex items-center gap-3 flex-wrap w-full lg:w-auto justify-between lg:justify-end">
-            <a href="烤漆順序管理.html" class="bg-emerald-700 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 font-medium shadow text-sm">
-                <i class="fa-solid fa-pen-to-square"></i> <span data-i18n="btnSwitchManagement">切換至建立紀錄</span>
-            </a>
+            <button onclick="switchTab('create')" class="bg-emerald-700 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 font-medium shadow text-sm">
+                <i class="fa-solid fa-pen-to-square"></i> <span data-i18n="btnSwitchManagement">建立/管理排程</span>
+            </button>
             <div class="flex items-center gap-2 bg-gray-800 px-3 py-1.5 rounded-lg border border-gray-700">
                 <span class="text-xs text-gray-400" data-i18n="langLabel">語言 / Ngôn ngữ:</span>
                 <select id="lang-switch" class="w-auto cursor-pointer py-0.5 px-2 text-xs bg-gray-900 border-gray-600">
@@ -169,6 +170,9 @@
     <div class="flex items-center gap-2 mb-6 overflow-x-auto pb-2 border-b border-gray-800">
         <button id="tab-btn-master" class="tab-btn active" onclick="switchTab('master')">
             <i class="fa-solid fa-table-list"></i> <span data-i18n="tabMasterBoard">［總排程看板］</span>
+        </button>
+        <button id="tab-btn-create" class="tab-btn inactive" onclick="switchTab('create')">
+            <i class="fa-solid fa-calendar-plus"></i> <span data-i18n="tabCreateBoard">建立排程</span>
         </button>
         <button id="tab-btn-today" class="tab-btn inactive" onclick="switchTab('today')">
             <i class="fa-solid fa-calendar-check"></i> <span data-i18n="tabDailyBoard">每日烤漆順序看板</span>
@@ -214,7 +218,7 @@
                         <span data-i18n="masterBoardTitle">［總排程看板］ (工作表1)</span>
                     </h2>
                     <p class="text-xs text-gray-400 mt-1">
-                        來源：Google Sheets 工作表1｜每10分鐘自動更新｜雙語支援
+                        來源：Google Sheets 工作表1｜每10分鐘自動更新｜(已隱藏指定欄位)
                     </p>
                 </div>
                 
@@ -254,6 +258,61 @@
             <div class="mt-3 flex justify-between items-center text-xs text-gray-500">
                 <span id="master-last-updated">最後更新時間：--</span>
                 <span id="master-display-count">顯示 0 筆資料</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== 頁籤 1.5 (新增): 建立排程 ===== -->
+    <div id="tab-content-create" class="hidden">
+        <div class="card border-l-4 border-l-yellow-500 shadow-lg">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-5 gap-2 pb-4 border-b border-gray-800">
+                <h2 class="text-xl font-bold text-yellow-400 flex items-center gap-2">
+                    <i class="fa-solid fa-calendar-plus"></i>
+                    <span data-i18n="createTitle">排程管理與建立</span>
+                </h2>
+                <div class="flex items-center gap-3">
+                    <label class="text-sm text-gray-400 font-bold" data-i18n="lblSelectDate">排程日期：</label>
+                    <input type="date" id="create-target-date" class="w-auto font-bold text-yellow-400" onchange="loadCreateDataForDate()">
+                </div>
+            </div>
+
+            <!-- 快速新增表單 -->
+            <div class="bg-gray-900 p-4 rounded-lg border border-gray-700 mb-6 flex flex-wrap gap-4 items-end">
+                <div class="flex-1 min-w-[150px]">
+                    <label class="block text-xs text-gray-400 mb-1" data-i18n="thColor">顏色</label>
+                    <input type="text" id="create-new-color" list="color-list" placeholder="輸入或選擇顏色">
+                </div>
+                <div class="flex-1 min-w-[150px]">
+                    <label class="block text-xs text-gray-400 mb-1" data-i18n="thModel">機型</label>
+                    <input type="text" id="create-new-model" list="model-list" placeholder="輸入或選擇機型">
+                </div>
+                <div class="flex-[2] min-w-[200px]">
+                    <label class="block text-xs text-gray-400 mb-1" data-i18n="thRemark">備註 (多筆以 / 分隔)</label>
+                    <input type="text" id="create-new-remark" placeholder="選填備註...">
+                </div>
+                <div>
+                    <button onclick="addNewScheduleItem()" class="bg-yellow-600 hover:bg-yellow-700 text-white px-5 py-2.5 rounded shadow font-bold flex items-center gap-2 h-full">
+                        <i class="fa-solid fa-plus"></i> <span data-i18n="btnAddItem">新增一筆</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 該日期的資料表 -->
+            <div class="overflow-x-auto">
+                <table class="min-w-full">
+                    <thead>
+                        <tr>
+                            <th class="w-seq" data-i18n="thNo">序號</th>
+                            <th class="w-color" data-i18n="thColor">顏色</th>
+                            <th class="w-model" data-i18n="thModel">機型</th>
+                            <th data-i18n="thRemark">備註</th>
+                            <th class="w-action" data-i18n="thAction">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="create-tbody">
+                        <tr><td colspan="5" class="text-center text-gray-500 py-6" data-i18n="msgLoading">資料載入中...</td></tr>
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
@@ -334,7 +393,7 @@
     <!-- Firebase 腳本與邏輯 -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getDatabase, ref, onValue, get, set } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+        import { getDatabase, ref, onValue, get, set, remove, push } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
 
         // Firebase 配置
         const firebaseConfig = {
@@ -351,18 +410,23 @@
 
         // 全域狀態
         let currentLang = 'zh';
-        let activeTab = 'master'; // 'master' | 'today' | 'history'
+        let activeTab = 'master'; // 'master' | 'create' | 'today' | 'history'
         
         let todayData = [];
         let historyData = [];
+        let createPageData = [];
         let isEditingToday = null;
         let isEditingHistory = null;
+        let isEditingCreate = null;
 
         // 總排程 Google Sheet 狀態
         let rawMasterHeaders = [];
         let rawMasterRows = [];
         let refreshCountdown = 600; // 10分鐘 = 600秒
         let countdownTimerId = null;
+
+        // 需要過濾不顯示的總排程欄位
+        const excludedColumns = ["工單", "排版", "倉庫", "採購", "板材進貨日"];
 
         const holidays = new Set([
             "2026-01-01", "2026-02-16", "2026-02-17", "2026-02-18", "2026-02-19", "2026-02-20", 
@@ -405,17 +469,13 @@
         function formatChineseDate(val) {
             if (!val) return '';
             const str = String(val).trim();
-
-            // 匹配 Google Sheets GViz API 的 Date(yyyy,m,d) 格式 (Google GViz 月份為 0-indexed)
             const gvizDateRegex = /^Date\((\d{4}),\s*(\d{1,2}),\s*(\d{1,2})\)$/i;
             const match = str.match(gvizDateRegex);
             if (match) {
-                const month = parseInt(match[2], 10) + 1; // 0-indexed 轉為 1-12 月
+                const month = parseInt(match[2], 10) + 1;
                 const day = parseInt(match[3], 10);
                 return `${month}月${day}日`;
             }
-
-            // 匹配 YYYY-MM-DD 或 YYYY/MM/DD 標準日期格式
             const stdDateRegex = /^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/;
             const stdMatch = str.match(stdDateRegex);
             if (stdMatch) {
@@ -423,7 +483,6 @@
                 const day = parseInt(stdMatch[3], 10);
                 return `${month}月${day}日`;
             }
-
             return str;
         }
 
@@ -431,9 +490,10 @@
             zh: {
                 appTitle: "烤漆與生產總排程管理系統",
                 appSubTitle: "即時監控生產總排程、每日烤漆順序與歷史數據",
-                btnSwitchManagement: "切換至建立紀錄",
+                btnSwitchManagement: "建立/管理排程",
                 langLabel: "語言 / Ngôn ngữ:",
                 tabMasterBoard: "［總排程看板］",
+                tabCreateBoard: "建立排程",
                 tabDailyBoard: "每日烤漆順序看板",
                 tabHistorySearch: "歷史記錄查詢",
                 kpiTotalRows: "總排程數據總筆數",
@@ -449,19 +509,24 @@
                 legStockReserved: "完成-先挪庫存料 (橙色填滿)",
                 legPaintColor: "烤漆顏色：依字樣顏色標示",
                 searchTitle: "歷史記錄查詢",
+                createTitle: "排程管理與建立",
+                lblSelectDate: "選擇排程日期：",
+                btnAddItem: "新增一筆",
                 lblDate: "日期 (Ngày)", lblColor: "顏色 (Màu sắc)", lblModel: "Model (機型)",
-                btnSearch: "查詢", btnReset: "重設", msgNoData: "尚無符合條件的資料", msgLoading: "資料載入中...",
+                btnSearch: "查詢", btnReset: "重設", msgNoData: "尚無資料", msgLoading: "資料載入中...",
                 todayTitle: "今日作業資料", nextDayTitle: "次日作業排程 (已過16:30)", thDate: "日期", thNo: "序號", thColor: "顏色", thModel: "機型", thRemark: "備註", thAction: "操作",
                 phSearchColor: "輸入顏色查詢...", phSearchModel: "輸入機型查詢...",
-                btnEdit: "編輯", btnSave: "儲存", btnCancel: "取消", msgUpdateOk: "資料更新成功！", msgUpdateErr: "資料更新失敗："
+                btnEdit: "編輯", btnSave: "儲存", btnCancel: "取消", btnDelete: "刪除",
+                msgUpdateOk: "資料更新成功！", msgUpdateErr: "資料更新失敗：", msgConfirmDel: "確定要刪除這筆資料嗎？"
             },
             vi: {
                 appTitle: "Hệ thống Quản lý Tiến độ Sơn & Tổng thể",
                 appSubTitle: "Giám sát tiến độ tổng thể, thứ tự sơn hàng ngày và lịch sử",
-                btnSwitchManagement: "Chuyển sang Tạo Hồ sơ",
+                btnSwitchManagement: "Tạo / Quản lý Lịch",
                 langLabel: "Ngôn ngữ / 語言:",
                 tabMasterBoard: "［Bảng Tiến độ Tổng thể］",
-                tabDailyBoard: "Bảng Thứ tự Sơn Hàng ngày",
+                tabCreateBoard: "Tạo Lịch Trình",
+                tabDailyBoard: "Bảng Thứ tự Sơn",
                 tabHistorySearch: "Tra cứu Lịch sử",
                 kpiTotalRows: "Tổng số dòng tiến độ",
                 kpiCompletedRows: "Tổng số Hoàn thành",
@@ -476,11 +541,15 @@
                 legStockReserved: "Hoàn thành - Dùng kho (Cam)",
                 legPaintColor: "Màu sơn: Hiển thị theo màu chữ",
                 searchTitle: "Tra cứu lịch sử",
+                createTitle: "Quản lý & Tạo Lịch trình",
+                lblSelectDate: "Chọn ngày:",
+                btnAddItem: "Thêm mới",
                 lblDate: "Ngày (日期)", lblColor: "Màu sắc (顏色)", lblModel: "Model (機型)",
                 btnSearch: "Tìm kiếm", btnReset: "Đặt lại", msgNoData: "Không có dữ liệu", msgLoading: "Đang tải...",
                 todayTitle: "Dữ liệu làm việc hôm nay", nextDayTitle: "Lịch trình ngày mai (Đã qua 16:30)", thDate: "Ngày", thNo: "STT", thColor: "Màu sắc", thModel: "Model", thRemark: "Ghi chú", thAction: "Thao tác",
                 phSearchColor: "Nhập màu sắc...", phSearchModel: "Nhập model...",
-                btnEdit: "Sửa", btnSave: "Lưu", btnCancel: "Hủy", msgUpdateOk: "Cập nhật thành công!", msgUpdateErr: "Cập nhật thất bại: "
+                btnEdit: "Sửa", btnSave: "Lưu", btnCancel: "Hủy", btnDelete: "Xóa",
+                msgUpdateOk: "Cập nhật thành công!", msgUpdateErr: "Cập nhật thất bại: ", msgConfirmDel: "Bạn có chắc chắn muốn xóa không?"
             }
         };
 
@@ -504,20 +573,25 @@
         // 頁籤切換
         window.switchTab = function(tabName) {
             activeTab = tabName;
-            document.getElementById('tab-content-master').className = tabName === 'master' ? 'block' : 'hidden';
-            document.getElementById('tab-content-today').className = tabName === 'today' ? 'block' : 'hidden';
-            document.getElementById('tab-content-history').className = tabName === 'history' ? 'block' : 'hidden';
+            const tabs = ['master', 'create', 'today', 'history'];
+            
+            tabs.forEach(t => {
+                document.getElementById(`tab-content-${t}`).className = tabName === t ? 'block' : 'hidden';
+                document.getElementById(`tab-btn-${t}`).className = tabName === t ? 'tab-btn active' : 'tab-btn inactive';
+            });
 
-            document.getElementById('tab-btn-master').className = tabName === 'master' ? 'tab-btn active' : 'tab-btn inactive';
-            document.getElementById('tab-btn-today').className = tabName === 'today' ? 'tab-btn active' : 'tab-btn inactive';
-            document.getElementById('tab-btn-history').className = tabName === 'history' ? 'tab-btn active' : 'tab-btn inactive';
+            if (tabName === 'create') {
+                if (!document.getElementById('create-target-date').value) {
+                    document.getElementById('create-target-date').value = getNextWorkingDate().dbDate;
+                }
+                loadCreateDataForDate();
+            }
         };
 
         // ==========================================
         // ［總排程看板］ Core Logic (Google Sheets)
         // ==========================================
         
-        // 解析烤漆顏色字樣樣式
         function getPaintColorStyle(colorText) {
             if (!colorText) return '';
             const txt = String(colorText).trim().toLowerCase();
@@ -545,37 +619,22 @@
             return `color: #38bdf8; font-weight: 700;`;
         }
 
-        // 渲染單元格（含日期格式化、狀態顏色與烤漆顏色邏輯）
         function renderMasterCellContent(val, headerName) {
             if (val === null || val === undefined || val === '') return '-';
             let valStr = String(val).trim();
-
-            // 自動將 Date(YYYY,M,D) 或標準日期格式轉為繁體中文月日模式 (例如: 8月18日)
             valStr = formatChineseDate(valStr);
-
             const translatedVal = translateContent(valStr, currentLang);
 
-            // 狀態顏色判定 (排版、倉庫、採購、完成等)
-            if (valStr === '完成') {
-                return `<span class="status-badge status-completed">${translatedVal}</span>`;
-            }
-            if (valStr === '作業中') {
-                return `<span class="status-badge status-in-progress">${translatedVal}</span>`;
-            }
-            if (valStr === '完成-先挪庫存料' || valStr.includes('完成-先挪庫存料')) {
-                return `<span class="status-badge status-stock-reserved">${translatedVal}</span>`;
-            }
-
-            // 烤漆顏色欄位判定
+            if (valStr === '完成') return `<span class="status-badge status-completed">${translatedVal}</span>`;
+            if (valStr === '作業中') return `<span class="status-badge status-in-progress">${translatedVal}</span>`;
+            if (valStr === '完成-先挪庫存料' || valStr.includes('完成-先挪庫存料')) return `<span class="status-badge status-stock-reserved">${translatedVal}</span>`;
             if (headerName && (headerName.includes('顏色') || headerName.includes('烤漆'))) {
                 const colorStyle = getPaintColorStyle(valStr);
                 return `<span style="${colorStyle}">${translatedVal}</span>`;
             }
-
             return translatedVal;
         }
 
-        // 從 Google Sheets 抓取資料 (GViz API / CSV fallback)
         async function fetchMasterScheduleData() {
             const sheetId = '1Xo-KJND3rkrv02Wl3CdnrJh7g1kyV2gIaOUl0vYKrAk';
             const sheetName = '工作表1';
@@ -584,29 +643,33 @@
             try {
                 const res = await fetch(gvizUrl);
                 const text = await res.text();
-                
-                // 擷取 JSON 內容
                 const jsonMatch = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\);/);
-                if (!jsonMatch || !jsonMatch[1]) {
-                    throw new Error("GViz API 回傳格式錯誤");
-                }
+                if (!jsonMatch || !jsonMatch[1]) throw new Error("GViz API 回傳格式錯誤");
 
                 const parsed = JSON.parse(jsonMatch[1]);
                 const table = parsed.table;
 
-                const headers = table.cols.map(c => (c && c.label) ? c.label : '');
-                const rows = table.rows.map(r => {
-                    return r.c.map(cell => (cell && cell.v !== null && cell.v !== undefined) ? cell.v : '');
+                const originalHeaders = table.cols.map(c => (c && c.label) ? c.label.trim() : '');
+                
+                // 找出需保留的欄位 Index (過濾指定的機敏欄位)
+                const keepIndices = originalHeaders
+                    .map((h, i) => excludedColumns.includes(h) ? -1 : i)
+                    .filter(i => i !== -1);
+                
+                const filteredHeaders = keepIndices.map(i => originalHeaders[i]);
+
+                const filteredRows = table.rows.map(r => {
+                    const fullRow = r.c.map(cell => (cell && cell.v !== null && cell.v !== undefined) ? cell.v : '');
+                    return keepIndices.map(i => fullRow[i] || '');
                 });
 
-                return { headers, rows };
+                return { headers: filteredHeaders, rows: filteredRows };
             } catch (err) {
                 console.warn("GViz API 讀取失敗，改用 CSV 解析:", err);
                 return await fetchCsvFallback(sheetId, sheetName);
             }
         }
 
-        // 備用 CSV 解析器
         async function fetchCsvFallback(sheetId, sheetName) {
             const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
             const res = await fetch(csvUrl);
@@ -621,25 +684,31 @@
                 let cur = '';
                 for (let i = 0; i < line.length; i++) {
                     const char = line[i];
-                    if (char === '"' && (i === 0 || line[i-1] !== '\\')) {
-                        insideQuote = !insideQuote;
-                    } else if (char === ',' && !insideQuote) {
-                        result.push(cur.replace(/^"|"$/g, '').trim());
-                        cur = '';
-                    } else {
-                        cur += char;
-                    }
+                    if (char === '"' && (i === 0 || line[i-1] !== '\\')) insideQuote = !insideQuote;
+                    else if (char === ',' && !insideQuote) { result.push(cur.replace(/^"|"$/g, '').trim()); cur = ''; } 
+                    else cur += char;
                 }
                 result.push(cur.replace(/^"|"$/g, '').trim());
                 return result;
             };
 
-            const headers = parseCsvLine(lines[0]);
-            const rows = lines.slice(1).map(l => parseCsvLine(l));
-            return { headers, rows };
+            const originalHeaders = parseCsvLine(lines[0]);
+            
+            // 找出需保留的欄位 Index (過濾指定的機敏欄位)
+            const keepIndices = originalHeaders
+                .map((h, i) => excludedColumns.includes(h) ? -1 : i)
+                .filter(i => i !== -1);
+                
+            const filteredHeaders = keepIndices.map(i => originalHeaders[i]);
+
+            const filteredRows = lines.slice(1).map(l => {
+                const fullRow = parseCsvLine(l);
+                return keepIndices.map(i => fullRow[i] || '');
+            });
+
+            return { headers: filteredHeaders, rows: filteredRows };
         }
 
-        // 渲染總排程看板
         async function loadMasterSchedule() {
             const tbody = document.getElementById('master-tbody');
             const thead = document.getElementById('master-thead');
@@ -650,7 +719,6 @@
                 rawMasterHeaders = headers;
                 rawMasterRows = rows;
 
-                // 統計數據
                 let totalCount = rows.length;
                 let completedCount = 0;
                 let workingCount = 0;
@@ -667,14 +735,8 @@
                 document.getElementById('kpi-completed-count').innerText = completedCount;
                 document.getElementById('kpi-working-count').innerText = workingCount;
 
-                // 建立表頭
                 if (headers.length > 0) {
-                    thead.innerHTML = `
-                        <tr>
-                            <th class="w-seq">#</th>
-                            ${headers.map(h => `<th>${translateContent(h, currentLang)}</th>`).join('')}
-                        </tr>
-                    `;
+                    thead.innerHTML = `<tr><th class="w-seq">#</th>${headers.map(h => `<th>${translateContent(h, currentLang)}</th>`).join('')}</tr>`;
                 }
 
                 filterMasterTable();
@@ -688,7 +750,6 @@
             }
         }
 
-        // 過濾總排程表格
         window.filterMasterTable = function() {
             const tbody = document.getElementById('master-tbody');
             const searchKeyword = document.getElementById('master-search-input').value.trim().toLowerCase();
@@ -701,16 +762,12 @@
             }
 
             let filtered = rawMasterRows.filter(row => {
-                // 關鍵字比對 (轉換日期後再比對)
                 const rowText = row.map(cell => formatChineseDate(String(cell))).join(' ').toLowerCase();
                 const matchKeyword = !searchKeyword || rowText.includes(searchKeyword);
-
-                // 狀態比對
                 let matchStatus = true;
                 if (statusFilter) {
                     matchStatus = row.some(cell => String(cell).trim() === statusFilter);
                 }
-
                 return matchKeyword && matchStatus;
             });
 
@@ -722,12 +779,10 @@
 
             let html = '';
             filtered.forEach((row, idx) => {
-                html += `<tr class="hover:bg-gray-800 transition-colors">`;
-                html += `<td class="text-center font-bold text-gray-500 text-xs">${idx + 1}</td>`;
+                html += `<tr class="hover:bg-gray-800 transition-colors"><td class="text-center font-bold text-gray-500 text-xs">${idx + 1}</td>`;
                 row.forEach((cellVal, colIdx) => {
                     const headerName = rawMasterHeaders[colIdx] || '';
-                    const cellHtml = renderMasterCellContent(cellVal, headerName);
-                    html += `<td>${cellHtml}</td>`;
+                    html += `<td>${renderMasterCellContent(cellVal, headerName)}</td>`;
                 });
                 html += `</tr>`;
             });
@@ -736,24 +791,18 @@
             document.getElementById('master-display-count').innerText = `顯示 ${filtered.length} / ${rawMasterRows.length} 筆資料`;
         };
 
-        // 手動刷新總排程
         window.manualRefreshMaster = function() {
             refreshCountdown = 600;
             loadMasterSchedule();
         };
 
-        // 10分鐘倒數計時器
         function startAutoRefreshTimer() {
             if (countdownTimerId) clearInterval(countdownTimerId);
-            
             countdownTimerId = setInterval(() => {
                 refreshCountdown--;
-                
                 const mins = Math.floor(refreshCountdown / 60);
                 const secs = refreshCountdown % 60;
-                document.getElementById('sync-countdown').innerText = 
-                    `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-
+                document.getElementById('sync-countdown').innerText = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
                 if (refreshCountdown <= 0) {
                     refreshCountdown = 600;
                     loadMasterSchedule();
@@ -762,7 +811,7 @@
         }
 
         // ==========================================
-        // 每日烤漆順序 (Firebase RTDB)
+        // 每日烤漆與建立排程邏輯 (Firebase RTDB)
         // ==========================================
 
         function getDBDateFormat(dateObj) {
@@ -777,9 +826,11 @@
                 let isoStr = getDBDateFormat(nextDate);
                 if (day !== 0 && day !== 6 && !holidays.has(isoStr)) break;
             }
-            const nextDB = getDBDateFormat(nextDate);
-            const nextDisplay = `${nextDate.getMonth() + 1}/${nextDate.getDate()} (${currentLang === 'vi' ? 'Thứ ' : '週'}${weekdays[currentLang][nextDate.getDay()]})`;
-            return { dbDate: nextDB, displayDate: nextDisplay, isNext: true };
+            return { 
+                dbDate: getDBDateFormat(nextDate), 
+                displayDate: `${nextDate.getMonth() + 1}/${nextDate.getDate()} (${currentLang === 'vi' ? 'Thứ ' : '週'}${weekdays[currentLang][nextDate.getDay()]})`, 
+                isNext: true 
+            };
         }
 
         function getTargetBoardDate() {
@@ -790,13 +841,16 @@
             if (hours > 16 || (hours === 16 && minutes >= 30)) {
                 return getNextWorkingDate();
             } else {
-                const todayDB = getDBDateFormat(now);
-                const todayDisplay = `${now.getMonth() + 1}/${now.getDate()} (${currentLang === 'vi' ? 'Thứ ' : '週'}${weekdays[currentLang][now.getDay()]})`;
-                return { dbDate: todayDB, displayDate: todayDisplay, isNext: false };
+                return { 
+                    dbDate: getDBDateFormat(now), 
+                    displayDate: `${now.getMonth() + 1}/${now.getDate()} (${currentLang === 'vi' ? 'Thứ ' : '週'}${weekdays[currentLang][now.getDay()]})`, 
+                    isNext: false 
+                };
             }
         }
 
         let currentActiveTarget = getTargetBoardDate();
+        let createListenerUnsubscribe = null;
 
         function applyLanguage() {
             const t = i18n[currentLang];
@@ -809,6 +863,7 @@
             
             renderTodayTable();
             renderHistoryTable();
+            if(activeTab === 'create') renderCreateTable();
             filterMasterTable();
         }
 
@@ -817,6 +872,151 @@
             applyLanguage();
         });
 
+        // ==========================================
+        // 建立/管理排程功能 (新頁籤邏輯)
+        // ==========================================
+        window.loadCreateDataForDate = function() {
+            const selectedDate = document.getElementById('create-target-date').value;
+            if(!selectedDate) return;
+
+            if (createListenerUnsubscribe) {
+                // Remove previous listener if exists (RTDB doesn't have a direct unsubsribe object, but off() can be used on reference)
+            }
+
+            onValue(ref(db, `schedules/${selectedDate}`), (snapshot) => {
+                createPageData = [];
+                if (snapshot.exists()) {
+                    const data = snapshot.val();
+                    Object.keys(data).forEach(key => {
+                        if (data[key]) createPageData.push({ originalIndex: key, ...data[key] });
+                    });
+                }
+                renderCreateTable();
+            });
+        };
+
+        window.addNewScheduleItem = async function() {
+            const selectedDate = document.getElementById('create-target-date').value;
+            if(!selectedDate) return alert('請先選擇日期');
+
+            const color = document.getElementById('create-new-color').value.trim().toUpperCase();
+            const model = document.getElementById('create-new-model').value.trim().toUpperCase();
+            const rmkStr = document.getElementById('create-new-remark').value.trim();
+            const remarks = rmkStr ? rmkStr.split('/').map(r => r.trim()).filter(r => r !== '') : [];
+
+            if(!color && !model) return alert('請至少輸入顏色或機型');
+
+            // 決定下一號 seqNo
+            let maxSeq = 0;
+            createPageData.forEach(item => {
+                if(item.seqNo && typeof item.seqNo === 'number' && item.seqNo > maxSeq) {
+                    maxSeq = item.seqNo;
+                }
+            });
+            const newSeqNo = maxSeq + 1;
+
+            const newItem = { seqNo: newSeqNo, color, model, remarks };
+
+            try {
+                // 為了排序方便，儲存節點可直接用遞增 ID
+                const newRef = push(ref(db, `schedules/${selectedDate}`));
+                await set(newRef, newItem);
+                
+                // 清空輸入框
+                document.getElementById('create-new-color').value = '';
+                document.getElementById('create-new-model').value = '';
+                document.getElementById('create-new-remark').value = '';
+            } catch (err) {
+                alert(i18n[currentLang].msgUpdateErr + err.message);
+            }
+        };
+
+        function renderCreateTable() {
+            const tbody = document.getElementById('create-tbody');
+            const t = i18n[currentLang];
+            tbody.innerHTML = '';
+            
+            if (createPageData.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center text-gray-500 py-6">${t.msgNoData}</td></tr>`;
+                return;
+            }
+
+            createPageData.sort((a, b) => a.seqNo - b.seqNo).forEach((item, idx) => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-gray-800 transition-colors";
+                
+                if (isEditingCreate === idx) {
+                    tr.innerHTML = `
+                        <td><input type="number" id="edit-c-seq-${idx}" value="${item.seqNo}" class="w-16 text-center"></td>
+                        <td><input type="text" id="edit-c-color-${idx}" list="color-list" value="${item.color || ''}"></td>
+                        <td><input type="text" id="edit-c-model-${idx}" list="model-list" value="${item.model || ''}"></td>
+                        <td><input type="text" id="edit-c-remark-${idx}" value="${item.remarks ? item.remarks.join(' / ') : ''}"></td>
+                        <td class="text-center">
+                            <div class="flex flex-col gap-1 justify-center">
+                                <button onclick="saveCreate(${idx})" class="bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded text-sm"><i class="fa-solid fa-check"></i> ${t.btnSave}</button>
+                                <button onclick="cancelEditCreate()" class="bg-gray-500 hover:bg-gray-600 text-white px-2 py-1 rounded text-sm"><i class="fa-solid fa-xmark"></i> ${t.btnCancel}</button>
+                            </div>
+                        </td>
+                    `;
+                } else {
+                    const displayColor = translateContent(item.color || '', currentLang);
+                    const displayModel = translateContent(item.model || '', currentLang);
+                    const displayRemarks = item.remarks ? item.remarks.map(r => translateContent(r, currentLang)).join('<br>') : '';
+                    const colorStyle = getPaintColorStyle(item.color || '');
+
+                    tr.innerHTML = `
+                        <td class="text-center font-bold text-yellow-500 text-lg">${item.seqNo}</td>
+                        <td class="font-bold text-lg"><span style="${colorStyle}">${displayColor}</span></td>
+                        <td class="font-bold text-white text-lg">${displayModel}</td>
+                        <td class="text-gray-300 text-sm">${displayRemarks}</td>
+                        <td class="text-center">
+                            <div class="flex flex-col md:flex-row gap-2 justify-center">
+                                <button onclick="editCreate(${idx})" class="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded shadow text-sm font-bold"><i class="fa-solid fa-pen"></i></button>
+                                <button onclick="deleteCreate(${idx})" class="bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded shadow text-sm font-bold"><i class="fa-solid fa-trash"></i></button>
+                            </div>
+                        </td>
+                    `;
+                }
+                tbody.appendChild(tr);
+            });
+        }
+
+        window.editCreate = (idx) => { isEditingCreate = idx; renderCreateTable(); };
+        window.cancelEditCreate = () => { isEditingCreate = null; renderCreateTable(); };
+        
+        window.saveCreate = async (idx) => {
+            const item = createPageData[idx];
+            const selectedDate = document.getElementById('create-target-date').value;
+            const seqNo = parseInt(document.getElementById(`edit-c-seq-${idx}`).value) || item.seqNo;
+            const color = document.getElementById(`edit-c-color-${idx}`).value.trim().toUpperCase();
+            const model = document.getElementById(`edit-c-model-${idx}`).value.trim().toUpperCase();
+            const rmkStr = document.getElementById(`edit-c-remark-${idx}`).value.trim();
+            const remarks = rmkStr ? rmkStr.split('/').map(r => r.trim()).filter(r => r !== '') : [];
+            
+            const updatedData = { seqNo, color, model, remarks };
+            
+            try {
+                await set(ref(db, `schedules/${selectedDate}/${item.originalIndex}`), updatedData);
+                isEditingCreate = null;
+            } catch (err) {
+                alert(i18n[currentLang].msgUpdateErr + err.message);
+            }
+        };
+
+        window.deleteCreate = async (idx) => {
+            if(!confirm(i18n[currentLang].msgConfirmDel)) return;
+            const item = createPageData[idx];
+            const selectedDate = document.getElementById('create-target-date').value;
+            try {
+                await remove(ref(db, `schedules/${selectedDate}/${item.originalIndex}`));
+            } catch(err) {
+                alert(i18n[currentLang].msgUpdateErr + err.message);
+            }
+        }
+
+        // ==========================================
+        // 今日作業與歷史記錄看板渲染
+        // ==========================================
         function renderTodayTable() {
             const tbody = document.getElementById('today-tbody');
             const t = i18n[currentLang];
@@ -827,7 +1027,7 @@
                 return;
             }
 
-            todayData.forEach((item, idx) => {
+            todayData.sort((a,b) => a.seqNo - b.seqNo).forEach((item, idx) => {
                 const tr = document.createElement('tr');
                 tr.className = "hover:bg-gray-800 transition-colors";
                 
@@ -955,7 +1155,7 @@
             }
         };
 
-        // 監聽 Firebase 排程資料
+        // 監聽 Firebase 今日排程資料
         function listenActiveSchedule() {
             currentActiveTarget = getTargetBoardDate();
             const t = i18n[currentLang];

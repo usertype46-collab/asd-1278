@@ -59,15 +59,15 @@
             white-space: nowrap;
         }
         .status-completed {
-            background-color: #dc2626 !important; 
+            background-color: #dc2626 !important; /* 紅色填滿 */
             color: #ffffff !important;
         }
         .status-in-progress {
-            background-color: #8b5cf6 !important; 
+            background-color: #8b5cf6 !important; /* 紫羅蘭色填滿 */
             color: #ffffff !important;
         }
         .status-stock-reserved {
-            background-color: #f97316 !important; 
+            background-color: #f97316 !important; /* 橙色填滿 */
             color: #ffffff !important;
         }
 
@@ -75,9 +75,9 @@
         .w-seq { width: 60px; text-align: center; }
         .w-color { width: 180px; }
         .w-model { width: 180px; }
-        .w-action { width: 160px; text-align: center; }
+        .w-action { width: 180px; text-align: center; }
 
-        input[type="text"], input[type="date"], select { 
+        input[type="text"], input[type="date"], input[type="number"], select { 
             background-color: #282828; 
             color: #ffffff; 
             border: 1px solid #444444; 
@@ -141,7 +141,7 @@
 </head>
 <body class="min-h-screen p-3 md:p-6 text-base">
 
-    <!-- 用於編輯時的自動補齊 -->
+    <!-- 用於編輯與新增時的自動補齊 -->
     <datalist id="color-list"></datalist>
     <datalist id="model-list"></datalist>
 
@@ -184,6 +184,7 @@
 
     <!-- ===== 頁籤 1: ［總排程看板］ (Google Sheets 10分鐘即時同步) ===== -->
     <div id="tab-content-master" class="block">
+        <!-- 頂部資訊與計時器 -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <div class="card p-4 border-l-4 border-l-blue-500 mb-0">
                 <div class="text-xs text-gray-400 mb-1" data-i18n="kpiTotalRows">總排程資料筆數</div>
@@ -208,6 +209,7 @@
             </div>
         </div>
 
+        <!-- 總排程資料看板區塊 -->
         <div class="card border-l-4 border-l-blue-600 shadow-xl">
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-5 gap-3">
                 <div>
@@ -220,6 +222,7 @@
                     </p>
                 </div>
                 
+                <!-- 篩選與關鍵字查詢 -->
                 <div class="flex items-center gap-2 w-full md:w-auto flex-wrap">
                     <input type="text" id="master-search-input" placeholder="快速搜尋關鍵字..." class="w-full md:w-64 text-sm" onkeyup="filterMasterTable()">
                     <select id="master-status-filter" class="w-auto text-sm" onchange="filterMasterTable()">
@@ -231,6 +234,7 @@
                 </div>
             </div>
 
+            <!-- 圖例說明 -->
             <div class="flex items-center gap-4 mb-4 p-3 bg-gray-900 rounded-lg text-xs flex-wrap border border-gray-800">
                 <span class="text-gray-400 font-bold" data-i18n="legendTitle">圖例標示：</span>
                 <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-red-600 inline-block"></span><span data-i18n="legCompleted">完成 (紅色填滿)</span></span>
@@ -239,6 +243,7 @@
                 <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-blue-400 inline-block"></span><span data-i18n="legPaintColor">烤漆顏色：依字樣顏色標示</span></span>
             </div>
 
+            <!-- 總排程表格 -->
             <div class="overflow-x-auto max-h-[650px] overflow-y-auto rounded-lg border border-gray-800">
                 <table class="min-w-full">
                     <thead id="master-thead">
@@ -263,33 +268,40 @@
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-5 gap-3">
                 <h2 class="text-xl font-bold text-green-400 flex items-center flex-wrap gap-2">
                     <i class="fa-solid fa-calendar-day mr-1"></i>
-                    <span id="board-title-text" data-i18n="todayTitle">今日作業資料</span>
+                    <span id="board-title-text" data-i18n="todayTitle">今日作業資料</span>[span_0](start_span)[span_0](end_span)
                     
-                    <input type="date" id="daily-date-picker" class="ml-2 bg-gray-700 text-white px-3 py-1.5 rounded border border-gray-600 text-sm font-normal cursor-pointer hover:bg-gray-600 focus:outline-none focus:border-blue-500 transition-colors w-auto">
+                    <!-- 可自訂的日期選擇器 -->
+                    <input type="date" id="daily-date-picker" class="ml-2 bg-gray-700 text-white px-3 py-1.5 rounded border border-gray-600 text-sm font-normal cursor-pointer hover:bg-gray-600 focus:outline-none focus:border-blue-500 transition-colors w-auto">[span_1](start_span)[span_1](end_span)
                     
-                    <button onclick="switchToToday()" class="bg-green-700 hover:bg-green-600 text-white px-3 py-1.5 rounded text-sm shadow ml-1"><i class="fa-solid fa-calendar-check mr-1"></i> <span data-i18n="btnToday">今日</span></button>
-                    <button onclick="switchToNextDay()" class="bg-blue-700 hover:bg-blue-600 text-white px-3 py-1.5 rounded text-sm shadow"><i class="fa-solid fa-arrow-right mr-1"></i> <span data-i18n="btnNextDay">次日</span></button>
+                    <button onclick="switchToToday()" class="bg-green-700 hover:bg-green-600 text-white px-3 py-1.5 rounded text-sm shadow ml-1"><i class="fa-solid fa-calendar-check mr-1"></i> <span data-i18n="btnToday">今日</span></button>[span_2](start_span)[span_2](end_span)
+                    <button onclick="switchToNextDay()" class="bg-blue-700 hover:bg-blue-600 text-white px-3 py-1.5 rounded text-sm shadow"><i class="fa-solid fa-arrow-right mr-1"></i> <span data-i18n="btnNextDay">次日</span></button>[span_3](start_span)[span_3](end_span)
                 </h2>
                 <span class="text-sm text-gray-400 bg-gray-800 px-3 py-1.5 rounded shadow flex items-center"><i class="fa-solid fa-cloud-arrow-down mr-2 text-blue-400"></i>雲端即時同步</span>
             </div>
 
-            <!-- 新增排程區塊 -->
-            <div class="bg-gray-800 p-3 rounded-lg mb-4 flex flex-wrap gap-3 items-end border border-gray-700">
+            <!-- 新增排程表單區塊 -->
+            <div class="mb-5 flex flex-wrap gap-3 items-end bg-gray-800 p-4 rounded-lg border border-gray-700">
                 <div>
-                    <label class="block text-xs text-gray-400 mb-1" data-i18n="thColor">顏色</label>
-                    <input type="text" id="new-color" list="color-list" class="w-32 text-sm">
+                    <label class="block text-xs text-gray-400 mb-1" data-i18n="lblSeq">序號</label>
+                    <input type="number" id="new-seq" class="w-20" placeholder="1">
                 </div>
                 <div>
-                    <label class="block text-xs text-gray-400 mb-1" data-i18n="thModel">機型</label>
-                    <input type="text" id="new-model" list="model-list" class="w-48 text-sm">
+                    <label class="block text-xs text-gray-400 mb-1" data-i18n="lblColor">顏色</label>
+                    <input type="text" id="new-color" list="color-list" class="w-32" data-i18n-ph="phColor">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1" data-i18n="lblModel">機型</label>
+                    <input type="text" id="new-model" list="model-list" class="w-48" data-i18n-ph="phModel">
                 </div>
                 <div class="flex-grow">
-                    <label class="block text-xs text-gray-400 mb-1" data-i18n="thRemark">備註</label>
-                    <input type="text" id="new-remark" data-i18n-ph="phRemark" placeholder="使用 / 分隔多條備註" class="w-full text-sm">
+                    <label class="block text-xs text-gray-400 mb-1" data-i18n="lblRemark">備註</label>
+                    <input type="text" id="new-remark" data-i18n-ph="phRemark" placeholder="使用 / 分隔多條備註" class="w-full">
                 </div>
-                <button onclick="addNewSchedule()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow text-sm font-bold flex items-center gap-2">
-                    <i class="fa-solid fa-plus"></i> <span data-i18n="btnAdd">新增排程</span>
-                </button>
+                <div>
+                    <button onclick="addDailyRecord()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded shadow font-bold flex items-center gap-2 h-[42px]">
+                        <i class="fa-solid fa-plus"></i> <span data-i18n="btnAdd">新增排程</span>
+                    </button>
+                </div>
             </div>
 
             <div class="overflow-x-auto">
@@ -314,7 +326,7 @@
     <!-- ===== 頁籤 3: 歷史記錄查詢 ===== -->
     <div id="tab-content-history" class="hidden">
         <div class="card border-l-4 border-l-blue-500">
-            <h2 class="text-xl font-bold text-blue-400 mb-5 flex items-center gap-2" data-i18n="searchTitle"><i class="fa-solid fa-magnifying-glass"></i> 歷史記錄查詢</h2>
+            <h2 class="text-xl font-bold text-blue-400 mb-5 flex items-center gap-2" data-i18n="searchTitle"><i class="fa-solid fa-magnifying-glass"></i> 歷史記錄查詢</h2>[span_4](start_span)[span_4](end_span)
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end mb-6">
                 <div>
                     <label class="block text-sm text-gray-400 mb-1 font-medium" data-i18n="lblDate">日期 (Ngày)</label>
@@ -329,11 +341,12 @@
                     <input type="text" id="search-model" data-i18n-ph="phSearchModel" placeholder="輸入機型查詢...">
                 </div>
                 <div class="flex gap-2">
-                    <button id="btn-search" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-3 rounded shadow font-bold flex items-center justify-center gap-2"><i class="fa-solid fa-magnifying-glass"></i> <span data-i18n="btnSearch">查詢</span></button>
-                    <button id="btn-reset-search" class="w-full bg-gray-600 hover:bg-gray-700 text-white py-2 px-3 rounded shadow font-bold flex items-center justify-center gap-2"><i class="fa-solid fa-rotate-left"></i> <span data-i18n="btnReset">重設</span></button>
+                    <button id="btn-search" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-3 rounded shadow font-bold flex items-center justify-center gap-2"><i class="fa-solid fa-magnifying-glass"></i> <span data-i18n="btnSearch">查詢</span></button>[span_5](start_span)[span_5](end_span)
+                    <button id="btn-reset-search" class="w-full bg-gray-600 hover:bg-gray-700 text-white py-2 px-3 rounded shadow font-bold flex items-center justify-center gap-2"><i class="fa-solid fa-rotate-left"></i> <span data-i18n="btnReset">重設</span></button>[span_6](start_span)[span_6](end_span)
                 </div>
             </div>
 
+            <!-- 查詢結果表格 -->
             <div class="overflow-x-auto">
                 <table class="min-w-full">
                     <thead>
@@ -374,7 +387,7 @@
 
         // 全域狀態
         let currentLang = 'zh';
-        let activeTab = 'master'; 
+        let activeTab = 'master'; // 'master' | 'today' | 'history'
         
         let todayData = [];
         let historyData = [];
@@ -385,27 +398,44 @@
         // 總排程 Google Sheet 狀態
         let rawMasterHeaders = [];
         let rawMasterRows = [];
-        let refreshCountdown = 600; 
+        let refreshCountdown = 600; // 10分鐘 = 600秒
         let countdownTimerId = null;
 
         const holidays = new Set([
             "2026-01-01", "2026-02-16", "2026-02-17", "2026-02-18", "2026-02-19", "2026-02-20", 
             "2026-02-28", "2026-04-03", "2026-04-06", "2026-05-01", "2026-06-19", "2026-09-25", "2026-10-09"
-        ]);
+        ]);[span_7](start_span)[span_7](end_span)
 
+        // 擴充雙語對照字典（包含狀態與工廠常見字眼）
         const contentDict = {
-            "急件": "Hàng gấp", "特急": "Cực gấp", "重烤": "Sơn lại", "補漆": "Sơn dặm",
-            "缺件": "Thiếu kiện", "暫停": "Tạm dừng", "優先": "Ưu tiên", "待確認": "Chờ xác nhận",
-            "測試": "Kiểm tra", "報廢": "Phế liệu", "打樣": "Hàng mẫu",
-            "完成-先挪庫存料": "Hoàn thành - Dùng kho", "完成": "Hoàn thành", "作業中": "Đang làm",
-            "控箱面板": "Bảng điều khiển", "控箱 面板": "Bảng điều khiển", "排勾": "Móc treo",
-            "照順序之外": "Ngoài thứ tự", "有大的先": "Làm cái lớn trước",
-            "一個小東西": "Một đồ nhỏ", "小東西": "Đồ nhỏ"
-        };
+            "急件": "Hàng gấp",
+            "特急": "Cực gấp",
+            "重烤": "Sơn lại",
+            "補漆": "Sơn dặm",
+            "缺件": "Thiếu kiện",
+            "暫停": "Tạm dừng",
+            "優先": "Ưu tiên",
+            "待確認": "Chờ xác nhận",
+            "測試": "Kiểm tra",
+            "報廢": "Phế liệu",
+            "打樣": "Hàng mẫu",
+            "完成-先挪庫存料": "Hoàn thành - Dùng kho",
+            "完成": "Hoàn thành",
+            "作業中": "Đang làm",
+            "控箱面板": "Bảng điều khiển",
+            "控箱 面板": "Bảng điều khiển",
+            "排勾": "Móc treo",
+            "照順序之外": "Ngoài thứ tự",
+            "有大的先": "Làm cái lớn trước",
+            "一個小東西": "Một đồ nhỏ",
+            "小東西": "Đồ nhỏ"
+        };[span_8](start_span)[span_8](end_span)
 
         function translateContent(text, targetLang) {
             if (!text) return '';
             let result = String(text);
+            
+            // 將字典依照字串長度排序，避免短字串取代長字串的部分內容
             const sortedKeys = Object.keys(contentDict).sort((a, b) => b.length - a.length);
 
             if (targetLang === 'vi') {
@@ -422,9 +452,11 @@
             return result;
         }
 
+        // 日期轉繁體中文月日模式格式化函數
         function formatChineseDate(val) {
             if (!val) return '';
             const str = String(val).trim();
+
             const gvizDateRegex = /^Date\((\d{4}),\s*(\d{1,2}),\s*(\d{1,2})\)$/i;
             const match = str.match(gvizDateRegex);
             if (match) {
@@ -432,6 +464,7 @@
                 const day = parseInt(match[3], 10);
                 return `${month}月${day}日`;
             }
+
             const stdDateRegex = /^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/;
             const stdMatch = str.match(stdDateRegex);
             if (stdMatch) {
@@ -439,44 +472,81 @@
                 const day = parseInt(stdMatch[3], 10);
                 return `${month}月${day}日`;
             }
+
             return str;
-        }
+        }[span_9](start_span)[span_9](end_span)
 
         const i18n = {
             zh: {
-                appTitle: "烤漆與生產總排程管理系統", appSubTitle: "即時監控生產總排程、每日烤漆順序與歷史數據",
-                btnSwitchManagement: "切換至建立紀錄", langLabel: "語言 / Ngôn ngữ:",
-                tabMasterBoard: "［總排程看板］", tabDailyBoard: "每日烤漆順序看板", tabHistorySearch: "歷史記錄查詢",
-                kpiTotalRows: "總排程資料總筆數", kpiCompletedRows: "已完成總計", kpiWorkingRows: "作業中總計", kpiNextSync: "10分鐘自動同步倒數",
-                btnRefreshNow: "立卽更新", masterBoardTitle: "［總排程看板］ (工作表1)", optAllStatus: "全部狀態",
-                legendTitle: "圖例標示：", legCompleted: "完成 (紅色填滿)", legInProgress: "作業中 (紫羅蘭色填滿)",
-                legStockReserved: "完成-先挪庫存料 (橙色填滿)", legPaintColor: "烤漆顏色：依字樣顏色標示",
-                searchTitle: "歷史記錄查詢", lblDate: "日期 (Ngày)", lblColor: "顏色 (Màu sắc)", lblModel: "Model (機型)",
+                appTitle: "烤漆與生產總排程管理系統",
+                appSubTitle: "即時監控生產總排程、每日烤漆順序與歷史數據",
+                btnSwitchManagement: "切換至建立紀錄",
+                langLabel: "語言 / Ngôn ngữ:",
+                tabMasterBoard: "［總排程看板］",
+                tabDailyBoard: "每日烤漆順序看板",
+                tabHistorySearch: "歷史記錄查詢",
+                kpiTotalRows: "總排程資料總筆數",
+                kpiCompletedRows: "已完成總計",
+                kpiWorkingRows: "作業中總計",
+                kpiNextSync: "10分鐘自動同步倒數",
+                btnRefreshNow: "立卽更新",
+                masterBoardTitle: "［總排程看板］ (工作表1)",
+                optAllStatus: "全部狀態",
+                legendTitle: "圖例標示：",
+                legCompleted: "完成 (紅色填滿)",
+                legInProgress: "作業中 (紫羅蘭色填滿)",
+                legStockReserved: "完成-先挪庫存料 (橙色填滿)",
+                legPaintColor: "烤漆顏色：依字樣顏色標示",
+                searchTitle: "歷史記錄查詢",
+                lblDate: "日期 (Ngày)", lblColor: "顏色 (Màu sắc)", lblModel: "Model (機型)", lblSeq: "序號 (STT)", lblRemark: "備註 (Ghi chú)",
                 btnSearch: "查詢", btnReset: "重設", msgNoData: "尚無符合條件的資料", msgLoading: "資料載入中...",
                 todayTitle: "今日作業資料", nextDayTitle: "次日作業排程", customDayTitle: "指定日期排程", btnToday: "今日", btnNextDay: "次日", 
                 thDate: "日期", thNo: "序號", thColor: "顏色", thModel: "機型", thRemark: "備註", thAction: "操作",
-                phSearchColor: "輸入顏色查詢...", phSearchModel: "輸入機型查詢...", phRemark: "使用 / 分隔多條備註",
-                btnEdit: "編輯", btnSave: "儲存", btnCancel: "取消", btnDelete: "刪除", btnAdd: "新增排程",
-                msgUpdateOk: "資料更新成功！", msgUpdateErr: "資料更新失敗：", msgDeleteConfirm: "確定要刪除此筆資料嗎？", msgRequireFields: "請填寫顏色與機型"
+                phSearchColor: "輸入顏色查詢...", phSearchModel: "輸入機型查詢...", phColor: "輸入顏色...", phModel: "輸入機型...", phRemark: "使用 / 分隔多條備註",
+                btnAdd: "新增排程", btnEdit: "編輯", btnSave: "儲存", btnCancel: "取消", btnDelete: "刪除",
+                msgUpdateOk: "資料更新成功！", msgUpdateErr: "資料更新失敗：",
+                msgAddOk: "新增成功！", msgAddErr: "新增失敗：", msgConfirmDel: "確定要刪除這筆資料嗎？", msgDelOk: "刪除成功！", msgDelErr: "刪除失敗：",
+                msgReqFields: "請填寫序號、顏色與機型。"
             },
             vi: {
-                appTitle: "Hệ thống Quản lý Tiến độ Sơn & Tổng thể", appSubTitle: "Giám sát tiến độ tổng thể, thứ tự sơn hàng ngày và lịch sử",
-                btnSwitchManagement: "Chuyển sang Tạo Hồ sơ", langLabel: "Ngôn ngữ / 語言:",
-                tabMasterBoard: "［Bảng Tiến độ Tổng thể］", tabDailyBoard: "Bảng Thứ tự Sơn Hàng ngày", tabHistorySearch: "Tra cứu Lịch sử",
-                kpiTotalRows: "Tổng số dòng tiến độ", kpiCompletedRows: "Tổng số Hoàn thành", kpiWorkingRows: "Tổng số Đang làm", kpiNextSync: "Tự động đồng bộ (10 phút)",
-                btnRefreshNow: "Làm mới", masterBoardTitle: "［Bảng Tiến độ Tổng thể］ (Sheet1)", optAllStatus: "Tất cả trạng thái",
-                legendTitle: "Chú thích:", legCompleted: "Hoàn thành (Đỏ)", legInProgress: "Đang làm (Tím Violet)",
-                legStockReserved: "Hoàn thành - Dùng kho (Cam)", legPaintColor: "Màu sơn: Hiển thị theo màu chữ",
-                searchTitle: "Tra cứu lịch sử", lblDate: "Ngày (日期)", lblColor: "Màu sắc (顏色)", lblModel: "Model (機型)",
+                appTitle: "Hệ thống Quản lý Tiến độ Sơn & Tổng thể",
+                appSubTitle: "Giám sát tiến độ tổng thể, thứ tự sơn hàng ngày và lịch sử",
+                btnSwitchManagement: "Chuyển sang Tạo Hồ sơ",
+                langLabel: "Ngôn ngữ / 語言:",
+                tabMasterBoard: "［Bảng Tiến độ Tổng thể］",
+                tabDailyBoard: "Bảng Thứ tự Sơn Hàng ngày",
+                tabHistorySearch: "Tra cứu Lịch sử",
+                kpiTotalRows: "Tổng số dòng tiến độ",
+                kpiCompletedRows: "Tổng số Hoàn thành",
+                kpiWorkingRows: "Tổng số Đang làm",
+                kpiNextSync: "Tự động đồng bộ (10 phút)",
+                btnRefreshNow: "Làm mới",
+                masterBoardTitle: "［Bảng Tiến độ Tổng thể］ (Sheet1)",
+                optAllStatus: "Tất cả trạng thái",
+                legendTitle: "Chú thích:",
+                legCompleted: "Hoàn thành (Đỏ)",
+                legInProgress: "Đang làm (Tím Violet)",
+                legStockReserved: "Hoàn thành - Dùng kho (Cam)",
+                legPaintColor: "Màu sơn: Hiển thị theo màu chữ",
+                searchTitle: "Tra cứu lịch sử",
+                lblDate: "Ngày (日期)", lblColor: "Màu sắc (顏色)", lblModel: "Model (機型)", lblSeq: "STT (序號)", lblRemark: "Ghi chú (備註)",
                 btnSearch: "Tìm kiếm", btnReset: "Đặt lại", msgNoData: "Không có dữ liệu", msgLoading: "Đang tải...",
                 todayTitle: "Dữ liệu làm việc hôm nay", nextDayTitle: "Lịch trình ngày mai", customDayTitle: "Lịch trình ngày chỉ định", btnToday: "Hôm nay", btnNextDay: "Ngày mai",
                 thDate: "Ngày", thNo: "STT", thColor: "Màu sắc", thModel: "Model", thRemark: "Ghi chú", thAction: "Thao tác",
-                phSearchColor: "Nhập màu sắc...", phSearchModel: "Nhập model...", phRemark: "Sử dụng / để phân cách ghi chú",
-                btnEdit: "Sửa", btnSave: "Lưu", btnCancel: "Hủy", btnDelete: "Xóa", btnAdd: "Thêm lịch trình",
-                msgUpdateOk: "Cập nhật thành công!", msgUpdateErr: "Cập nhật thất bại: ", msgDeleteConfirm: "Bạn có chắc chắn muốn xóa dữ liệu này không?", msgRequireFields: "Vui lòng điền màu sắc và model"
+                phSearchColor: "Nhập màu sắc...", phSearchModel: "Nhập model...", phColor: "Nhập màu sắc...", phModel: "Nhập model...", phRemark: "Sử dụng / để chia nhiều ghi chú",
+                btnAdd: "Thêm lịch", btnEdit: "Sửa", btnSave: "Lưu", btnCancel: "Hủy", btnDelete: "Xóa",
+                msgUpdateOk: "Cập nhật thành công!", msgUpdateErr: "Cập nhật thất bại: ",
+                msgAddOk: "Thêm thành công!", msgAddErr: "Thêm thất bại: ", msgConfirmDel: "Bạn có chắc chắn muốn xóa dữ liệu này không?", msgDelOk: "Xóa thành công!", msgDelErr: "Xóa thất bại: ",
+                msgReqFields: "Vui lòng điền STT, màu sắc và model."
             }
+        };[span_10](start_span)[span_10](end_span)
+
+        const weekdays = {
+            zh: ["日", "一", "二", "三", "四", "五", "六"],
+            vi: ["CN", "T2", "T3", "T4", "T5", "T6", "T7"]
         };
 
+        // Firebase 補齊選單設定
         onValue(ref(db, 'settings/colors'), (snapshot) => {
             if (snapshot.exists()) {
                 document.getElementById('color-list').innerHTML = snapshot.val().map(c => `<option value="${c}">`).join('');
@@ -486,8 +556,9 @@
             if (snapshot.exists()) {
                 document.getElementById('model-list').innerHTML = snapshot.val().map(m => `<option value="${m}">`).join('');
             }
-        });
+        });[span_11](start_span)[span_11](end_span)
 
+        // 頁籤切換
         window.switchTab = function(tabName) {
             activeTab = tabName;
             document.getElementById('tab-content-master').className = tabName === 'master' ? 'block' : 'hidden';
@@ -497,11 +568,17 @@
             document.getElementById('tab-btn-master').className = tabName === 'master' ? 'tab-btn active' : 'tab-btn inactive';
             document.getElementById('tab-btn-today').className = tabName === 'today' ? 'tab-btn active' : 'tab-btn inactive';
             document.getElementById('tab-btn-history').className = tabName === 'history' ? 'tab-btn active' : 'tab-btn inactive';
-        };
+        };[span_12](start_span)[span_12](end_span)
 
+        // ==========================================
+        // ［總排程看板］ Core Logic (Google Sheets)
+        // ==========================================
+        
+        // 解析烤漆顏色字樣樣式
         function getPaintColorStyle(colorText) {
             if (!colorText) return '';
             const txt = String(colorText).trim().toLowerCase();
+            
             const colorPalette = [
                 { keywords: ['紅', 'red', '朱'], bg: '#ef4444', text: '#ffffff', border: '#b91c1c' },
                 { keywords: ['粉', 'pink'], bg: '#ec4899', text: '#ffffff', border: '#be185d' },
@@ -523,11 +600,13 @@
                 }
             }
             return `color: #38bdf8; font-weight: 700;`;
-        }
+        }[span_13](start_span)[span_13](end_span)
 
+        // 渲染單元格
         function renderMasterCellContent(val, headerName) {
             if (val === null || val === undefined || val === '') return '-';
             let valStr = String(val).trim();
+
             valStr = formatChineseDate(valStr);
             const translatedVal = translateContent(valStr, currentLang);
 
@@ -541,8 +620,9 @@
             }
 
             return translatedVal;
-        }
+        }[span_14](start_span)[span_14](end_span)
 
+        // 從 Google Sheets 抓取資料
         async function fetchMasterScheduleData() {
             const sheetId = '1Xo-KJND3rkrv02Wl3CdnrJh7g1kyV2gIaOUl0vYKrAk';
             const sheetName = '工作表1';
@@ -551,6 +631,7 @@
             try {
                 const res = await fetch(gvizUrl);
                 const text = await res.text();
+                
                 const jsonMatch = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\);/);
                 if (!jsonMatch || !jsonMatch[1]) throw new Error("GViz API 回傳格式錯誤");
 
@@ -567,7 +648,7 @@
                 console.warn("GViz API 讀取失敗，改用 CSV 解析:", err);
                 return await fetchCsvFallback(sheetId, sheetName);
             }
-        }
+        }[span_15](start_span)[span_15](end_span)
 
         async function fetchCsvFallback(sheetId, sheetName) {
             const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
@@ -594,8 +675,9 @@
             const headers = parseCsvLine(lines[0]);
             const rows = lines.slice(1).map(l => parseCsvLine(l));
             return { headers, rows };
-        }
+        }[span_16](start_span)[span_16](end_span)
 
+        // 渲染總排程看板（包含過濾指定欄位）
         async function loadMasterSchedule() {
             const tbody = document.getElementById('master-tbody');
             const thead = document.getElementById('master-thead');
@@ -603,6 +685,8 @@
 
             try {
                 const { headers, rows } = await fetchMasterScheduleData();
+                
+                // 排除不需要顯示的欄位
                 const excludedCols = ["工單", "排版", "倉庫", "採購", "板材進貨日"];
                 const keepIndices = [];
                 const filteredHeaders = [];
@@ -616,6 +700,7 @@
                 });
 
                 const filteredRows = rows.map(r => keepIndices.map(idx => r[idx]));
+                
                 rawMasterHeaders = filteredHeaders;
                 rawMasterRows = filteredRows;
 
@@ -653,7 +738,7 @@
             } catch (err) {
                 tbody.innerHTML = `<tr><td colspan="100" class="text-center text-red-400 py-6">載入總排程失敗：${err.message}</td></tr>`;
             }
-        }
+        }[span_17](start_span)[span_17](end_span)
 
         window.filterMasterTable = function() {
             const tbody = document.getElementById('master-tbody');
@@ -696,12 +781,12 @@
 
             tbody.innerHTML = html;
             document.getElementById('master-display-count').innerText = `顯示 ${filtered.length} / ${rawMasterRows.length} 筆資料`;
-        };
+        };[span_18](start_span)[span_18](end_span)
 
         window.manualRefreshMaster = function() {
             refreshCountdown = 600;
             loadMasterSchedule();
-        };
+        };[span_19](start_span)[span_19](end_span)
 
         function startAutoRefreshTimer() {
             if (countdownTimerId) clearInterval(countdownTimerId);
@@ -719,15 +804,15 @@
                     loadMasterSchedule();
                 }
             }, 1000);
-        }
+        }[span_20](start_span)[span_20](end_span)
 
         // ==========================================
-        // 每日烤漆順序與排程建立 (Firebase RTDB)
+        // 每日烤漆順序 (Firebase RTDB) - 可變更日期與新增刪除
         // ==========================================
 
         function getDBDateFormat(dateObj) {
             return `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')}`;
-        }
+        }[span_21](start_span)[span_21](end_span)
 
         function getNextWorkingDate() {
             let nextDate = new Date();
@@ -738,7 +823,7 @@
                 if (day !== 0 && day !== 6 && !holidays.has(isoStr)) break;
             }
             return { dbDate: getDBDateFormat(nextDate), isNext: true };
-        }
+        }[span_22](start_span)[span_22](end_span)
 
         function getTargetBoardDate() {
             const now = new Date();
@@ -750,7 +835,7 @@
             } else {
                 return { dbDate: getDBDateFormat(now), isNext: false };
             }
-        }
+        }[span_23](start_span)[span_23](end_span)
 
         let currentActiveTarget = getTargetBoardDate();
 
@@ -759,6 +844,7 @@
             document.querySelectorAll('[data-i18n]').forEach(el => { el.innerText = t[el.getAttribute('data-i18n')]; });
             document.querySelectorAll('[data-i18n-ph]').forEach(el => { el.placeholder = t[el.getAttribute('data-i18n-ph')]; });
             
+            // 重新應用當前監聽日期的標題語系
             const titleEl = document.getElementById('board-title-text');
             if (currentActiveTarget.isCustom) {
                 titleEl.innerText = t.customDayTitle;
@@ -769,51 +855,12 @@
             renderTodayTable();
             renderHistoryTable();
             filterMasterTable();
-        }
+        }[span_24](start_span)[span_24](end_span)
 
         document.getElementById('lang-switch').addEventListener('change', (e) => {
             currentLang = e.target.value;
             applyLanguage();
-        });
-
-        // 新增指定日期的排程
-        window.addNewSchedule = async () => {
-            const color = document.getElementById('new-color').value.trim().toUpperCase();
-            const model = document.getElementById('new-model').value.trim().toUpperCase();
-            const rmkStr = document.getElementById('new-remark').value.trim();
-            const remarks = rmkStr ? rmkStr.split('/').map(r => r.trim()).filter(r => r !== '') : [];
-
-            if (!color || !model) {
-                alert(i18n[currentLang].msgRequireFields);
-                return;
-            }
-
-            // 自動計算下一個序號
-            let maxSeq = 0;
-            todayData.forEach(item => {
-                const s = parseInt(item.seqNo);
-                if (!isNaN(s) && s > maxSeq) maxSeq = s;
-            });
-            const newSeqNo = maxSeq + 1;
-
-            const newData = {
-                seqNo: newSeqNo,
-                color,
-                model,
-                remarks
-            };
-
-            try {
-                const newRef = push(ref(db, `schedules/${currentActiveTarget.dbDate}`));
-                await set(newRef, newData);
-                
-                document.getElementById('new-color').value = '';
-                document.getElementById('new-model').value = '';
-                document.getElementById('new-remark').value = '';
-            } catch (err) {
-                alert(i18n[currentLang].msgUpdateErr + err.message);
-            }
-        };
+        });[span_25](start_span)[span_25](end_span)
 
         function renderTodayTable() {
             const tbody = document.getElementById('today-tbody');
@@ -837,8 +884,8 @@
                         <td><input type="text" id="edit-t-remark-${idx}" value="${item.remarks ? item.remarks.join(' / ') : ''}" placeholder="使用 / 分隔多條備註"></td>
                         <td class="text-center">
                             <div class="flex flex-col md:flex-row gap-2 justify-center">
-                                <button onclick="saveToday(${idx})" class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm"><i class="fa-solid fa-check"></i></button>
-                                <button onclick="cancelEditToday()" class="bg-gray-500 hover:bg-gray-600 text-white px-3 py-1 rounded text-sm"><i class="fa-solid fa-xmark"></i></button>
+                                <button onclick="saveToday(${idx})" class="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded shadow text-sm font-bold"><i class="fa-solid fa-check"></i> ${t.btnSave}</button>
+                                <button onclick="cancelEditToday()" class="bg-gray-500 hover:bg-gray-600 text-white px-3 py-1.5 rounded shadow text-sm font-bold"><i class="fa-solid fa-xmark"></i> ${t.btnCancel}</button>
                             </div>
                         </td>
                     `;
@@ -854,8 +901,8 @@
                         <td class="font-bold text-white text-lg">${displayModel}</td>
                         <td class="text-gray-300 leading-relaxed">${displayRemarks}</td>
                         <td class="text-center">
-                            <button onclick="editToday(${idx})" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded shadow text-sm font-bold"><i class="fa-solid fa-pen"></i></button>
-                            <button onclick="deleteToday(${idx})" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded shadow text-sm font-bold ml-1"><i class="fa-solid fa-trash"></i></button>
+                            <button onclick="editToday(${idx})" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded shadow text-sm font-bold"><i class="fa-solid fa-pen"></i> ${t.btnEdit}</button>
+                            <button onclick="deleteToday(${idx})" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded shadow text-sm font-bold ml-1"><i class="fa-solid fa-trash"></i> ${t.btnDelete}</button>
                         </td>
                     `;
                 }
@@ -886,8 +933,8 @@
                         <td><input type="text" id="edit-h-remark-${idx}" value="${r.remarks ? r.remarks.join(' / ') : ''}" placeholder="使用 / 分隔多條備註"></td>
                         <td class="text-center align-middle">
                             <div class="flex flex-col md:flex-row gap-2 justify-center">
-                                <button onclick="saveHistory(${idx})" class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm"><i class="fa-solid fa-check"></i></button>
-                                <button onclick="cancelEditHistory()" class="bg-gray-500 hover:bg-gray-600 text-white px-3 py-1 rounded text-sm"><i class="fa-solid fa-xmark"></i></button>
+                                <button onclick="saveHistory(${idx})" class="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded shadow text-sm font-bold"><i class="fa-solid fa-check"></i> ${t.btnSave}</button>
+                                <button onclick="cancelEditHistory()" class="bg-gray-500 hover:bg-gray-600 text-white px-3 py-1.5 rounded shadow text-sm font-bold"><i class="fa-solid fa-xmark"></i> ${t.btnCancel}</button>
                             </div>
                         </td>
                     `;
@@ -904,8 +951,8 @@
                         <td class="text-lg font-bold">${displayModel}</td>
                         <td class="text-gray-300">${displayRemarks}</td>
                         <td class="text-center">
-                            <button onclick="editHistory(${idx})" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded shadow text-sm font-bold"><i class="fa-solid fa-pen"></i></button>
-                            <button onclick="deleteHistory(${idx})" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded shadow text-sm font-bold ml-1"><i class="fa-solid fa-trash"></i></button>
+                            <button onclick="editHistory(${idx})" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded shadow text-sm font-bold"><i class="fa-solid fa-pen"></i> ${t.btnEdit}</button>
+                            <button onclick="deleteHistory(${idx})" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded shadow text-sm font-bold ml-1"><i class="fa-solid fa-trash"></i> ${t.btnDelete}</button>
                         </td>
                     `;
                 }
@@ -913,8 +960,35 @@
             });
         }
 
-        window.editToday = (idx) => { isEditingToday = idx; renderTodayTable(); };
-        window.cancelEditToday = () => { isEditingToday = null; renderTodayTable(); };
+        // 新增指定日期的排程
+        window.addDailyRecord = async () => {
+            const seqNo = document.getElementById('new-seq').value.trim();
+            const color = document.getElementById('new-color').value.trim().toUpperCase();
+            const model = document.getElementById('new-model').value.trim().toUpperCase();
+            const rmkStr = document.getElementById('new-remark').value.trim();
+            const remarks = rmkStr ? rmkStr.split('/').map(r => r.trim()).filter(r => r !== '') : [];
+
+            if (!seqNo || !color || !model) {
+                alert(i18n[currentLang].msgReqFields);
+                return;
+            }
+
+            const newRecord = { seqNo, color, model, remarks };
+            try {
+                const newListRef = push(ref(db, `schedules/${currentActiveTarget.dbDate}`));
+                await set(newListRef, newRecord);
+                
+                document.getElementById('new-color').value = '';
+                document.getElementById('new-model').value = '';
+                document.getElementById('new-remark').value = '';
+                alert(i18n[currentLang].msgAddOk);
+            } catch (err) {
+                alert(i18n[currentLang].msgAddErr + err.message);
+            }
+        };
+
+        window.editToday = (idx) => { isEditingToday = idx; renderTodayTable(); };[span_26](start_span)[span_26](end_span)
+        window.cancelEditToday = () => { isEditingToday = null; renderTodayTable(); };[span_27](start_span)[span_27](end_span)
         window.saveToday = async (idx) => {
             const item = todayData[idx];
             const color = document.getElementById(`edit-t-color-${idx}`).value.trim().toUpperCase();
@@ -931,20 +1005,21 @@
             } catch (err) {
                 alert(i18n[currentLang].msgUpdateErr + err.message);
             }
-        };
+        };[span_28](start_span)[span_28](end_span)
 
         window.deleteToday = async (idx) => {
-            if (!confirm(i18n[currentLang].msgDeleteConfirm)) return;
+            if (!confirm(i18n[currentLang].msgConfirmDel)) return;
             const item = todayData[idx];
             try {
                 await remove(ref(db, `schedules/${currentActiveTarget.dbDate}/${item.originalIndex}`));
+                alert(i18n[currentLang].msgDelOk);
             } catch (err) {
-                alert(i18n[currentLang].msgUpdateErr + err.message);
+                alert(i18n[currentLang].msgDelErr + err.message);
             }
         };
 
-        window.editHistory = (idx) => { isEditingHistory = idx; renderHistoryTable(); };
-        window.cancelEditHistory = () => { isEditingHistory = null; renderHistoryTable(); };
+        window.editHistory = (idx) => { isEditingHistory = idx; renderHistoryTable(); };[span_29](start_span)[span_29](end_span)
+        window.cancelEditHistory = () => { isEditingHistory = null; renderHistoryTable(); };[span_30](start_span)[span_30](end_span)
         window.saveHistory = async (idx) => {
             const item = historyData[idx];
             const color = document.getElementById(`edit-h-color-${idx}`).value.trim().toUpperCase();
@@ -963,23 +1038,24 @@
             } catch (err) {
                 alert(i18n[currentLang].msgUpdateErr + err.message);
             }
-        };
+        };[span_31](start_span)[span_31](end_span)
 
         window.deleteHistory = async (idx) => {
-            if (!confirm(i18n[currentLang].msgDeleteConfirm)) return;
+            if (!confirm(i18n[currentLang].msgConfirmDel)) return;
             const item = historyData[idx];
             try {
                 await remove(ref(db, `schedules/${item.date}/${item.originalIndex}`));
                 historyData.splice(idx, 1);
-                isEditingHistory = null;
                 renderHistoryTable();
+                alert(i18n[currentLang].msgDelOk);
             } catch (err) {
-                alert(i18n[currentLang].msgUpdateErr + err.message);
+                alert(i18n[currentLang].msgDelErr + err.message);
             }
         };
 
+        // 監聽 Firebase 排程資料，支援自訂日期
         function listenActiveSchedule(customDbDate = null) {
-            if (activeScheduleRef) off(activeScheduleRef);
+            if (activeScheduleRef) off(activeScheduleRef); // 移除舊的監聽事件
 
             if (customDbDate) {
                 currentActiveTarget = { dbDate: customDbDate, isNext: false, isCustom: true };
@@ -996,36 +1072,53 @@
                 titleEl.innerText = currentActiveTarget.isNext ? t.nextDayTitle : t.todayTitle;
             }
 
+            // 更新日期選擇器的值
             document.getElementById('daily-date-picker').value = currentActiveTarget.dbDate;
 
             activeScheduleRef = ref(db, `schedules/${currentActiveTarget.dbDate}`);
             onValue(activeScheduleRef, (snapshot) => {
                 todayData = [];
+                let maxSeq = 0;
+                
                 if (snapshot.exists()) {
                     const data = snapshot.val();
                     Object.keys(data).forEach(key => {
-                        if (data[key]) todayData.push({ originalIndex: key, ...data[key] });
+                        if (data[key]) {
+                            const item = { originalIndex: key, ...data[key] };
+                            todayData.push(item);
+                            const seq = parseInt(item.seqNo);
+                            if (!isNaN(seq) && seq > maxSeq) maxSeq = seq;
+                        }
                     });
+                    // 確保按序號排序
                     todayData.sort((a, b) => (parseInt(a.seqNo) || 0) - (parseInt(b.seqNo) || 0));
                 }
+                
+                // 自動帶入下一個序號
+                document.getElementById('new-seq').value = maxSeq + 1;
                 renderTodayTable();
             });
-        }
+        }[span_32](start_span)[span_32](end_span)
 
+        // 綁定 Date Picker 變更事件
         document.getElementById('daily-date-picker').addEventListener('change', (e) => {
             const selectedDate = e.target.value;
-            if (selectedDate) listenActiveSchedule(selectedDate);
-        });
+            if (selectedDate) {
+                listenActiveSchedule(selectedDate);
+            }
+        });[span_33](start_span)[span_33](end_span)
 
+        // 日期快速切換按鈕
         window.switchToToday = function() {
             const todayDB = getDBDateFormat(new Date());
             listenActiveSchedule(todayDB);
-        };
+        };[span_34](start_span)[span_34](end_span)
         window.switchToNextDay = function() {
             const next = getNextWorkingDate();
             listenActiveSchedule(next.dbDate);
-        };
+        };[span_35](start_span)[span_35](end_span)
 
+        // 搜尋歷史記錄
         document.getElementById('btn-search').addEventListener('click', async () => {
             const sDate = document.getElementById('search-date').value;
             const sColor = document.getElementById('search-color').value.trim().toUpperCase();
@@ -1068,7 +1161,7 @@
             } catch (err) {
                 alert(`搜尋失敗 / Lỗi tìm kiếm: ${err.message}`);
             }
-        });
+        });[span_36](start_span)[span_36](end_span)
 
         document.getElementById('btn-reset-search').addEventListener('click', () => {
             document.getElementById('search-date').value = '';
@@ -1077,14 +1170,15 @@
             historyData = [];
             isEditingHistory = null;
             renderHistoryTable();
-        });
+        });[span_37](start_span)[span_37](end_span)
 
+        // 初始化
         document.addEventListener('DOMContentLoaded', () => {
             applyLanguage();
             listenActiveSchedule();
             loadMasterSchedule();
             startAutoRefreshTimer();
-        });
+        });[span_38](start_span)[span_38](end_span)
     </script>
 </body>
 </html>

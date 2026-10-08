@@ -292,22 +292,6 @@
                     <tbody id="today-tbody">
                         <tr><td colspan="5" class="text-center text-gray-500 py-6" data-i18n="msgLoading">載入中...</td></tr>
                     </tbody>
-                    <!-- 新增項目列 -->
-                    <tfoot id="today-tfoot">
-                        <tr class="bg-gray-800/80 border-t-2 border-gray-600">
-                            <td class="text-center font-bold text-emerald-400 text-sm">
-                                <span data-i18n="lblNewItem">新增一筆</span>
-                            </td>
-                            <td><input type="text" id="new-t-color" list="color-list" data-i18n-ph="phNewColor" placeholder="輸入顏色..."></td>
-                            <td><input type="text" id="new-t-model" list="model-list" data-i18n-ph="phNewModel" placeholder="輸入機型..."></td>
-                            <td><input type="text" id="new-t-remark" data-i18n-ph="phNewRemark" placeholder="輸入備註(用 / 分隔)"></td>
-                            <td class="text-center">
-                                <button onclick="addNewTodayItem()" class="bg-emerald-600 hover:bg-emerald-700 text-white w-full py-1.5 rounded shadow text-sm font-bold flex justify-center items-center gap-1">
-                                    <i class="fa-solid fa-plus"></i> <span data-i18n="btnAdd">新增</span>
-                                </button>
-                            </td>
-                        </tr>
-                    </tfoot>
                 </table>
             </div>
         </div>
@@ -493,8 +477,7 @@
                 todayTitle: "今日作業資料", nextDayTitle: "次日作業排程", customDayTitle: "指定日期排程", btnToday: "今日", btnNextDay: "次日", 
                 thDate: "日期", thNo: "序號", thColor: "顏色", thModel: "機型", thRemark: "備註", thAction: "操作",
                 phSearchColor: "輸入顏色查詢...", phSearchModel: "輸入機型查詢...",
-                btnEdit: "編輯", btnSave: "儲存", btnCancel: "取消", msgUpdateOk: "資料更新成功！", msgUpdateErr: "資料更新失敗：",
-                lblNewItem: "新增一筆", btnAdd: "新增", phNewColor: "輸入顏色...", phNewModel: "輸入機型...", phNewRemark: "輸入備註(用 / 分隔)"
+                btnEdit: "編輯", btnSave: "儲存", btnCancel: "取消", msgUpdateOk: "資料更新成功！", msgUpdateErr: "資料更新失敗："
             },
             vi: {
                 appTitle: "Hệ thống Quản lý Tiến độ Sơn & Tổng thể",
@@ -522,8 +505,7 @@
                 todayTitle: "Dữ liệu làm việc hôm nay", nextDayTitle: "Lịch trình ngày mai", customDayTitle: "Lịch trình ngày chỉ định", btnToday: "Hôm nay", btnNextDay: "Ngày mai",
                 thDate: "Ngày", thNo: "STT", thColor: "Màu sắc", thModel: "Model", thRemark: "Ghi chú", thAction: "Thao tác",
                 phSearchColor: "Nhập màu sắc...", phSearchModel: "Nhập model...",
-                btnEdit: "Sửa", btnSave: "Lưu", btnCancel: "Hủy", msgUpdateOk: "Cập nhật thành công!", msgUpdateErr: "Cập nhật thất bại: ",
-                lblNewItem: "Thêm mới", btnAdd: "Thêm", phNewColor: "Nhập màu sắc...", phNewModel: "Nhập model...", phNewRemark: "Nhập ghi chú (dùng / phân cách)"
+                btnEdit: "Sửa", btnSave: "Lưu", btnCancel: "Hủy", msgUpdateOk: "Cập nhật thành công!", msgUpdateErr: "Cập nhật thất bại: "
             }
         };
 
@@ -793,7 +775,7 @@
         }
 
         // ==========================================
-        // 每日烤漆順序 (Firebase RTDB) - 可變更日期與新增資料
+        // 每日烤漆順序 (Firebase RTDB) - 可變更日期
         // ==========================================
 
         function getDBDateFormat(dateObj) {
@@ -847,43 +829,6 @@
             currentLang = e.target.value;
             applyLanguage();
         });
-
-        // 綁定於「新增」按鈕的事件
-        window.addNewTodayItem = async () => {
-            const colorEl = document.getElementById('new-t-color');
-            const modelEl = document.getElementById('new-t-model');
-            const remarkEl = document.getElementById('new-t-remark');
-            
-            const color = colorEl.value.trim().toUpperCase();
-            const model = modelEl.value.trim().toUpperCase();
-            const rmkStr = remarkEl.value.trim();
-            const remarks = rmkStr ? rmkStr.split('/').map(r => r.trim()).filter(r => r !== '') : [];
-            
-            if (!color && !model) {
-                alert(currentLang === 'zh' ? "請輸入顏色或機型！" : "Vui lòng nhập màu sắc hoặc model!");
-                return;
-            }
-
-            let maxSeq = 0;
-            todayData.forEach(item => {
-                const seq = parseInt(item.seqNo) || 0;
-                if (seq > maxSeq) maxSeq = seq;
-            });
-            const nextSeqNo = maxSeq + 1;
-            
-            const newKey = 'item_' + Date.now();
-            const newData = { seqNo: nextSeqNo, color, model, remarks };
-            
-            try {
-                await set(ref(db, `schedules/${currentActiveTarget.dbDate}/${newKey}`), newData);
-                // 成功後清空輸入框，畫面會因為 onValue 監聽器自動刷新
-                colorEl.value = '';
-                modelEl.value = '';
-                remarkEl.value = '';
-            } catch (err) {
-                alert(i18n[currentLang].msgUpdateErr + err.message);
-            }
-        };
 
         function renderTodayTable() {
             const tbody = document.getElementById('today-tbody');

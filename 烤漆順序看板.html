@@ -185,18 +185,10 @@
     <!-- ===== 頁籤 1: ［總排程看板］ (Google Sheets 10分鐘即時同步) ===== -->
     <div id="tab-content-master" class="block">
         <!-- 頂部資訊與計時器 -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 mb-6">
             <div class="card p-4 border-l-4 border-l-blue-500 mb-0">
                 <div class="text-xs text-gray-400 mb-1" data-i18n="kpiTotalRows">總排程資料筆數</div>
                 <div class="text-2xl font-bold text-white" id="kpi-total-count">--</div>
-            </div>
-            <div class="card p-4 border-l-4 border-l-red-500 mb-0">
-                <div class="text-xs text-gray-400 mb-1" data-i18n="kpiCompletedRows">已完成項目</div>
-                <div class="text-2xl font-bold text-red-400" id="kpi-completed-count">--</div>
-            </div>
-            <div class="card p-4 border-l-4 border-l-purple-500 mb-0">
-                <div class="text-xs text-gray-400 mb-1" data-i18n="kpiWorkingRows">作業中項目</div>
-                <div class="text-2xl font-bold text-purple-400" id="kpi-working-count">--</div>
             </div>
             <div class="card p-4 border-l-4 border-l-emerald-500 mb-0">
                 <div class="text-xs text-gray-400 mb-1" data-i18n="kpiNextSync">10分鐘自動同步倒數</div>
@@ -234,17 +226,8 @@
                 </div>
             </div>
 
-            <!-- 圖例說明 -->
-            <div class="flex items-center gap-4 mb-4 p-3 bg-gray-900 rounded-lg text-xs flex-wrap border border-gray-800">
-                <span class="text-gray-400 font-bold" data-i18n="legendTitle">圖例標示：</span>
-                <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-red-600 inline-block"></span><span data-i18n="legCompleted">完成 (紅色填滿)</span></span>
-                <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-purple-600 inline-block" style="background-color: #8b5cf6;"></span><span data-i18n="legInProgress">作業中 (紫羅蘭色填滿)</span></span>
-                <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-orange-500 inline-block"></span><span data-i18n="legStockReserved">完成-先挪庫存料 (橙色填滿)</span></span>
-                <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-blue-400 inline-block"></span><span data-i18n="legPaintColor">烤漆顏色：依字樣顏色標示</span></span>
-            </div>
-
             <!-- 總排程表格 -->
-            <div class="overflow-x-auto max-h-[650px] overflow-y-auto rounded-lg border border-gray-800">
+            <div class="overflow-x-auto max-h-[650px] overflow-y-auto rounded-lg border border-gray-800 mt-2">
                 <table class="min-w-full">
                     <thead id="master-thead">
                         <tr><th class="text-center py-4" data-i18n="msgLoading">載入總排程資料中...</th></tr>
@@ -380,7 +363,7 @@
             "2026-02-28", "2026-04-03", "2026-04-06", "2026-05-01", "2026-06-19", "2026-09-25", "2026-10-09"
         ]);
 
-        // 擴充雙語對照字典（包含狀態與工廠常見字眼）
+        // 擴充雙語對照字典
         const contentDict = {
             "急件": "Hàng gấp",
             "特急": "Cực gấp",
@@ -409,7 +392,7 @@
             if (!text) return '';
             let result = String(text);
             
-            // 將字典依照字串長度排序，避免短字串取代長字串的部分內容
+            // 將字典依照字串長度排序
             const sortedKeys = Object.keys(contentDict).sort((a, b) => b.length - a.length);
 
             if (targetLang === 'vi') {
@@ -426,7 +409,6 @@
             return result;
         }
 
-        // 日期轉繁體中文月日模式格式化函數
         function formatChineseDate(val) {
             if (!val) return '';
             const str = String(val).trim();
@@ -460,17 +442,10 @@
                 tabDailyBoard: "每日烤漆順序看板",
                 tabHistorySearch: "歷史記錄查詢",
                 kpiTotalRows: "總排程資料總筆數",
-                kpiCompletedRows: "已完成總計",
-                kpiWorkingRows: "作業中總計",
                 kpiNextSync: "10分鐘自動同步倒數",
                 btnRefreshNow: "立卽更新",
                 masterBoardTitle: "［總排程看板］ (工作表1)",
                 optAllStatus: "全部狀態",
-                legendTitle: "圖例標示：",
-                legCompleted: "完成 (紅色填滿)",
-                legInProgress: "作業中 (紫羅蘭色填滿)",
-                legStockReserved: "完成-先挪庫存料 (橙色填滿)",
-                legPaintColor: "烤漆顏色：依字樣顏色標示",
                 searchTitle: "歷史記錄查詢",
                 lblDate: "日期 (Ngày)", lblColor: "顏色 (Màu sắc)", lblModel: "Model (機型)",
                 btnSearch: "查詢", btnReset: "重設", msgNoData: "尚無符合條件的資料", msgLoading: "資料載入中...",
@@ -488,17 +463,10 @@
                 tabDailyBoard: "Bảng Thứ tự Sơn Hàng ngày",
                 tabHistorySearch: "Tra cứu Lịch sử",
                 kpiTotalRows: "Tổng số dòng tiến độ",
-                kpiCompletedRows: "Tổng số Hoàn thành",
-                kpiWorkingRows: "Tổng số Đang làm",
                 kpiNextSync: "Tự động đồng bộ (10 phút)",
                 btnRefreshNow: "Làm mới",
                 masterBoardTitle: "［Bảng Tiến độ Tổng thể］ (Sheet1)",
                 optAllStatus: "Tất cả trạng thái",
-                legendTitle: "Chú thích:",
-                legCompleted: "Hoàn thành (Đỏ)",
-                legInProgress: "Đang làm (Tím Violet)",
-                legStockReserved: "Hoàn thành - Dùng kho (Cam)",
-                legPaintColor: "Màu sơn: Hiển thị theo màu chữ",
                 searchTitle: "Tra cứu lịch sử",
                 lblDate: "Ngày (日期)", lblColor: "Màu sắc (顏色)", lblModel: "Model (機型)",
                 btnSearch: "Tìm kiếm", btnReset: "Đặt lại", msgNoData: "Không có dữ liệu", msgLoading: "Đang tải...",
@@ -538,10 +506,6 @@
             document.getElementById('tab-btn-history').className = tabName === 'history' ? 'tab-btn active' : 'tab-btn inactive';
         };
 
-        // ==========================================
-        // ［總排程看板］ Core Logic (Google Sheets)
-        // ==========================================
-        
         // 解析烤漆顏色字樣樣式
         function getPaintColorStyle(colorText) {
             if (!colorText) return '';
@@ -564,13 +528,14 @@
 
             for (const item of colorPalette) {
                 if (item.keywords.some(k => txt.includes(k))) {
-                    return `background-color: ${item.bg}; color: ${item.text}; border: 1px solid ${item.border}; font-weight: 700; border-radius: 0.375rem; padding: 0.25rem 0.6rem; display: inline-block;`;
+                    return `background-color: ${item.bg}; color: ${item.text}; border: 1px solid ${item.border}; font-weight: 700; border-radius: 0.375rem; padding: 0.25rem 0.6rem; display: inline-block; white-space: nowrap;`;
                 }
             }
-            return `color: #38bdf8; font-weight: 700;`;
+            // 預設樣式
+            return `background-color: #334155; color: #ffffff; border: 1px solid #1e293b; font-weight: 700; border-radius: 0.375rem; padding: 0.25rem 0.6rem; display: inline-block; white-space: nowrap;`;
         }
 
-        // 渲染單元格
+        // 渲染單元格（含逗號過濾與拆分）
         function renderMasterCellContent(val, headerName) {
             if (val === null || val === undefined || val === '') return '-';
             let valStr = String(val).trim();
@@ -583,8 +548,15 @@
             if (valStr.includes('完成-先挪庫存料')) return `<span class="status-badge status-stock-reserved">${translatedVal}</span>`;
 
             if (headerName && (headerName.includes('顏色') || headerName.includes('烤漆'))) {
-                const colorStyle = getPaintColorStyle(valStr);
-                return `<span style="${colorStyle}">${translatedVal}</span>`;
+                // 將全形逗號轉為半形，拆分過濾空白，並各自填滿字樣顏色樣式
+                const colors = valStr.replace(/，/g, ',').split(',').map(c => c.trim()).filter(c => c !== '');
+                if (colors.length > 0) {
+                    return `<div class="flex flex-wrap gap-1">` + colors.map(c => {
+                        const tColor = translateContent(c, currentLang);
+                        const style = getPaintColorStyle(c);
+                        return `<span style="${style}">${tColor}</span>`;
+                    }).join('') + `</div>`;
+                }
             }
 
             return translatedVal;
@@ -645,7 +617,6 @@
             return { headers, rows };
         }
 
-        // 渲染總排程看板（包含過濾指定欄位）
         async function loadMasterSchedule() {
             const tbody = document.getElementById('master-tbody');
             const thead = document.getElementById('master-thead');
@@ -672,21 +643,7 @@
                 rawMasterHeaders = filteredHeaders;
                 rawMasterRows = filteredRows;
 
-                let totalCount = filteredRows.length;
-                let completedCount = 0;
-                let workingCount = 0;
-
-                filteredRows.forEach(r => {
-                    r.forEach(val => {
-                        const s = String(val).trim();
-                        if (s === '完成' || s === '完成-先挪庫存料') completedCount++;
-                        if (s === '作業中') workingCount++;
-                    });
-                });
-
-                document.getElementById('kpi-total-count').innerText = totalCount;
-                document.getElementById('kpi-completed-count').innerText = completedCount;
-                document.getElementById('kpi-working-count').innerText = workingCount;
+                document.getElementById('kpi-total-count').innerText = filteredRows.length;
 
                 if (filteredHeaders.length > 0) {
                     thead.innerHTML = `
@@ -812,7 +769,6 @@
             document.querySelectorAll('[data-i18n]').forEach(el => { el.innerText = t[el.getAttribute('data-i18n')]; });
             document.querySelectorAll('[data-i18n-ph]').forEach(el => { el.placeholder = t[el.getAttribute('data-i18n-ph')]; });
             
-            // 重新應用當前監聽日期的標題語系
             const titleEl = document.getElementById('board-title-text');
             if (currentActiveTarget.isCustom) {
                 titleEl.innerText = t.customDayTitle;
@@ -858,14 +814,23 @@
                         </td>
                     `;
                 } else {
-                    const displayColor = translateContent(item.color || '', currentLang);
                     const displayModel = translateContent(item.model || '', currentLang);
                     const displayRemarks = item.remarks ? item.remarks.map(r => translateContent(r, currentLang)).join('<br>') : '';
-                    const colorStyle = getPaintColorStyle(item.color || '');
+                    
+                    // 逗號過濾並各自呈現框
+                    const colorItems = (item.color || '').replace(/，/g, ',').split(',').map(c => c.trim()).filter(c => c !== '');
+                    let colorHtml = '';
+                    if(colorItems.length > 0) {
+                        colorHtml = `<div class="flex flex-wrap gap-1">` + colorItems.map(c => {
+                            const tC = translateContent(c, currentLang);
+                            const s = getPaintColorStyle(c);
+                            return `<span style="${s}">${tC}</span>`;
+                        }).join('') + `</div>`;
+                    }
 
                     tr.innerHTML = `
                         <td class="text-center font-bold text-green-400 text-lg">${item.seqNo}</td>
-                        <td class="font-bold text-lg"><span style="${colorStyle}">${displayColor}</span></td>
+                        <td class="font-bold text-lg">${colorHtml}</td>
                         <td class="font-bold text-white text-lg">${displayModel}</td>
                         <td class="text-gray-300 leading-relaxed">${displayRemarks}</td>
                         <td class="text-center">
@@ -906,15 +871,24 @@
                         </td>
                     `;
                 } else {
-                    const displayColor = translateContent(r.color || '', currentLang);
                     const displayModel = translateContent(r.model || '', currentLang);
                     const displayRemarks = r.remarks ? r.remarks.map(rmk => translateContent(rmk, currentLang)).join(' / ') : '';
-                    const colorStyle = getPaintColorStyle(r.color || '');
+                    
+                    // 逗號過濾並各自呈現框
+                    const colorItems = (r.color || '').replace(/，/g, ',').split(',').map(c => c.trim()).filter(c => c !== '');
+                    let colorHtml = '';
+                    if(colorItems.length > 0) {
+                        colorHtml = `<div class="flex flex-wrap gap-1">` + colorItems.map(c => {
+                            const tC = translateContent(c, currentLang);
+                            const s = getPaintColorStyle(c);
+                            return `<span style="${s}">${tC}</span>`;
+                        }).join('') + `</div>`;
+                    }
 
                     tr.innerHTML = `
                         <td class="text-blue-300 font-mono">${formatChineseDate(r.date)}</td>
                         <td class="text-center font-bold text-lg">${r.seqNo}</td>
-                        <td class="text-lg font-bold"><span style="${colorStyle}">${displayColor}</span></td>
+                        <td class="text-lg font-bold">${colorHtml}</td>
                         <td class="text-lg font-bold">${displayModel}</td>
                         <td class="text-gray-300">${displayRemarks}</td>
                         <td class="text-center">
@@ -968,9 +942,8 @@
             }
         };
 
-        // 監聽 Firebase 排程資料，支援自訂日期
         function listenActiveSchedule(customDbDate = null) {
-            if (activeScheduleRef) off(activeScheduleRef); // 移除舊的監聽事件
+            if (activeScheduleRef) off(activeScheduleRef); 
 
             if (customDbDate) {
                 currentActiveTarget = { dbDate: customDbDate, isNext: false, isCustom: true };
@@ -987,7 +960,6 @@
                 titleEl.innerText = currentActiveTarget.isNext ? t.nextDayTitle : t.todayTitle;
             }
 
-            // 更新日期選擇器的值
             document.getElementById('daily-date-picker').value = currentActiveTarget.dbDate;
 
             activeScheduleRef = ref(db, `schedules/${currentActiveTarget.dbDate}`);
@@ -998,14 +970,12 @@
                     Object.keys(data).forEach(key => {
                         if (data[key]) todayData.push({ originalIndex: key, ...data[key] });
                     });
-                    // 確保按序號排序
                     todayData.sort((a, b) => (parseInt(a.seqNo) || 0) - (parseInt(b.seqNo) || 0));
                 }
                 renderTodayTable();
             });
         }
 
-        // 綁定 Date Picker 變更事件
         document.getElementById('daily-date-picker').addEventListener('change', (e) => {
             const selectedDate = e.target.value;
             if (selectedDate) {
@@ -1013,7 +983,6 @@
             }
         });
 
-        // 日期快速切換按鈕
         window.switchToToday = function() {
             const todayDB = getDBDateFormat(new Date());
             listenActiveSchedule(todayDB);
@@ -1023,7 +992,6 @@
             listenActiveSchedule(next.dbDate);
         };
 
-        // 搜尋歷史記錄
         document.getElementById('btn-search').addEventListener('click', async () => {
             const sDate = document.getElementById('search-date').value;
             const sColor = document.getElementById('search-color').value.trim().toUpperCase();
@@ -1077,7 +1045,6 @@
             renderHistoryTable();
         });
 
-        // 初始化
         document.addEventListener('DOMContentLoaded', () => {
             applyLanguage();
             listenActiveSchedule();

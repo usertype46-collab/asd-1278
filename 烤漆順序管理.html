@@ -22,6 +22,10 @@
         .w-action { width: 80px; text-align: center; }
 
         input, select { background-color: #1e1e1e; color: #fff; border: 1px solid #555; border-radius: 0.375rem; padding: 0.6rem; width: 100%; outline: none; font-size: 1rem; transition: border-color 0.2s; }
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+            cursor: pointer;
+        }
         input:focus, select:focus { border-color: #3b82f6; box-shadow: 0 0 0 1px #3b82f6; }
         
         button { cursor: pointer; transition: all 0.2s; }
@@ -57,12 +61,12 @@
 
     <div class="grid grid-cols-1 gap-6">
 
-        <!-- 建立次日排程作業 (編輯區塊) -->
+        <!-- 建立排程作業 (編輯區塊) -->
         <div class="card border-l-4 border-l-orange-500">
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-5 gap-4">
                 <h2 class="text-xl font-bold text-orange-400 flex items-center">
-                    <i class="fa-solid fa-calendar-plus mr-2"></i><span data-i18n="nextTitle">建立次日烤漆排程</span>
-                    <span id="next-date-display" class="ml-3 text-white bg-gray-700 px-3 py-1 rounded text-base"></span>
+                    <i class="fa-solid fa-calendar-plus mr-2"></i><span data-i18n="nextTitle">建立烤漆排程 (指定日期)</span>
+                    <input type="date" id="next-date-picker" class="ml-3 bg-gray-700 text-white px-3 py-1 rounded text-base border border-gray-600 focus:outline-none focus:border-blue-500 cursor-pointer w-auto">
                 </h2>
                 <div class="flex gap-2">
                     <button id="btn-add-row" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md font-bold shadow-lg flex items-center gap-1">
@@ -132,14 +136,14 @@
 
         const i18n = {
             zh: {
-                appTitle: "📝 建立烤漆排程紀錄", langLabel: "語言 / Ngôn ngữ:", nextTitle: "建立次日烤漆排程", 
+                appTitle: "📝 建立烤漆排程紀錄", langLabel: "語言 / Ngôn ngữ:", nextTitle: "建立烤漆排程 (指定日期)", 
                 btnAdd: "新增下一筆", btnSave: "儲存至雲端", thNo: "序號", thColor: "顏色", thModel: "機型", 
                 thRemark: "備註欄 (按 + 號新增多條備註)", thAction: "操作", phColor: "選擇或輸入顏色", 
                 phModel: "選擇或輸入機型", phRemark: "輸入備註...", promptConfirmDel: "確定要刪除此筆記錄嗎？", 
                 sysReady: "系統初始化完成。", sysSaveOk: "儲存成功！", sysSaveErr: "儲存失敗："
             },
             vi: {
-                appTitle: "📝 Tạo Lịch trình Sơn", langLabel: "Ngôn ngữ / 語言:", nextTitle: "Lịch trình sơn ngày mai", 
+                appTitle: "📝 Tạo Lịch trình Sơn", langLabel: "Ngôn ngữ / 語言:", nextTitle: "Tạo lịch trình sơn (Chọn ngày)", 
                 btnAdd: "Thêm dòng mới", btnSave: "Lưu lên Cloud", thNo: "STT", thColor: "Màu sắc", thModel: "Model", 
                 thRemark: "Ghi chú (Bấm + để thêm dòng)", thAction: "Thao tác", phColor: "Chọn/Nhập màu", 
                 phModel: "Chọn/Nhập model", phRemark: "Nhập ghi chú...", promptConfirmDel: "Bạn có chắc chắn muốn xóa bản ghi này không?", 
@@ -147,23 +151,19 @@
             }
         };
 
-        const weekdays = {
-            zh: ["日", "一", "二", "三", "四", "五", "六"],
-            vi: ["CN", "T2", "T3", "T4", "T5", "T6", "T7"]
-        };
-
         window.logMsg = function(msg, type = 'info') {
             const consoleBox = document.getElementById('debug-console');
-            const time = new Date().toLocaleTimeString('zh-TW', { hour12: false });
-            let style = type === 'error' ? 'log-error' : (type === 'success' ? 'log-success' : 'text-gray-300');
-            consoleBox.innerHTML += `<div class="${style}">[${time}] ${msg}</div>`;
+            const time = new Date().toLocaleTimeString();
+            const colorClass = type === 'error' ? 'log-error' : (type === 'success' ? 'log-success' : 'text-gray-300');
+            consoleBox.innerHTML += `<div class="${colorClass}">[${time}] ${msg}</div>`;
             consoleBox.scrollTop = consoleBox.scrollHeight;
-        }
+        };
 
         function getDBDateFormat(dateObj) {
             return `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')}`;
         }
 
+        // 取得預設下一工作日，但只回傳 ISO 字串 (不再回傳 nextDisplay)
         function getNextWorkingDate() {
             let nextDate = new Date();
             while (true) {
@@ -172,16 +172,106 @@
                 let isoStr = getDBDateFormat(nextDate);
                 if (day !== 0 && day !== 6 && !holidays.has(isoStr)) break;
             }
-            const nextDB = getDBDateFormat(nextDate);
-            const nextDisplay = `${nextDate.getMonth() + 1}/${nextDate.getDate()} (${currentLang === 'vi' ? 'Thứ ' : '週'}${weekdays[currentLang][nextDate.getDay()]})`;
-            return { nextDB, nextDisplay };
+            return getDBDateFormat(nextDate);
         }
+
+        let nextDayData = [];
+
+        function updateDatalists() {
+            document.getElementById('color-list').innerHTML = dbColors.map(c => `<option value="${c}">`).join('');
+            document.getElementById('model-list').innerHTML = dbModels.map(m => `<option value="${m}">`).join('');
+        }
+
+        onValue(ref(db, 'settings/colors'), (snapshot) => {
+            if (snapshot.exists()) dbColors = snapshot.val();
+            else set(ref(db, 'settings/colors'), defaultColors);
+            updateDatalists();
+        });
+
+        onValue(ref(db, 'settings/models'), (snapshot) => {
+            if (snapshot.exists()) dbModels = snapshot.val();
+            updateDatalists();
+        });
+
+        function renderNextTable() {
+            const tbody = document.getElementById('next-tbody');
+            tbody.innerHTML = '';
+            
+            const t = i18n[currentLang];
+
+            nextDayData.forEach((item, idx) => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-[#2a2a2b] transition-colors group";
+                
+                let remarkHtml = item.remarks.map((rmk, rIdx) => `
+                    <div class="flex items-center gap-2 mb-1 last:mb-0">
+                        <input type="text" class="remark-input text-sm" value="${rmk}" data-idx="${idx}" data-ridx="${rIdx}" placeholder="${t.phRemark}">
+                        ${rIdx === item.remarks.length - 1 ? 
+                            `<button onclick="addRemarkLine(${idx})" class="text-green-500 hover:text-green-400 p-1"><i class="fa-solid fa-plus"></i></button>` : 
+                            `<button onclick="removeRemarkLine(${idx},${rIdx})" class="text-red-500 hover:text-red-400 p-1"><i class="fa-solid fa-minus"></i></button>`
+                        }
+                    </div>
+                `).join('');
+
+                tr.innerHTML = `
+                    <td class="text-center text-gray-400 font-bold w-seq">${idx + 1}</td>
+                    <td class="w-color">
+                        <input type="text" class="color-input uppercase font-bold text-blue-300" list="color-list" value="${item.color}" data-idx="${idx}" placeholder="${t.phColor}">
+                    </td>
+                    <td class="w-model">
+                        <input type="text" class="model-input uppercase font-bold text-purple-300" list="model-list" value="${item.model}" data-idx="${idx}" placeholder="${t.phModel}">
+                    </td>
+                    <td class="bg-[#1e1e1e] p-2">${remarkHtml}</td>
+                    <td class="w-action">
+                        <button onclick="removeNextRow(${idx})" class="text-red-500 hover:text-red-400 bg-red-500/10 hover:bg-red-500/20 w-8 h-8 rounded-full flex items-center justify-center mx-auto transition-colors opacity-70 group-hover:opacity-100" title="刪除整列">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            document.querySelectorAll('.color-input').forEach(el => {
+                el.addEventListener('input', (e) => { nextDayData[e.target.dataset.idx].color = e.target.value.toUpperCase(); });
+            });
+            document.querySelectorAll('.model-input').forEach(el => {
+                el.addEventListener('input', (e) => { nextDayData[e.target.dataset.idx].model = e.target.value.toUpperCase(); });
+            });
+            document.querySelectorAll('.remark-input').forEach(el => {
+                el.addEventListener('input', (e) => {
+                    const rowIdx = e.target.dataset.idx;
+                    const rIdx = e.target.dataset.ridx;
+                    nextDayData[rowIdx].remarks[rIdx] = e.target.value;
+                });
+            });
+        }
+
+        window.addNextRow = function() {
+            nextDayData.push({ color: '', model: '', remarks: [''] });
+            renderNextTable();
+        };
+
+        window.removeNextRow = function(idx) {
+            if (confirm(i18n[currentLang].promptConfirmDel)) {
+                nextDayData.splice(idx, 1);
+                if (nextDayData.length === 0) addNextRow();
+                renderNextTable();
+            }
+        };
+
+        window.addRemarkLine = function(idx) {
+            nextDayData[idx].remarks.push('');
+            renderNextTable();
+        };
+
+        window.removeRemarkLine = function(rowIdx, rIdx) {
+            nextDayData[rowIdx].remarks.splice(rIdx, 1);
+            renderNextTable();
+        };
 
         function applyLanguage() {
             const t = i18n[currentLang];
             document.querySelectorAll('[data-i18n]').forEach(el => { el.innerText = t[el.getAttribute('data-i18n')]; });
-            const dates = getNextWorkingDate();
-            document.getElementById('next-date-display').innerText = dates.nextDisplay;
             updateDatalists();
             renderNextTable();
         }
@@ -191,92 +281,48 @@
             applyLanguage();
         });
 
-        function updateDatalists() {
-            document.getElementById('color-list').innerHTML = dbColors.map(c => `<option value="${c}">`).join('');
-            document.getElementById('model-list').innerHTML = dbModels.map(m => `<option value="${m}">`).join('');
-        }
+        document.getElementById('btn-add-row').addEventListener('click', addNextRow);
 
-        onValue(ref(db, 'settings/colors'), (snapshot) => {
-            if (snapshot.exists()) dbColors = snapshot.val();
-            updateDatalists();
-        });
-        onValue(ref(db, 'settings/models'), (snapshot) => {
-            if (snapshot.exists()) dbModels = snapshot.val();
-            updateDatalists();
-        });
-
-        let nextDayData = [];
-
-        window.addNextRow = function(data = null) {
-            nextDayData.push(data ? data : { color: '', model: '', remarks: [''] });
-            renderNextTable();
-        }
-
-        window.removeNextRow = function(index) {
-            if (confirm(i18n[currentLang].promptConfirmDel)) {
-                nextDayData.splice(index, 1);
+        function loadDataForDate(dateStr) {
+            get(ref(db, `schedules/${dateStr}`)).then((snapshot) => {
+                nextDayData = [];
+                if (snapshot.exists() && snapshot.val().length > 0) {
+                    snapshot.val().forEach(item => {
+                        nextDayData.push({ 
+                            color: item.color || '', 
+                            model: item.model || '', 
+                            remarks: item.remarks && item.remarks.length > 0 ? item.remarks : [''] 
+                        });
+                    });
+                } else {
+                    addNextRow();
+                }
                 renderNextTable();
-            }
-        }
-
-        window.addRemark = function(rowIndex) {
-            nextDayData[rowIndex].remarks.push('');
-            renderNextTable();
-        }
-        window.removeRemark = function(rowIndex, rmkIndex) {
-            nextDayData[rowIndex].remarks.splice(rmkIndex, 1);
-            renderNextTable();
-        }
-        
-        // 輸入框直接更新原始資料，確保資料庫儲存的都是單一語言基準（建議皆用中文輸入）
-        window.updateData = function(rowIndex, field, val, rmkIndex = -1) {
-            if (rmkIndex === -1) nextDayData[rowIndex][field] = val.toUpperCase();
-            else nextDayData[rowIndex].remarks[rmkIndex] = val;
-        }
-
-        function renderNextTable() {
-            const tbody = document.getElementById('next-tbody');
-            tbody.innerHTML = '';
-            const t = i18n[currentLang];
-
-            if(nextDayData.length === 0) nextDayData.push({ color: '', model: '', remarks: [''] });
-
-            nextDayData.forEach((item, idx) => {
-                const tr = document.createElement('tr');
-                let remarksHtml = '';
-                item.remarks.forEach((rmk, rIdx) => {
-                    remarksHtml += `
-                        <div class="flex gap-2 mb-2 items-center">
-                            <input type="text" value="${rmk}" oninput="updateData(${idx}, 'remarks', this.value, ${rIdx})" placeholder="${t.phRemark}" class="flex-grow">
-                            ${rIdx === 0 
-                                ? `<button onclick="addRemark(${idx})" class="bg-green-600 text-white w-8 h-8 rounded-md hover:bg-green-700 shadow flex items-center justify-center text-lg" title="新增備註"><i class="fa-solid fa-plus"></i></button>`
-                                : `<button onclick="removeRemark(${idx}, ${rIdx})" class="bg-red-600 text-white w-8 h-8 rounded-md hover:bg-red-700 shadow flex items-center justify-center text-lg" title="刪除備註"><i class="fa-solid fa-minus"></i></button>`
-                            }
-                        </div>
-                    `;
-                });
-
-                tr.innerHTML = `
-                    <td class="text-center font-bold text-lg align-middle">${idx + 1}</td>
-                    <td><input list="color-list" value="${item.color}" oninput="updateData(${idx}, 'color', this.value)" placeholder="${t.phColor}"></td>
-                    <td><input list="model-list" value="${item.model}" oninput="updateData(${idx}, 'model', this.value)" placeholder="${t.phModel}"></td>
-                    <td class="align-top pt-3">${remarksHtml}</td>
-                    <td class="text-center align-middle">
-                        <button onclick="removeNextRow(${idx})" class="text-red-400 hover:text-red-300 p-2 text-xl transition-colors"><i class="fa-solid fa-trash-can"></i></button>
-                    </td>
-                `;
-                tbody.appendChild(tr);
+                logMsg(`載入日期資料: ${dateStr}`);
+            }).catch(err => {
+                logMsg(`載入失敗: ${err.message}`, 'error');
             });
         }
 
-        document.getElementById('btn-add-row').addEventListener('click', () => addNextRow());
+        document.getElementById('next-date-picker').addEventListener('change', (e) => {
+            const selectedDate = e.target.value;
+            if (selectedDate) {
+                loadDataForDate(selectedDate);
+            }
+        });
 
         document.getElementById('btn-save').addEventListener('click', async () => {
             const btn = document.getElementById('btn-save');
+            const selectedDate = document.getElementById('next-date-picker').value;
+            
+            if (!selectedDate) {
+                alert("請選擇日期 / Vui lòng chọn ngày");
+                return;
+            }
+            
             btn.disabled = true;
             btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Saving...`;
             
-            const { nextDB } = getNextWorkingDate();
             let validTasks = [];
             let newColors = new Set();
             let newModels = new Set();
@@ -294,14 +340,14 @@
             });
 
             try {
-                await set(ref(db, `schedules/${nextDB}`), validTasks);
+                await set(ref(db, `schedules/${selectedDate}`), validTasks);
                 if (newColors.size > 0 || newModels.size > 0) {
                     const updates = {};
                     if (newColors.size > 0) updates['settings/colors'] = [...new Set([...dbColors, ...newColors])];
                     if (newModels.size > 0) updates['settings/models'] = [...new Set([...dbModels, ...newModels])];
                     await update(ref(db), updates);
                 }
-                logMsg(`${i18n[currentLang].sysSaveOk} (日期: ${nextDB})`, 'success');
+                logMsg(`${i18n[currentLang].sysSaveOk} (日期: ${selectedDate})`, 'success');
                 alert(i18n[currentLang].sysSaveOk);
             } catch (err) {
                 logMsg(`${i18n[currentLang].sysSaveErr} ${err.message}`, 'error');
@@ -311,22 +357,17 @@
             }
         });
 
+        // 頁面載入時初始化
         document.addEventListener('DOMContentLoaded', () => {
             applyLanguage();
-            const { nextDB } = getNextWorkingDate();
-            get(ref(db, `schedules/${nextDB}`)).then((snapshot) => {
-                nextDayData = [];
-                if (snapshot.exists() && snapshot.val().length > 0) {
-                    snapshot.val().forEach(item => {
-                        nextDayData.push({ color: item.color||'', model: item.model||'', remarks: item.remarks && item.remarks.length > 0 ? item.remarks : [''] });
-                    });
-                } else {
-                    addNextRow();
-                }
-                renderNextTable();
-            });
+            const nextDBDate = getNextWorkingDate();
+            const datePicker = document.getElementById('next-date-picker');
+            datePicker.value = nextDBDate; // 設定為預設的次工作日
+            
+            loadDataForDate(nextDBDate); // 讀取該日資料
             logMsg(i18n[currentLang].sysReady, 'success');
         });
+
     </script>
 </body>
 </html>

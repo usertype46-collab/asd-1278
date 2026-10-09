@@ -4,7 +4,7 @@
     <!-- ========================================================================================== -->
     <!-- 百富粉體塗裝自動槍參數系統 / Sistem Parameter Pelapisan Serbuk Baifu                        -->
     <!-- Architecture: Pure Frontend AI Architecture (Respan Span 01 Lite Enabled)                  -->
-    <!-- 完美修復版本：修復 Supabase 儲存 Cache 欄位錯位、Schema 相容與自動自動重試剔除無效欄位機制     -->
+    <!-- 完美修復版本：精準匹配 coating_params 48 個 Schema 欄位與資料型態修復                       -->
     <!-- ========================================================================================== -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -703,7 +703,7 @@
         </div>
     </div>
 
-    <!-- 膜厚總覽 Modal 面板 (第一欄強制定錨為構件圖片) -->
+    <!-- 膜厚總覽 Modal 面板 -->
     <div id="thicknessTableModal" class="fixed inset-0 bg-slate-900/95 flex items-center justify-center hidden z-50 p-3 sm:p-4 backdrop-blur-sm">
         <div class="glass-panel p-4 sm:p-6 rounded-2xl max-w-5xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-pink-500/30">
             <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-700">
@@ -796,7 +796,7 @@
     </div>
 
     <!-- ========================================================================================== -->
-    <!-- 核心 JavaScript 邏輯 (包含 Supabase 雙重 Schema 解析與自動修剪非 Schema 欄位之修復機制)      -->
+    <!-- 核心 JavaScript 邏輯 (包含 Supabase 48 欄位白名單與自動防護修剪儲存機制)                  -->
     <!-- ========================================================================================== -->
     <script type="module">
         import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
@@ -814,11 +814,11 @@
         // SVG 防破圖備援占位圖 (Base64)
         const SVG_PLACEHOLDER = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjNDc1NTY5IiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHJlY3QgeD0iMyIgeT0iMyIgd2lkdGg9IjE4IiBoZWlnaHQ9IjE4IiByeD0iMiIgcnk9IjIiPjwvcmVjdD48Y2lyY2xlIGN4PSI4LjUiIGN5PSI4LjUiIHI9IjEuNSI+PC9jaXJjbGU+PHBvbHlsaW5lIHBvaW50cz0iMjEgMTUgMTYgMTAgNSAyMSI+PC9wb2x5bGluZT48L3N2Zz4=";
 
-        // --- 全局狀態 ---
+        // 全局狀態
         let allParamsData = [];
         let editingItemId = null;
         let cropperObj = null;
-        let cropTargetType = 'AI_SEARCH'; // AI_SEARCH | NAME_OCR
+        let cropTargetType = 'AI_SEARCH';
 
         let currentThicknessRecords = [];
         let currentNgRecords = [];
@@ -1118,15 +1118,11 @@
 
         // --- 3. 核心工具與 Google Drive / Supabase 資料結構轉換機制 ---
 
-        /**
-         * 將 Google Drive 分享連結自動轉換為直鏈網址
-         */
         function fixImageUrl(url) {
             if (!url || typeof url !== 'string') return '';
             url = url.trim();
             if (!url) return '';
 
-            // Google Drive 連結轉直鏈處理
             const driveMatch1 = url.match(/drive\.google\.com\/file\/d\/([^\/]+)/);
             if (driveMatch1 && driveMatch1[1]) {
                 return `https://lh3.googleusercontent.com/d/${driveMatch1[1]}`;
@@ -1138,9 +1134,6 @@
             return url;
         }
 
-        /**
-         * 安全解析 JSON 字串或直接回傳物件
-         */
         function safeParseJSON(val) {
             if (!val) return null;
             if (typeof val === 'object') return val;
@@ -1153,132 +1146,125 @@
 
         /**
          * 雙重 Schema 自動相容解析器 (Normalize Data)
-         * 全面支援 powder_params 與 coating_params 的異構數據結構
+         * 全面讀取 Supabase coating_params 的 48 個原生欄位
          */
         function normalizeItemData(raw) {
             if (!raw) return null;
 
-            // 1. 自動槍粉量 guns 處理 (相容 JSONB auto_guns 或展平欄位 gun_1 ~ gun_8)
-            const parsedAutoGuns = safeParseJSON(raw.auto_guns) || safeParseJSON(raw.guns);
-            const gunsArr = Array.isArray(parsedAutoGuns) ? parsedAutoGuns : [
-                raw.gun_1 ?? raw.gun1 ?? '0',
-                raw.gun_2 ?? raw.gun2 ?? '0',
-                raw.gun_3 ?? raw.gun3 ?? '0',
-                raw.gun_4 ?? raw.gun4 ?? '0',
-                raw.gun_5 ?? raw.gun5 ?? '0',
-                raw.gun_6 ?? raw.gun6 ?? '0',
-                raw.gun_7 ?? raw.gun7 ?? '0',
-                raw.gun_8 ?? raw.gun8 ?? '0'
+            // 1. 自動槍粉量 guns 處理 (槍1 ~ 槍8 展平欄位)
+            const gunsArr = [
+                raw.gun_1 ?? '0',
+                raw.gun_2 ?? '0',
+                raw.gun_3 ?? '0',
+                raw.gun_4 ?? '0',
+                raw.gun_5 ?? '0',
+                raw.gun_6 ?? '0',
+                raw.gun_7 ?? '0',
+                raw.gun_8 ?? '0'
             ];
 
-            // 2. 區塊 A 手動槍參數處理 (相容 manual_a JSONB 或展平手動槍欄位)
-            const parsedA = safeParseJSON(raw.manual_a) || safeParseJSON(raw.manual_gun_a) || safeParseJSON(raw.block_a) || {};
+            // 2. 區塊 A 手動槍參數處理 (優先讀取 manual_gun_a JSONB，備援展平欄位)
+            const parsedA = safeParseJSON(raw.manual_gun_a) || safeParseJSON(raw.manual_a) || {};
             const manualA = {
-                powder: parsedA.powder ?? raw.manual_a_powder ?? raw.a_powder ?? 0,
-                air: parsedA.air ?? raw.manual_a_air ?? raw.a_air ?? 0,
-                voltage: parsedA.voltage ?? raw.manual_a_voltage ?? raw.a_voltage ?? 70,
-                current: parsedA.current ?? raw.manual_a_current ?? raw.a_current ?? 15,
-                nozzle: parsedA.nozzle || raw.manual_a_nozzle || raw.a_nozzle || '扇型',
-                ring: parsedA.ring || raw.manual_a_ring || raw.a_ring || '有',
-                spray_count: parsedA.spray_count ?? raw.manual_a_spray_count ?? raw.a_spray_count ?? 1,
-                spray_left: parsedA.spray_left ?? raw.manual_a_spray_left ?? raw.a_spray_left ?? 0,
-                spray_top: parsedA.spray_top ?? raw.manual_a_spray_top ?? raw.a_spray_top ?? 0,
-                spray_bottom: parsedA.spray_bottom ?? raw.manual_a_spray_bottom ?? raw.a_spray_bottom ?? 0,
-                spray_right: parsedA.spray_right ?? raw.manual_a_spray_right ?? raw.a_spray_right ?? 0,
-                spray_mid_1: parsedA.spray_mid_1 ?? raw.manual_a_spray_mid_1 ?? raw.a_spray_mid_1 ?? 0,
-                spray_mid_2: parsedA.spray_mid_2 ?? raw.manual_a_spray_mid_2 ?? raw.a_spray_mid_2 ?? 0,
-                spray_mid_3: parsedA.spray_mid_3 ?? raw.manual_a_spray_mid_3 ?? raw.a_spray_mid_3 ?? 0,
-                spray_mid_4: parsedA.spray_mid_4 ?? raw.manual_a_spray_mid_4 ?? raw.a_spray_mid_4 ?? 0
+                powder: parsedA.powder ?? raw.manual_a_powder ?? 0,
+                air: parsedA.air ?? raw.manual_a_air ?? 0,
+                voltage: parsedA.voltage ?? raw.manual_a_voltage ?? 70,
+                current: parsedA.current ?? raw.manual_a_current ?? 15,
+                nozzle: parsedA.nozzle || raw.manual_a_nozzle || '扇型',
+                ring: parsedA.ring || raw.manual_a_ring || '有',
+                spray_count: parsedA.spray_count ?? raw.manual_a_spray_count ?? 1,
+                spray_left: parsedA.spray_left ?? 0,
+                spray_top: parsedA.spray_top ?? 0,
+                spray_bottom: parsedA.spray_bottom ?? 0,
+                spray_right: parsedA.spray_right ?? 0,
+                spray_mid_1: parsedA.spray_mid_1 ?? 0,
+                spray_mid_2: parsedA.spray_mid_2 ?? 0,
+                spray_mid_3: parsedA.spray_mid_3 ?? 0,
+                spray_mid_4: parsedA.spray_mid_4 ?? 0
             };
 
-            // 3. 區塊 B 手動槍參數處理 (相容 manual_b JSONB 或展平手動槍欄位)
-            const parsedB = safeParseJSON(raw.manual_b) || safeParseJSON(raw.manual_gun_b) || safeParseJSON(raw.block_b) || {};
+            // 3. 區塊 B 手動槍參數處理 (優先讀取 manual_gun_b JSONB，備援展平欄位)
+            const parsedB = safeParseJSON(raw.manual_gun_b) || safeParseJSON(raw.manual_b) || {};
             const manualB = {
-                powder: parsedB.powder ?? raw.manual_b_powder ?? raw.b_powder ?? 0,
-                air: parsedB.air ?? raw.manual_b_air ?? raw.b_air ?? 0,
-                voltage: parsedB.voltage ?? raw.manual_b_voltage ?? raw.b_voltage ?? 70,
-                current: parsedB.current ?? raw.manual_b_current ?? raw.b_current ?? 15,
-                nozzle: parsedB.nozzle || raw.manual_b_nozzle || raw.b_nozzle || '扇型',
-                ring: parsedB.ring || raw.manual_b_ring || raw.b_ring || '有',
-                spray_count: parsedB.spray_count ?? raw.manual_b_spray_count ?? raw.b_spray_count ?? 1,
-                spray_left: parsedB.spray_left ?? raw.manual_b_spray_left ?? raw.b_spray_left ?? 0,
-                spray_top: parsedB.spray_top ?? raw.manual_b_spray_top ?? raw.b_spray_top ?? 0,
-                spray_bottom: parsedB.spray_bottom ?? raw.manual_b_spray_bottom ?? raw.b_spray_bottom ?? 0,
-                spray_right: parsedB.spray_right ?? raw.manual_b_spray_right ?? raw.b_spray_right ?? 0,
-                spray_mid_1: parsedB.spray_mid_1 ?? raw.manual_b_spray_mid_1 ?? raw.b_spray_mid_1 ?? 0,
-                spray_mid_2: parsedB.spray_mid_2 ?? raw.manual_b_spray_mid_2 ?? raw.b_spray_mid_2 ?? 0,
-                spray_mid_3: parsedB.spray_mid_3 ?? raw.manual_b_spray_mid_3 ?? raw.b_spray_mid_3 ?? 0,
-                spray_mid_4: parsedB.spray_mid_4 ?? raw.manual_b_spray_mid_4 ?? raw.b_spray_mid_4 ?? 0
+                powder: parsedB.powder ?? raw.manual_b_powder ?? 0,
+                air: parsedB.air ?? raw.manual_b_air ?? 0,
+                voltage: parsedB.voltage ?? raw.manual_b_voltage ?? 70,
+                current: parsedB.current ?? raw.manual_b_current ?? 15,
+                nozzle: parsedB.nozzle || raw.manual_b_nozzle || '扇型',
+                ring: parsedB.ring || raw.manual_b_ring || '有',
+                spray_count: parsedB.spray_count ?? raw.manual_b_spray_count ?? 1,
+                spray_left: parsedB.spray_left ?? 0,
+                spray_top: parsedB.spray_top ?? 0,
+                spray_bottom: parsedB.spray_bottom ?? 0,
+                spray_right: parsedB.spray_right ?? 0,
+                spray_mid_1: parsedB.spray_mid_1 ?? 0,
+                spray_mid_2: parsedB.spray_mid_2 ?? 0,
+                spray_mid_3: parsedB.spray_mid_3 ?? 0,
+                spray_mid_4: parsedB.spray_mid_4 ?? 0
             };
 
-            // 4. 往復機運行參數 reciprocator 處理
-            const parsedRecip = safeParseJSON(raw.reciprocator) || {};
+            // 4. 往復機運行參數 (int4 轉換回「自動」文字顯示)
+            const formatTurn = (val) => {
+                if (val === 0 || val === '0' || val === '自動' || !val) return '自動';
+                return String(val);
+            };
+
             const reciprocator = {
-                speed_left: parsedRecip.speed_left ?? raw.speed_left ?? '600',
-                speed_right: parsedRecip.speed_right ?? raw.speed_right ?? '600',
-                up_turn_left: parsedRecip.up_turn_left ?? raw.up_turn_left ?? '自動',
-                up_turn_right: parsedRecip.up_turn_right ?? raw.up_turn_right ?? '自動',
-                down_turn_left: parsedRecip.down_turn_left ?? raw.down_turn_left ?? '自動',
-                down_turn_right: parsedRecip.down_turn_right ?? raw.down_turn_right ?? '自動',
-                dist_left: parsedRecip.dist_left ?? raw.dist_left ?? '380',
-                dist_right: parsedRecip.dist_right ?? raw.dist_right ?? '420'
+                speed_left: String(raw.speed_left ?? '600'),
+                speed_right: String(raw.speed_right ?? '600'),
+                up_turn_left: formatTurn(raw.up_turn_left),
+                up_turn_right: formatTurn(raw.up_turn_right),
+                down_turn_left: formatTurn(raw.down_turn_left),
+                down_turn_right: formatTurn(raw.down_turn_right),
+                dist_left: String(raw.dist_left ?? '380'),
+                dist_right: String(raw.dist_right ?? '420')
             };
 
-            // 5. 膜厚歷史紀錄的多重欄位名稱讀取與相容
-            let rawTh = raw.thickness_history ?? raw.history_thickness ?? raw.film_thickness_records ?? raw.thickness_records ?? raw.film_thickness ?? raw.thickness ?? [];
+            // 5. 膜厚歷史紀錄
+            let rawTh = raw.thickness_history ?? raw.film_thickness_records ?? raw.thickness_records ?? [];
             if (typeof rawTh === 'string') {
                 try { rawTh = JSON.parse(rawTh); } catch(e) { rawTh = []; }
-            }
-            if (!Array.isArray(rawTh) && rawTh && typeof rawTh === 'object') {
-                rawTh = [rawTh];
             }
             if (!Array.isArray(rawTh)) rawTh = [];
 
             let thicknessHistory = rawTh.map(r => {
-                if (typeof r === 'string') {
-                    try { r = JSON.parse(r); } catch(e) { r = { remark: r }; }
-                }
                 if (!r || typeof r !== 'object') return null;
-
-                const date = r.date || r.record_date || r.created_at || r.d || '-';
-
-                let f_min = r.f_min ?? r.front_min ?? r.frontMin ?? (Array.isArray(r.front) ? r.front[0] : null);
-                let f_max = r.f_max ?? r.front_max ?? r.frontMax ?? (Array.isArray(r.front) ? r.front[1] : null);
-                let m_min = r.m_min ?? r.mid_min ?? r.midMin ?? (Array.isArray(r.mid) ? r.mid[0] : null);
-                let m_max = r.m_max ?? r.mid_max ?? r.midMax ?? (Array.isArray(r.mid) ? r.mid[1] : null);
-                let r_min = r.r_min ?? r.rear_min ?? r.rearMin ?? (Array.isArray(r.rear) ? r.rear[0] : null);
-                let r_max = r.r_max ?? r.rear_max ?? r.rearMax ?? (Array.isArray(r.rear) ? r.rear[1] : null);
-
                 return {
-                    date: date,
-                    f_min: (f_min !== null && f_min !== undefined && f_min !== '') ? f_min : '-',
-                    f_max: (f_max !== null && f_max !== undefined && f_max !== '') ? f_max : '-',
-                    m_min: (m_min !== null && m_min !== undefined && m_min !== '') ? m_min : '-',
-                    m_max: (m_max !== null && m_max !== undefined && m_max !== '') ? m_max : '-',
-                    r_min: (r_min !== null && r_min !== undefined && r_min !== '') ? r_min : '-',
-                    r_max: (r_max !== null && r_max !== undefined && r_max !== '') ? r_max : '-'
+                    date: r.date || r.record_date || '-',
+                    f_min: r.f_min ?? '-',
+                    f_max: r.f_max ?? '-',
+                    m_min: r.m_min ?? '-',
+                    m_max: r.m_max ?? '-',
+                    r_min: r.r_min ?? '-',
+                    r_max: r.r_max ?? '-'
                 };
             }).filter(Boolean);
 
             // 6. NG 歷史紀錄
-            let rawNg = raw.ng_history ?? raw.history_ng ?? raw.ng_records ?? raw.ng_list ?? [];
+            let rawNg = raw.ng_records ?? raw.ng_history ?? [];
             if (typeof rawNg === 'string') {
                 try { rawNg = JSON.parse(rawNg); } catch(e) { rawNg = []; }
             }
             if (!Array.isArray(rawNg)) rawNg = [];
 
             // 7. 備註紀錄
-            let rawRemarks = raw.remarks ?? raw.remarks_list ?? raw.dynamic_remarks ?? raw.notes ?? (raw.remark ? [raw.remark] : []);
+            let rawRemarks = raw.remarks ?? raw.remarks_list ?? raw.dynamic_remarks ?? [];
             if (typeof rawRemarks === 'string') {
                 try { rawRemarks = JSON.parse(rawRemarks); } catch(e) { rawRemarks = [rawRemarks]; }
             }
             if (!Array.isArray(rawRemarks)) rawRemarks = [];
 
+            // 8. 膜厚類別復原 (從 JSONB 或 remark_1 回推)
+            let catName = raw.thickness_category || raw.category || (parsedA && parsedA.thickness_category) || '';
+            if (!catName && raw.remark_1 && raw.remark_1.includes('膜厚類別:')) {
+                catName = raw.remark_1.replace('膜厚類別:', '').trim();
+            }
+
             return {
                 id: raw.id,
-                item_name: raw.item_name || raw.name || '未命名構件',
-                image_url: fixImageUrl(raw.image_url || raw.image_base64 || raw.img_url || raw.photo || ''),
-                thickness_category: raw.thickness_category || raw.category || '',
+                item_name: raw.item_name || '未命名構件',
+                image_url: fixImageUrl(raw.image_url || ''),
+                thickness_category: catName,
                 guns: gunsArr,
                 reciprocator: reciprocator,
                 voltage: raw.voltage ?? 70,
@@ -1318,15 +1304,12 @@
             }
         }
 
-        // --- 5. Supabase 讀取與寫入 (修復 Schema Cache 欄位遺失與自動修剪重試) ---
+        // --- 5. Supabase 讀取與寫入 (精準 Schema 白名單過濾修復機制) ---
 
-        /**
-         * 從 Supabase 載入全量數據
-         */
         async function fetchAllCoatingParams() {
             showLoading(true, "連線資料庫讀取資料中...");
             try {
-                const { data, error } = await supabase.from(tableName).select('*').order('id', { ascending: false });
+                const { data, error } = await supabase.from(tableName).select('*').order('created_at', { ascending: false });
                 if (error) {
                     console.error("Supabase Select Error:", error);
                     alert("⚠️ 資料庫讀取失敗: " + error.message);
@@ -1342,9 +1325,6 @@
             }
         }
 
-        /**
-         * 填入構件選單
-         */
         function populateItemDropdown() {
             const selectEl = document.getElementById('itemSelect');
             const catFilter = document.getElementById('queryCategoryFilter').value;
@@ -1368,9 +1348,6 @@
             });
         }
 
-        /**
-         * 上傳圖片至 Google App Script (GAS)
-         */
         async function uploadImageToGas(base64Data, filename) {
             const gasUrl = document.getElementById('cfg_gas_url').value || defaultGasUrl;
             showLoading(true, "上傳構件照片至 Google Drive 中...");
@@ -1383,11 +1360,8 @@
                     })
                 });
                 const resJson = await response.json();
-                if (resJson && resJson.url) {
-                    return fixImageUrl(resJson.url);
-                } else if (resJson && resJson.fileUrl) {
-                    return fixImageUrl(resJson.fileUrl);
-                }
+                if (resJson && resJson.url) return fixImageUrl(resJson.url);
+                if (resJson && resJson.fileUrl) return fixImageUrl(resJson.fileUrl);
                 throw new Error("GAS 回傳不包含有效圖片 URL");
             } catch (e) {
                 console.warn("GAS Upload Warning:", e);
@@ -1398,52 +1372,48 @@
         }
 
         /**
-         * 寫入 Supabase (完美修復：自動捕獲遺失欄位錯誤並自動修剪重試)
+         * 寫入 Supabase (完美修復：比對截圖中的 48 個 Schema 欄位並自動刪除非法 Key)
          */
         async function saveToSupabase(rawPayload) {
             showLoading(true, "資料庫儲存中...");
             try {
                 let payload = JSON.parse(JSON.stringify(rawPayload));
 
-                // 徹底刪除可能引發 schema cache 錯誤的內部虛擬物件屬性
-                const virtualNonColumnKeys = [
-                    'guns', 'auto_guns', 'manual_a', 'manual_b', 
-                    'reciprocator', 'block_a', 'block_b', 'electrical', 
-                    'manual_gun_a', 'manual_gun_b'
-                ];
-                virtualNonColumnKeys.forEach(k => delete payload[k]);
+                // 根據資料庫截圖，確切宣告 coating_params 的 48 個合法 Schema 欄位白名單
+                const KNOWN_COATING_PARAMS_COLUMNS = new Set([
+                    'id', 'item_name', 'gun_1', 'gun_2', 'gun_3', 'gun_4', 'gun_5', 'gun_6', 'gun_7', 'gun_8',
+                    'speed_left', 'speed_right', 'up_turn_left', 'up_turn_right', 'down_turn_left', 'down_turn_right',
+                    'dist_left', 'dist_right', 'voltage', 'current', 'remark_1', 'remark_2', 'remark_3', 'created_at',
+                    'image_url', 'manual_gun_a', 'manual_gun_b', 'thickness_history', 'remarks',
+                    'manual_a_powder', 'manual_a_air', 'manual_a_voltage', 'manual_a_current', 'manual_a_nozzle', 'manual_a_ring', 'manual_a_spray_count',
+                    'manual_b_powder', 'manual_b_air', 'manual_b_voltage', 'manual_b_current', 'manual_b_nozzle', 'manual_b_ring', 'manual_b_spray_count',
+                    'film_thickness_records', 'remarks_list', 'thickness_records', 'ng_records', 'dynamic_remarks'
+                ]);
 
-                let retries = 30; // 允許多次自動剔除與重試
+                // 剔除所有不屬於 coating_params 的非法頂層 Key (如 guns, auto_guns, category 等)
+                Object.keys(payload).forEach(key => {
+                    if (!KNOWN_COATING_PARAMS_COLUMNS.has(key)) {
+                        delete payload[key];
+                    }
+                });
+
+                let retries = 10;
                 while (retries > 0) {
                     const { data, error } = await supabase.from(tableName).upsert([payload]).select();
-                    if (!error) {
-                        return data;
-                    }
+                    if (!error) return data;
 
                     console.warn(`Supabase Upsert Attempt (${retries} left):`, error);
 
-                    // 智慧匹配 Supabase 的欄位遺失 Error Prompt (例如：Could not find the 'guns' column of...)
+                    // 自動修剪未在 Cache 中更新的遺失欄位
                     const colMatch = error.message && error.message.match(/Could not find (?:the )?['"]?([^'"]+)['"]? column/i);
                     if (colMatch && colMatch[1]) {
                         const invalidCol = colMatch[1].trim();
-                        console.warn(`[Auto-Fix] 數據庫不支援欄位: '${invalidCol}'，自動剔除該欄位並重新儲存...`);
+                        console.warn(`[Auto-Fix] 數據庫不支援欄位: '${invalidCol}'，自動剔除...`);
                         delete payload[invalidCol];
                         retries--;
                         continue;
                     }
 
-                    // 若涉及 JSONB 與 Array 的轉碼型態問題，自動修復序列化格式
-                    if (error.message && (error.message.includes('array') || error.message.includes('json') || error.message.includes('type'))) {
-                        ['thickness_history', 'thickness_records', 'film_thickness_records', 'history_thickness', 'ng_history', 'ng_records', 'history_ng', 'remarks', 'remarks_list', 'dynamic_remarks'].forEach(key => {
-                            if (Array.isArray(payload[key])) {
-                                payload[key] = JSON.stringify(payload[key]);
-                            }
-                        });
-                        retries--;
-                        continue;
-                    }
-
-                    // 其他無法處理的錯誤則拋出
                     throw error;
                 }
             } catch (err) {
@@ -1456,9 +1426,6 @@
 
         // --- 6. 畫面渲染邏輯 ---
 
-        /**
-         * 生成手動槍區塊 (Block A / B) 的 HTML 內容
-         */
         function renderManualBlockHTML(block, blockType) {
             if (!block) return '<div class="text-slate-500 italic p-2">無資料</div>';
             
@@ -1466,76 +1433,43 @@
             const colorClass = isA ? 'text-indigo-400' : 'text-teal-400';
             const bgClass = isA ? 'bg-indigo-950/40 border-indigo-800/40' : 'bg-teal-950/40 border-teal-800/40';
 
-            const powder = block.powder ?? 0;
-            const air = block.air ?? 0;
-            const voltage = block.voltage ?? 70;
-            const current = block.current ?? 15;
-            const nozzle = block.nozzle || '扇型';
-            const ring = block.ring || '有';
-            const count = block.spray_count ?? 1;
-
-            const left = block.spray_left ?? 0;
-            const top = block.spray_top ?? 0;
-            const bottom = block.spray_bottom ?? 0;
-            const right = block.spray_right ?? 0;
-
-            const m1 = block.spray_mid_1 ?? 0;
-            const m2 = block.spray_mid_2 ?? 0;
-            const m3 = block.spray_mid_3 ?? 0;
-            const m4 = block.spray_mid_4 ?? 0;
-
             return `
                 <div class="space-y-2.5 font-mono">
                     <div class="grid grid-cols-2 gap-2 text-xs">
-                        <div class="bg-slate-800/90 p-2 rounded-lg border border-slate-700/80 flex justify-between items-center">
-                            <span class="text-slate-400">粉量:</span> <span class="font-bold text-white text-sm">${powder}</span>
-                        </div>
-                        <div class="bg-slate-800/90 p-2 rounded-lg border border-slate-700/80 flex justify-between items-center">
-                            <span class="text-slate-400">風量:</span> <span class="font-bold text-white text-sm">${air}</span>
-                        </div>
-                        <div class="bg-slate-800/90 p-2 rounded-lg border border-slate-700/80 flex justify-between items-center">
-                            <span class="text-slate-400">電壓:</span> <span class="font-bold text-red-400 text-sm">${voltage} kV</span>
-                        </div>
-                        <div class="bg-slate-800/90 p-2 rounded-lg border border-slate-700/80 flex justify-between items-center">
-                            <span class="text-slate-400">電流:</span> <span class="font-bold text-red-400 text-sm">${current} μA</span>
-                        </div>
-                        <div class="bg-slate-800/90 p-2 rounded-lg border border-slate-700/80 flex justify-between items-center">
-                            <span class="text-slate-400">噴嘴:</span> <span class="font-bold text-emerald-400 text-xs sm:text-sm">${nozzle}</span>
-                        </div>
-                        <div class="bg-slate-800/90 p-2 rounded-lg border border-slate-700/80 flex justify-between items-center">
-                            <span class="text-slate-400">靜電環:</span> <span class="font-bold text-emerald-400 text-xs sm:text-sm">${ring}</span>
-                        </div>
+                        <div class="bg-slate-800/90 p-2 rounded-lg border border-slate-700/80 flex justify-between items-center"><span class="text-slate-400">粉量:</span> <span class="font-bold text-white text-sm">${block.powder ?? 0}</span></div>
+                        <div class="bg-slate-800/90 p-2 rounded-lg border border-slate-700/80 flex justify-between items-center"><span class="text-slate-400">風量:</span> <span class="font-bold text-white text-sm">${block.air ?? 0}</span></div>
+                        <div class="bg-slate-800/90 p-2 rounded-lg border border-slate-700/80 flex justify-between items-center"><span class="text-slate-400">電壓:</span> <span class="font-bold text-red-400 text-sm">${block.voltage ?? 70} kV</span></div>
+                        <div class="bg-slate-800/90 p-2 rounded-lg border border-slate-700/80 flex justify-between items-center"><span class="text-slate-400">電流:</span> <span class="font-bold text-red-400 text-sm">${block.current ?? 15} μA</span></div>
+                        <div class="bg-slate-800/90 p-2 rounded-lg border border-slate-700/80 flex justify-between items-center"><span class="text-slate-400">噴嘴:</span> <span class="font-bold text-emerald-400 text-xs sm:text-sm">${block.nozzle || '扇型'}</span></div>
+                        <div class="bg-slate-800/90 p-2 rounded-lg border border-slate-700/80 flex justify-between items-center"><span class="text-slate-400">靜電環:</span> <span class="font-bold text-emerald-400 text-xs sm:text-sm">${block.ring || '有'}</span></div>
                     </div>
 
                     <div class="bg-slate-800/90 p-2.5 rounded-xl border border-slate-700 flex justify-between items-center shadow-inner">
                         <span class="text-amber-300 font-bold text-xs">總噴塗次數:</span>
-                        <span class="text-amber-300 font-black text-lg flash-gold">${count} 次</span>
+                        <span class="text-amber-300 font-black text-lg flash-gold">${block.spray_count ?? 1} 次</span>
                     </div>
 
                     <div class="p-2.5 rounded-xl ${bgClass} border space-y-2">
                         <div class="text-[11px] font-bold ${colorClass}">📍 方位噴塗次數：</div>
                         <div class="grid grid-cols-4 gap-1 text-[11px] text-center">
-                            <div class="bg-slate-900/80 p-1.5 rounded border border-slate-700/60"><span class="text-slate-400 block text-[10px]">左</span> <b class="text-emerald-400 text-xs">${left}</b></div>
-                            <div class="bg-slate-900/80 p-1.5 rounded border border-slate-700/60"><span class="text-slate-400 block text-[10px]">上</span> <b class="text-emerald-400 text-xs">${top}</b></div>
-                            <div class="bg-slate-900/80 p-1.5 rounded border border-slate-700/60"><span class="text-slate-400 block text-[10px]">下</span> <b class="text-emerald-400 text-xs">${bottom}</b></div>
-                            <div class="bg-slate-900/80 p-1.5 rounded border border-slate-700/60"><span class="text-slate-400 block text-[10px]">右</span> <b class="text-emerald-400 text-xs">${right}</b></div>
+                            <div class="bg-slate-900/80 p-1.5 rounded border border-slate-700/60"><span class="text-slate-400 block text-[10px]">左</span> <b class="text-emerald-400 text-xs">${block.spray_left ?? 0}</b></div>
+                            <div class="bg-slate-900/80 p-1.5 rounded border border-slate-700/60"><span class="text-slate-400 block text-[10px]">上</span> <b class="text-emerald-400 text-xs">${block.spray_top ?? 0}</b></div>
+                            <div class="bg-slate-900/80 p-1.5 rounded border border-slate-700/60"><span class="text-slate-400 block text-[10px]">下</span> <b class="text-emerald-400 text-xs">${block.spray_bottom ?? 0}</b></div>
+                            <div class="bg-slate-900/80 p-1.5 rounded border border-slate-700/60"><span class="text-slate-400 block text-[10px]">右</span> <b class="text-emerald-400 text-xs">${block.spray_right ?? 0}</b></div>
                         </div>
 
                         <div class="text-[11px] font-bold text-amber-300 pt-1">🎯 中間分段噴塗次數：</div>
                         <div class="grid grid-cols-4 gap-1 text-[11px] text-center">
-                            <div class="bg-slate-900/80 p-1.5 rounded border border-slate-700/60"><span class="text-slate-400 block text-[10px]">一段</span> <b class="text-amber-400 text-xs">${m1}</b></div>
-                            <div class="bg-slate-900/80 p-1.5 rounded border border-slate-700/60"><span class="text-slate-400 block text-[10px]">二段</span> <b class="text-amber-400 text-xs">${m2}</b></div>
-                            <div class="bg-slate-900/80 p-1.5 rounded border border-slate-700/60"><span class="text-slate-400 block text-[10px]">三段</span> <b class="text-amber-400 text-xs">${m3}</b></div>
-                            <div class="bg-slate-900/80 p-1.5 rounded border border-slate-700/60"><span class="text-slate-400 block text-[10px]">四段</span> <b class="text-amber-400 text-xs">${m4}</b></div>
+                            <div class="bg-slate-900/80 p-1.5 rounded border border-slate-700/60"><span class="text-slate-400 block text-[10px]">一段</span> <b class="text-amber-400 text-xs">${block.spray_mid_1 ?? 0}</b></div>
+                            <div class="bg-slate-900/80 p-1.5 rounded border border-slate-700/60"><span class="text-slate-400 block text-[10px]">二段</span> <b class="text-amber-400 text-xs">${block.spray_mid_2 ?? 0}</b></div>
+                            <div class="bg-slate-900/80 p-1.5 rounded border border-slate-700/60"><span class="text-slate-400 block text-[10px]">三段</span> <b class="text-amber-400 text-xs">${block.spray_mid_3 ?? 0}</b></div>
+                            <div class="bg-slate-900/80 p-1.5 rounded border border-slate-700/60"><span class="text-slate-400 block text-[10px]">四段</span> <b class="text-amber-400 text-xs">${block.spray_mid_4 ?? 0}</b></div>
                         </div>
                     </div>
                 </div>
             `;
         }
 
-        /**
-         * 渲染單一構件詳細資料至查詢看板
-         */
         function renderResultBoard(rawItem) {
             const item = normalizeItemData(rawItem);
             if (!item) return;
@@ -1557,7 +1491,7 @@
                 badge.classList.add('hidden');
             }
 
-            // 2. 構件圖片與防破圖機制處理
+            // 2. 構件圖片
             const imgBox = document.getElementById('imageContainer');
             const imgEl = document.getElementById('q_matched_image');
             const imgLink = document.getElementById('q_matched_image_link');
@@ -1578,18 +1512,18 @@
 
             // 4. 往復機運行參數
             const r = item.reciprocator;
-            document.getElementById('q_speed_left').textContent = r.speed_left ?? '600';
-            document.getElementById('q_speed_right').textContent = r.speed_right ?? '600';
-            document.getElementById('q_up_turn_left').textContent = r.up_turn_left ?? '自動';
-            document.getElementById('q_up_turn_right').textContent = r.up_turn_right ?? '自動';
-            document.getElementById('q_down_turn_left').textContent = r.down_turn_left ?? '自動';
-            document.getElementById('q_down_turn_right').textContent = r.down_turn_right ?? '自動';
-            document.getElementById('q_dist_left').textContent = r.dist_left ?? '380';
-            document.getElementById('q_dist_right').textContent = r.dist_right ?? '420';
+            document.getElementById('q_speed_left').textContent = r.speed_left;
+            document.getElementById('q_speed_right').textContent = r.speed_right;
+            document.getElementById('q_up_turn_left').textContent = r.up_turn_left;
+            document.getElementById('q_up_turn_right').textContent = r.up_turn_right;
+            document.getElementById('q_down_turn_left').textContent = r.down_turn_left;
+            document.getElementById('q_down_turn_right').textContent = r.down_turn_right;
+            document.getElementById('q_dist_left').textContent = r.dist_left;
+            document.getElementById('q_dist_right').textContent = r.dist_right;
 
             // 5. 電壓電流
-            document.getElementById('q_voltage').textContent = item.voltage ?? 70;
-            document.getElementById('q_current').textContent = item.current ?? 15;
+            document.getElementById('q_voltage').textContent = item.voltage;
+            document.getElementById('q_current').textContent = item.current;
 
             // 6. 手動槍區塊 A & B
             document.getElementById('q_manual_a_display').innerHTML = renderManualBlockHTML(item.manual_a, 'A');
@@ -1639,9 +1573,6 @@
             }
         }
 
-        /**
-         * 渲染全構件膜厚數據 Modal 表格
-         */
         function renderThicknessModalTable() {
             const tableBody = document.getElementById('thicknessTableBody');
             if (!tableBody) return;
@@ -1700,10 +1631,9 @@
             }
         }
 
-        // --- 7. 表單微調與動態資料維護 (Thickness, NG, Remark) ---
+        // --- 7. 表單微調與動態資料維護 ---
 
         function updateFormDynamicLists() {
-            // 1. 膜厚列表
             const thContainer = document.getElementById('thicknessList');
             thContainer.innerHTML = currentThicknessRecords.map((rec, idx) => `
                 <div class="bg-slate-900/80 p-2 rounded-lg border border-slate-700 flex justify-between items-center text-xs">
@@ -1713,7 +1643,6 @@
                 </div>
             `).join('');
 
-            // 2. NG 列表
             const ngContainer = document.getElementById('ngList');
             ngContainer.innerHTML = currentNgRecords.map((rec, idx) => `
                 <div class="bg-slate-900/80 p-2 rounded-lg border border-slate-700 flex justify-between items-center text-xs">
@@ -1724,7 +1653,6 @@
                 </div>
             `).join('');
 
-            // 3. 備註列表
             const remContainer = document.getElementById('remarksList');
             remContainer.innerHTML = currentRemarks.map((txt, idx) => `
                 <div class="bg-slate-900/80 p-2 rounded-lg border border-slate-700 flex justify-between items-center text-xs">
@@ -1743,9 +1671,6 @@
 
         // --- 8. AI 影像分析與 Cropper.js 邏輯 ---
 
-        /**
-         * 呼叫 NVIDIA API Vision 進行品名辨識或構件比對
-         */
         async function analyzeImageWithNvidiaAi(base64Image, mode) {
             const apiKey = document.getElementById('cfg_nvidia_key').value || defaultNvidiaKey;
             const modelName = document.getElementById('cfg_ai_model').value || defaultAiModel;
@@ -1809,9 +1734,6 @@
             }
         }
 
-        /**
-         * 開啟 Cropper Modal 準備裁切
-         */
         function openCropper(file, targetType) {
             cropTargetType = targetType;
             const reader = new FileReader();
@@ -1833,31 +1755,25 @@
         // --- 9. 事件監聽器與初始化綁定 ---
 
         document.addEventListener('DOMContentLoaded', () => {
-            // 初始化載入 API 設定
             document.getElementById('cfg_nvidia_key').value = localStorage.getItem('cfg_nvidia_key') || defaultNvidiaKey;
             document.getElementById('cfg_gas_url').value = localStorage.getItem('cfg_gas_url') || defaultGasUrl;
             document.getElementById('cfg_ai_model').value = localStorage.getItem('cfg_ai_model') || defaultAiModel;
 
-            // 預設日期設定
             const todayStr = new Date().toISOString().split('T')[0];
             document.getElementById('th_date').value = todayStr;
             document.getElementById('ng_date').value = todayStr;
 
-            // 載入資料庫
             fetchAllCoatingParams();
 
-            // 語言切換
             document.getElementById('langSelect').addEventListener('change', (e) => {
                 setLanguage(e.target.value);
                 populateItemDropdown();
             });
 
-            // 類別過濾器觸發
             document.getElementById('queryCategoryFilter').addEventListener('change', () => {
                 populateItemDropdown();
             });
 
-            // 選取構件觸發渲染
             document.getElementById('itemSelect').addEventListener('change', (e) => {
                 const id = e.target.value;
                 if (!id) {
@@ -1869,7 +1785,6 @@
                 if (raw) renderResultBoard(raw);
             });
 
-            // 頁籤切換邏輯
             const tabQueryBtn = document.getElementById('tabQueryBtn');
             const tabRegisterBtn = document.getElementById('tabRegisterBtn');
             const querySection = document.getElementById('querySection');
@@ -1889,7 +1804,6 @@
                 querySection.classList.add('hidden');
             });
 
-            // 按鈕數值微調 (+ / -) 邏輯處理
             document.querySelectorAll('.btn-adj').forEach(btn => {
                 btn.addEventListener('click', () => {
                     const targetId = btn.getAttribute('data-target');
@@ -1908,7 +1822,6 @@
                 });
             });
 
-            // 換向自動填入按鈕
             document.getElementById('btnFillAuto').addEventListener('click', () => {
                 document.getElementById('up_turn_left').value = '自動';
                 document.getElementById('up_turn_right').value = '自動';
@@ -1916,7 +1829,6 @@
                 document.getElementById('down_turn_right').value = '自動';
             });
 
-            // 相機拍照輸入觸發
             document.getElementById('btnAiSearchTrigger').addEventListener('click', () => {
                 document.getElementById('cameraInput').click();
             });
@@ -1937,7 +1849,6 @@
                 }
             });
 
-            // Cropper 確認按鈕
             document.getElementById('btnCropConfirm').addEventListener('click', () => {
                 if (!cropperObj) return;
                 const canvas = cropperObj.getCroppedCanvas({ maxWidth: 1024, maxHeight: 1024 });
@@ -1958,7 +1869,6 @@
                 }
             });
 
-            // 動態欄位新增按鈕
             document.getElementById('btnAddThickness').addEventListener('click', () => {
                 const date = document.getElementById('th_date').value;
                 const f_min = document.getElementById('th_f_min').value;
@@ -1992,7 +1902,6 @@
                 }
             });
 
-            // 預覽建檔照片
             document.getElementById('reg_image').addEventListener('change', (e) => {
                 if (e.target.files && e.target.files[0]) {
                     const reader = new FileReader();
@@ -2004,7 +1913,7 @@
                 }
             });
 
-            // 表單提交 (完美相容雙 Schema：建立完整 Payload 傳送，自動容錯清理不支援欄位)
+            // 表單提交 (完美精準匹配 Supabase coating_params 表欄位)
             document.getElementById('paramForm').addEventListener('submit', async (e) => {
                 e.preventDefault();
 
@@ -2025,103 +1934,112 @@
                     });
                 } else if (editingItemId) {
                     const existing = allParamsData.find(d => String(d.id) === String(editingItemId));
-                    if (existing) uploadedUrl = existing.image_url || existing.image_base64 || "";
+                    if (existing) uploadedUrl = existing.image_url || "";
                 }
 
-                // 構建相容不同版本 Supabase 資料表的數據 Payload
+                const catVal = document.getElementById('thickness_category').value;
+
+                // 構建手動槍 A/B 詳細 JSON 物件 (內含膜厚類別與細項噴塗次數)
+                const manualAObj = {
+                    powder: parseInt(document.getElementById('a_powder').value, 10) || 0,
+                    air: parseInt(document.getElementById('a_air').value, 10) || 0,
+                    voltage: parseInt(document.getElementById('a_voltage').value, 10) || 70,
+                    current: parseInt(document.getElementById('a_current').value, 10) || 15,
+                    nozzle: document.getElementById('a_nozzle').value || '扇型',
+                    ring: document.getElementById('a_ring').value || '有',
+                    spray_count: parseInt(document.getElementById('a_spray_count').value, 10) || 1,
+                    spray_left: parseInt(document.getElementById('a_spray_left').value, 10) || 0,
+                    spray_top: parseInt(document.getElementById('a_spray_top').value, 10) || 0,
+                    spray_bottom: parseInt(document.getElementById('a_spray_bottom').value, 10) || 0,
+                    spray_right: parseInt(document.getElementById('a_spray_right').value, 10) || 0,
+                    spray_mid_1: parseInt(document.getElementById('a_spray_mid_1').value, 10) || 0,
+                    spray_mid_2: parseInt(document.getElementById('a_spray_mid_2').value, 10) || 0,
+                    spray_mid_3: parseInt(document.getElementById('a_spray_mid_3').value, 10) || 0,
+                    spray_mid_4: parseInt(document.getElementById('a_spray_mid_4').value, 10) || 0,
+                    thickness_category: catVal
+                };
+
+                const manualBObj = {
+                    powder: parseInt(document.getElementById('b_powder').value, 10) || 0,
+                    air: parseInt(document.getElementById('b_air').value, 10) || 0,
+                    voltage: parseInt(document.getElementById('b_voltage').value, 10) || 70,
+                    current: parseInt(document.getElementById('b_current').value, 10) || 15,
+                    nozzle: document.getElementById('b_nozzle').value || '扇型',
+                    ring: document.getElementById('b_ring').value || '有',
+                    spray_count: parseInt(document.getElementById('b_spray_count').value, 10) || 1,
+                    spray_left: parseInt(document.getElementById('b_spray_left').value, 10) || 0,
+                    spray_top: parseInt(document.getElementById('b_spray_top').value, 10) || 0,
+                    spray_bottom: parseInt(document.getElementById('b_spray_bottom').value, 10) || 0,
+                    spray_right: parseInt(document.getElementById('b_spray_right').value, 10) || 0,
+                    spray_mid_1: parseInt(document.getElementById('b_spray_mid_1').value, 10) || 0,
+                    spray_mid_2: parseInt(document.getElementById('b_spray_mid_2').value, 10) || 0,
+                    spray_mid_3: parseInt(document.getElementById('b_spray_mid_3').value, 10) || 0,
+                    spray_mid_4: parseInt(document.getElementById('b_spray_mid_4').value, 10) || 0,
+                    thickness_category: catVal
+                };
+
+                // 將「自動」或非數字字串安全的轉成 int4 相容的整數數字 0
+                const parseRecipInt = (val) => {
+                    const parsed = parseInt(val, 10);
+                    return isNaN(parsed) ? 0 : parsed;
+                };
+
+                // 構建純淨的 48 欄位 Payload
                 const payload = {
                     item_name: itemName,
                     image_url: fixImageUrl(uploadedUrl),
-                    image_base64: fixImageUrl(uploadedUrl),
-                    thickness_category: document.getElementById('thickness_category').value,
-                    category: document.getElementById('thickness_category').value,
                     
-                    // 自動槍 1~8 展平欄位
-                    gun_1: document.getElementById('gun_1').value || '0',
-                    gun_2: document.getElementById('gun_2').value || '0',
-                    gun_3: document.getElementById('gun_3').value || '0',
-                    gun_4: document.getElementById('gun_4').value || '0',
-                    gun_5: document.getElementById('gun_5').value || '0',
-                    gun_6: document.getElementById('gun_6').value || '0',
-                    gun_7: document.getElementById('gun_7').value || '0',
-                    gun_8: document.getElementById('gun_8').value || '0',
+                    gun_1: parseInt(document.getElementById('gun_1').value, 10) || 0,
+                    gun_2: parseInt(document.getElementById('gun_2').value, 10) || 0,
+                    gun_3: parseInt(document.getElementById('gun_3').value, 10) || 0,
+                    gun_4: parseInt(document.getElementById('gun_4').value, 10) || 0,
+                    gun_5: parseInt(document.getElementById('gun_5').value, 10) || 0,
+                    gun_6: parseInt(document.getElementById('gun_6').value, 10) || 0,
+                    gun_7: parseInt(document.getElementById('gun_7').value, 10) || 0,
+                    gun_8: parseInt(document.getElementById('gun_8').value, 10) || 0,
 
-                    // 往復機運行參數
-                    speed_left: document.getElementById('speed_left').value,
-                    speed_right: document.getElementById('speed_right').value,
-                    up_turn_left: document.getElementById('up_turn_left').value,
-                    up_turn_right: document.getElementById('up_turn_right').value,
-                    down_turn_left: document.getElementById('down_turn_left').value,
-                    down_turn_right: document.getElementById('down_turn_right').value,
-                    dist_left: document.getElementById('dist_left').value,
-                    dist_right: document.getElementById('dist_right').value,
+                    speed_left: parseRecipInt(document.getElementById('speed_left').value),
+                    speed_right: parseRecipInt(document.getElementById('speed_right').value),
+                    up_turn_left: parseRecipInt(document.getElementById('up_turn_left').value),
+                    up_turn_right: parseRecipInt(document.getElementById('up_turn_right').value),
+                    down_turn_left: parseRecipInt(document.getElementById('down_turn_left').value),
+                    down_turn_right: parseRecipInt(document.getElementById('down_turn_right').value),
+                    dist_left: parseRecipInt(document.getElementById('dist_left').value),
+                    dist_right: parseRecipInt(document.getElementById('dist_right').value),
 
-                    voltage: document.getElementById('voltage').value,
-                    current: document.getElementById('current').value,
+                    voltage: parseInt(document.getElementById('voltage').value, 10) || 70,
+                    current: parseInt(document.getElementById('current').value, 10) || 15,
 
-                    // 區塊 A 面 (同時提供 manual_a_ 與 a_ 前綴欄位)
-                    manual_a_powder: parseInt(document.getElementById('a_powder').value, 10) || 0,
-                    manual_a_air: parseInt(document.getElementById('a_air').value, 10) || 0,
-                    manual_a_voltage: parseInt(document.getElementById('a_voltage').value, 10) || 70,
-                    manual_a_current: parseInt(document.getElementById('a_current').value, 10) || 15,
-                    manual_a_nozzle: document.getElementById('a_nozzle').value,
-                    manual_a_ring: document.getElementById('a_ring').value,
-                    manual_a_spray_count: parseInt(document.getElementById('a_spray_count').value, 10) || 1,
-                    manual_a_spray_left: parseInt(document.getElementById('a_spray_left').value, 10) || 0,
-                    manual_a_spray_top: parseInt(document.getElementById('a_spray_top').value, 10) || 0,
-                    manual_a_spray_bottom: parseInt(document.getElementById('a_spray_bottom').value, 10) || 0,
-                    manual_a_spray_right: parseInt(document.getElementById('a_spray_right').value, 10) || 0,
-                    manual_a_spray_mid_1: parseInt(document.getElementById('a_spray_mid_1').value, 10) || 0,
-                    manual_a_spray_mid_2: parseInt(document.getElementById('a_spray_mid_2').value, 10) || 0,
-                    manual_a_spray_mid_3: parseInt(document.getElementById('a_spray_mid_3').value, 10) || 0,
-                    manual_a_spray_mid_4: parseInt(document.getElementById('a_spray_mid_4').value, 10) || 0,
+                    manual_a_powder: manualAObj.powder,
+                    manual_a_air: manualAObj.air,
+                    manual_a_voltage: manualAObj.voltage,
+                    manual_a_current: manualAObj.current,
+                    manual_a_nozzle: manualAObj.nozzle,
+                    manual_a_ring: manualAObj.ring,
+                    manual_a_spray_count: manualAObj.spray_count,
 
-                    a_powder: parseInt(document.getElementById('a_powder').value, 10) || 0,
-                    a_air: parseInt(document.getElementById('a_air').value, 10) || 0,
-                    a_voltage: parseInt(document.getElementById('a_voltage').value, 10) || 70,
-                    a_current: parseInt(document.getElementById('a_current').value, 10) || 15,
-                    a_nozzle: document.getElementById('a_nozzle').value,
-                    a_ring: document.getElementById('a_ring').value,
-                    a_spray_count: parseInt(document.getElementById('a_spray_count').value, 10) || 1,
+                    manual_b_powder: manualBObj.powder,
+                    manual_b_air: manualBObj.air,
+                    manual_b_voltage: manualBObj.voltage,
+                    manual_b_current: manualBObj.current,
+                    manual_b_nozzle: manualBObj.nozzle,
+                    manual_b_ring: manualBObj.ring,
+                    manual_b_spray_count: manualBObj.spray_count,
 
-                    // 區塊 B 面 (同時提供 manual_b_ 與 b_ 前綴欄位)
-                    manual_b_powder: parseInt(document.getElementById('b_powder').value, 10) || 0,
-                    manual_b_air: parseInt(document.getElementById('b_air').value, 10) || 0,
-                    manual_b_voltage: parseInt(document.getElementById('b_voltage').value, 10) || 70,
-                    manual_b_current: parseInt(document.getElementById('b_current').value, 10) || 15,
-                    manual_b_nozzle: document.getElementById('b_nozzle').value,
-                    manual_b_ring: document.getElementById('b_ring').value,
-                    manual_b_spray_count: parseInt(document.getElementById('b_spray_count').value, 10) || 1,
-                    manual_b_spray_left: parseInt(document.getElementById('b_spray_left').value, 10) || 0,
-                    manual_b_spray_top: parseInt(document.getElementById('b_spray_top').value, 10) || 0,
-                    manual_b_spray_bottom: parseInt(document.getElementById('b_spray_bottom').value, 10) || 0,
-                    manual_b_spray_right: parseInt(document.getElementById('b_spray_right').value, 10) || 0,
-                    manual_b_spray_mid_1: parseInt(document.getElementById('b_spray_mid_1').value, 10) || 0,
-                    manual_b_spray_mid_2: parseInt(document.getElementById('b_spray_mid_2').value, 10) || 0,
-                    manual_b_spray_mid_3: parseInt(document.getElementById('b_spray_mid_3').value, 10) || 0,
-                    manual_b_spray_mid_4: parseInt(document.getElementById('b_spray_mid_4').value, 10) || 0,
+                    manual_gun_a: manualAObj,
+                    manual_gun_b: manualBObj,
 
-                    b_powder: parseInt(document.getElementById('b_powder').value, 10) || 0,
-                    b_air: parseInt(document.getElementById('b_air').value, 10) || 0,
-                    b_voltage: parseInt(document.getElementById('b_voltage').value, 10) || 70,
-                    b_current: parseInt(document.getElementById('b_current').value, 10) || 15,
-                    b_nozzle: document.getElementById('b_nozzle').value,
-                    b_ring: document.getElementById('b_ring').value,
-                    b_spray_count: parseInt(document.getElementById('b_spray_count').value, 10) || 1,
-
-                    // 膜厚、NG、備註歷程紀錄 (涵蓋不同 Schema 名稱)
                     thickness_history: currentThicknessRecords,
                     thickness_records: currentThicknessRecords,
                     film_thickness_records: currentThicknessRecords,
-                    history_thickness: currentThicknessRecords,
 
-                    ng_history: currentNgRecords,
                     ng_records: currentNgRecords,
-                    history_ng: currentNgRecords,
 
                     remarks: currentRemarks,
                     remarks_list: currentRemarks,
-                    dynamic_remarks: currentRemarks
+                    dynamic_remarks: currentRemarks,
+
+                    remark_1: catVal ? `膜厚類別: ${catVal}` : ''
                 };
 
                 if (editingItemId) payload.id = editingItemId;
@@ -2145,7 +2063,6 @@
                 }
             });
 
-            // 編輯構件按鈕
             document.getElementById('btnEditItem').addEventListener('click', () => {
                 const selectVal = document.getElementById('itemSelect').value;
                 if (!selectVal) return;
@@ -2163,19 +2080,18 @@
                 }
 
                 const r = item.reciprocator;
-                document.getElementById('speed_left').value = r.speed_left ?? '600';
-                document.getElementById('speed_right').value = r.speed_right ?? '600';
-                document.getElementById('up_turn_left').value = r.up_turn_left ?? '自動';
-                document.getElementById('up_turn_right').value = r.up_turn_right ?? '自動';
-                document.getElementById('down_turn_left').value = r.down_turn_left ?? '自動';
-                document.getElementById('down_turn_right').value = r.down_turn_right ?? '自動';
-                document.getElementById('dist_left').value = r.dist_left ?? '380';
-                document.getElementById('dist_right').value = r.dist_right ?? '420';
+                document.getElementById('speed_left').value = r.speed_left;
+                document.getElementById('speed_right').value = r.speed_right;
+                document.getElementById('up_turn_left').value = r.up_turn_left;
+                document.getElementById('up_turn_right').value = r.up_turn_right;
+                document.getElementById('down_turn_left').value = r.down_turn_left;
+                document.getElementById('down_turn_right').value = r.down_turn_right;
+                document.getElementById('dist_left').value = r.dist_left;
+                document.getElementById('dist_right').value = r.dist_right;
 
-                document.getElementById('voltage').value = item.voltage ?? 70;
-                document.getElementById('current').value = item.current ?? 15;
+                document.getElementById('voltage').value = item.voltage;
+                document.getElementById('current').value = item.current;
 
-                // A面
                 const ma = item.manual_a;
                 document.getElementById('a_powder').value = ma.powder;
                 document.getElementById('a_air').value = ma.air;
@@ -2193,7 +2109,6 @@
                 document.getElementById('a_spray_mid_3').value = ma.spray_mid_3;
                 document.getElementById('a_spray_mid_4').value = ma.spray_mid_4;
 
-                // B面
                 const mb = item.manual_b;
                 document.getElementById('b_powder').value = mb.powder;
                 document.getElementById('b_air').value = mb.air;
@@ -2225,7 +2140,6 @@
                 tabRegisterBtn.click();
             });
 
-            // 取消編輯按鈕
             document.getElementById('cancelEditBtn').addEventListener('click', () => {
                 editingItemId = null;
                 document.getElementById('paramForm').reset();
@@ -2237,7 +2151,6 @@
                 tabQueryBtn.click();
             });
 
-            // 刪除構件按鈕
             document.getElementById('btnDeleteItem').addEventListener('click', async () => {
                 const selectVal = document.getElementById('itemSelect').value;
                 if (!selectVal) return;
@@ -2258,7 +2171,6 @@
                 }
             });
 
-            // 膜厚總覽 Modal 控制
             document.getElementById('btnOpenThicknessModal').addEventListener('click', () => {
                 renderThicknessModalTable();
                 document.getElementById('thicknessTableModal').classList.remove('hidden');
@@ -2271,7 +2183,6 @@
             document.getElementById('thicknessModalSearch').addEventListener('input', renderThicknessModalTable);
             document.getElementById('thicknessModalCategoryFilter').addEventListener('change', renderThicknessModalTable);
 
-            // API 設定 Modal 控制
             document.getElementById('btnShowSettings').addEventListener('click', () => {
                 document.getElementById('settingsModal').classList.remove('hidden');
             });
@@ -2294,7 +2205,6 @@
                 alert("⚙️ API 設定已儲存至本機快取！");
             });
 
-            // 印尼語提示 Modal
             document.getElementById('btnLangInfo').addEventListener('click', () => {
                 document.getElementById('langInfoModal').classList.remove('hidden');
             });

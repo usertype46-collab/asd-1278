@@ -4,7 +4,7 @@
     <!-- ========================================================================================== -->
     <!-- 百富粉體塗裝自動槍參數系統 / Sistem Parameter Pelapisan Serbuk Baifu                        -->
     <!-- Architecture: Pure Frontend AI Architecture (Respan Span 01 Lite Enabled)                  -->
-    <!-- 完美修復版本：已修復 Supabase 讀取/寫入失敗、Schema 欄位錯位與 Google Drive 圖片直鏈轉碼機制 -->
+    <!-- 完美修復版本：修復 Supabase 儲存 Cache 欄位錯位、Schema 相容與自動自動重試剔除無效欄位機制     -->
     <!-- ========================================================================================== -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -796,7 +796,7 @@
     </div>
 
     <!-- ========================================================================================== -->
-    <!-- 核心 JavaScript 邏輯 (包含 Supabase 雙重 Schema 解析與全方位破圖/儲存修復機制)           -->
+    <!-- 核心 JavaScript 邏輯 (包含 Supabase 雙重 Schema 解析與自動修剪非 Schema 欄位之修復機制)      -->
     <!-- ========================================================================================== -->
     <script type="module">
         import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
@@ -827,7 +827,7 @@
         // --- 2. 多國語言字典設定 (i18n) ---
         const i18nDict = {
             tw: {
-                app_title: "百富粉體塗裝自動槍參數系統",
+                app_title: "百富粉體塗裝參數系統",
                 sub_title: "Pure Frontend AI Architecture (Respan Span 01 Lite Enabled)",
                 btn_thickness_summary: "📊 膜厚紀錄總覽",
                 btn_api_settings: "⚙️ 系統 API 設定",
@@ -1153,13 +1153,14 @@
 
         /**
          * 雙重 Schema 自動相容解析器 (Normalize Data)
-         * 全面支援膜厚歷史、槍號與手動槍欄位的多種異構儲存格式
+         * 全面支援 powder_params 與 coating_params 的異構數據結構
          */
         function normalizeItemData(raw) {
             if (!raw) return null;
 
-            // 1. 自動槍粉量 guns 處理
-            const gunsArr = Array.isArray(raw.guns) ? raw.guns : safeParseJSON(raw.guns) || [
+            // 1. 自動槍粉量 guns 處理 (相容 JSONB auto_guns 或展平欄位 gun_1 ~ gun_8)
+            const parsedAutoGuns = safeParseJSON(raw.auto_guns) || safeParseJSON(raw.guns);
+            const gunsArr = Array.isArray(parsedAutoGuns) ? parsedAutoGuns : [
                 raw.gun_1 ?? raw.gun1 ?? '0',
                 raw.gun_2 ?? raw.gun2 ?? '0',
                 raw.gun_3 ?? raw.gun3 ?? '0',
@@ -1170,44 +1171,44 @@
                 raw.gun_8 ?? raw.gun8 ?? '0'
             ];
 
-            // 2. 區塊 A 手動槍參數處理
-            const parsedA = safeParseJSON(raw.manual_a) || safeParseJSON(raw.block_a) || {};
+            // 2. 區塊 A 手動槍參數處理 (相容 manual_a JSONB 或展平手動槍欄位)
+            const parsedA = safeParseJSON(raw.manual_a) || safeParseJSON(raw.manual_gun_a) || safeParseJSON(raw.block_a) || {};
             const manualA = {
-                powder: parsedA.powder ?? raw.a_powder ?? raw.manual_a_powder ?? 0,
-                air: parsedA.air ?? raw.a_air ?? raw.manual_a_air ?? 0,
-                voltage: parsedA.voltage ?? raw.a_voltage ?? raw.manual_a_voltage ?? 70,
-                current: parsedA.current ?? raw.a_current ?? raw.manual_a_current ?? 15,
-                nozzle: parsedA.nozzle || raw.a_nozzle || raw.manual_a_nozzle || '扇型',
-                ring: parsedA.ring || raw.a_ring || raw.manual_a_ring || '有',
-                spray_count: parsedA.spray_count ?? raw.a_spray_count ?? raw.manual_a_spray_count ?? 1,
-                spray_left: parsedA.spray_left ?? raw.a_spray_left ?? 0,
-                spray_top: parsedA.spray_top ?? raw.a_spray_top ?? 0,
-                spray_bottom: parsedA.spray_bottom ?? raw.a_spray_bottom ?? 0,
-                spray_right: parsedA.spray_right ?? raw.a_spray_right ?? 0,
-                spray_mid_1: parsedA.spray_mid_1 ?? raw.a_spray_mid_1 ?? 0,
-                spray_mid_2: parsedA.spray_mid_2 ?? raw.a_spray_mid_2 ?? 0,
-                spray_mid_3: parsedA.spray_mid_3 ?? raw.a_spray_mid_3 ?? 0,
-                spray_mid_4: parsedA.spray_mid_4 ?? raw.a_spray_mid_4 ?? 0
+                powder: parsedA.powder ?? raw.manual_a_powder ?? raw.a_powder ?? 0,
+                air: parsedA.air ?? raw.manual_a_air ?? raw.a_air ?? 0,
+                voltage: parsedA.voltage ?? raw.manual_a_voltage ?? raw.a_voltage ?? 70,
+                current: parsedA.current ?? raw.manual_a_current ?? raw.a_current ?? 15,
+                nozzle: parsedA.nozzle || raw.manual_a_nozzle || raw.a_nozzle || '扇型',
+                ring: parsedA.ring || raw.manual_a_ring || raw.a_ring || '有',
+                spray_count: parsedA.spray_count ?? raw.manual_a_spray_count ?? raw.a_spray_count ?? 1,
+                spray_left: parsedA.spray_left ?? raw.manual_a_spray_left ?? raw.a_spray_left ?? 0,
+                spray_top: parsedA.spray_top ?? raw.manual_a_spray_top ?? raw.a_spray_top ?? 0,
+                spray_bottom: parsedA.spray_bottom ?? raw.manual_a_spray_bottom ?? raw.a_spray_bottom ?? 0,
+                spray_right: parsedA.spray_right ?? raw.manual_a_spray_right ?? raw.a_spray_right ?? 0,
+                spray_mid_1: parsedA.spray_mid_1 ?? raw.manual_a_spray_mid_1 ?? raw.a_spray_mid_1 ?? 0,
+                spray_mid_2: parsedA.spray_mid_2 ?? raw.manual_a_spray_mid_2 ?? raw.a_spray_mid_2 ?? 0,
+                spray_mid_3: parsedA.spray_mid_3 ?? raw.manual_a_spray_mid_3 ?? raw.a_spray_mid_3 ?? 0,
+                spray_mid_4: parsedA.spray_mid_4 ?? raw.manual_a_spray_mid_4 ?? raw.a_spray_mid_4 ?? 0
             };
 
-            // 3. 區塊 B 手動槍參數處理
-            const parsedB = safeParseJSON(raw.manual_b) || safeParseJSON(raw.block_b) || {};
+            // 3. 區塊 B 手動槍參數處理 (相容 manual_b JSONB 或展平手動槍欄位)
+            const parsedB = safeParseJSON(raw.manual_b) || safeParseJSON(raw.manual_gun_b) || safeParseJSON(raw.block_b) || {};
             const manualB = {
-                powder: parsedB.powder ?? raw.b_powder ?? raw.manual_b_powder ?? 0,
-                air: parsedB.air ?? raw.b_air ?? raw.manual_b_air ?? 0,
-                voltage: parsedB.voltage ?? raw.b_voltage ?? raw.manual_b_voltage ?? 70,
-                current: parsedB.current ?? raw.b_current ?? raw.manual_b_current ?? 15,
-                nozzle: parsedB.nozzle || raw.b_nozzle || raw.manual_b_nozzle || '扇型',
-                ring: parsedB.ring || raw.b_ring || raw.manual_b_ring || '有',
-                spray_count: parsedB.spray_count ?? raw.b_spray_count ?? raw.manual_b_spray_count ?? 1,
-                spray_left: parsedB.spray_left ?? raw.b_spray_left ?? 0,
-                spray_top: parsedB.spray_top ?? raw.b_spray_top ?? 0,
-                spray_bottom: parsedB.spray_bottom ?? raw.b_spray_bottom ?? 0,
-                spray_right: parsedB.spray_right ?? raw.b_spray_right ?? 0,
-                spray_mid_1: parsedB.spray_mid_1 ?? raw.b_spray_mid_1 ?? 0,
-                spray_mid_2: parsedB.spray_mid_2 ?? raw.b_spray_mid_2 ?? 0,
-                spray_mid_3: parsedB.spray_mid_3 ?? raw.b_spray_mid_3 ?? 0,
-                spray_mid_4: parsedB.spray_mid_4 ?? raw.b_spray_mid_4 ?? 0
+                powder: parsedB.powder ?? raw.manual_b_powder ?? raw.b_powder ?? 0,
+                air: parsedB.air ?? raw.manual_b_air ?? raw.b_air ?? 0,
+                voltage: parsedB.voltage ?? raw.manual_b_voltage ?? raw.b_voltage ?? 70,
+                current: parsedB.current ?? raw.manual_b_current ?? raw.b_current ?? 15,
+                nozzle: parsedB.nozzle || raw.manual_b_nozzle || raw.b_nozzle || '扇型',
+                ring: parsedB.ring || raw.manual_b_ring || raw.b_ring || '有',
+                spray_count: parsedB.spray_count ?? raw.manual_b_spray_count ?? raw.b_spray_count ?? 1,
+                spray_left: parsedB.spray_left ?? raw.manual_b_spray_left ?? raw.b_spray_left ?? 0,
+                spray_top: parsedB.spray_top ?? raw.manual_b_spray_top ?? raw.b_spray_top ?? 0,
+                spray_bottom: parsedB.spray_bottom ?? raw.manual_b_spray_bottom ?? raw.b_spray_bottom ?? 0,
+                spray_right: parsedB.spray_right ?? raw.manual_b_spray_right ?? raw.b_spray_right ?? 0,
+                spray_mid_1: parsedB.spray_mid_1 ?? raw.manual_b_spray_mid_1 ?? raw.b_spray_mid_1 ?? 0,
+                spray_mid_2: parsedB.spray_mid_2 ?? raw.manual_b_spray_mid_2 ?? raw.b_spray_mid_2 ?? 0,
+                spray_mid_3: parsedB.spray_mid_3 ?? raw.manual_b_spray_mid_3 ?? raw.b_spray_mid_3 ?? 0,
+                spray_mid_4: parsedB.spray_mid_4 ?? raw.manual_b_spray_mid_4 ?? raw.b_spray_mid_4 ?? 0
             };
 
             // 4. 往復機運行參數 reciprocator 處理
@@ -1223,8 +1224,8 @@
                 dist_right: parsedRecip.dist_right ?? raw.dist_right ?? '420'
             };
 
-            // 5. 膜厚歷史紀錄 (修復圖 123623.jpg：多重 Schema 相容解析)
-            let rawTh = raw.thickness_history ?? raw.thickness_records ?? raw.film_thickness ?? raw.thickness ?? raw.th_history ?? raw.thickness_data ?? raw.records ?? [];
+            // 5. 膜厚歷史紀錄的多重欄位名稱讀取與相容
+            let rawTh = raw.thickness_history ?? raw.history_thickness ?? raw.film_thickness_records ?? raw.thickness_records ?? raw.film_thickness ?? raw.thickness ?? [];
             if (typeof rawTh === 'string') {
                 try { rawTh = JSON.parse(rawTh); } catch(e) { rawTh = []; }
             }
@@ -1259,31 +1260,15 @@
                 };
             }).filter(Boolean);
 
-            // 若陣列為空但該 Row 含有單筆膜厚欄位，自動生成單筆歷史紀錄
-            if (thicknessHistory.length === 0) {
-                const hasSingleTh = raw.th_f_min || raw.f_min || raw.front_min || raw.th_m_min || raw.m_min || raw.mid_min;
-                if (hasSingleTh) {
-                    thicknessHistory.push({
-                        date: raw.th_date || raw.date || (raw.created_at ? raw.created_at.split('T')[0] : '-'),
-                        f_min: raw.th_f_min ?? raw.f_min ?? raw.front_min ?? '-',
-                        f_max: raw.th_f_max ?? raw.f_max ?? raw.front_max ?? '-',
-                        m_min: raw.th_m_min ?? raw.m_min ?? raw.mid_min ?? '-',
-                        m_max: raw.th_m_max ?? raw.m_max ?? raw.mid_max ?? '-',
-                        r_min: raw.th_r_min ?? raw.r_min ?? raw.rear_min ?? '-',
-                        r_max: raw.th_r_max ?? raw.r_max ?? raw.rear_max ?? '-'
-                    });
-                }
-            }
-
             // 6. NG 歷史紀錄
-            let rawNg = raw.ng_history ?? raw.ng_records ?? raw.ng_list ?? raw.ng ?? [];
+            let rawNg = raw.ng_history ?? raw.history_ng ?? raw.ng_records ?? raw.ng_list ?? [];
             if (typeof rawNg === 'string') {
                 try { rawNg = JSON.parse(rawNg); } catch(e) { rawNg = []; }
             }
             if (!Array.isArray(rawNg)) rawNg = [];
 
             // 7. 備註紀錄
-            let rawRemarks = raw.remarks ?? raw.remark_list ?? raw.notes ?? raw.remarks_history ?? (raw.remark ? [raw.remark] : []);
+            let rawRemarks = raw.remarks ?? raw.remarks_list ?? raw.dynamic_remarks ?? raw.notes ?? (raw.remark ? [raw.remark] : []);
             if (typeof rawRemarks === 'string') {
                 try { rawRemarks = JSON.parse(rawRemarks); } catch(e) { rawRemarks = [rawRemarks]; }
             }
@@ -1292,7 +1277,7 @@
             return {
                 id: raw.id,
                 item_name: raw.item_name || raw.name || '未命名構件',
-                image_url: fixImageUrl(raw.image_url || raw.img_url || raw.photo || ''),
+                image_url: fixImageUrl(raw.image_url || raw.image_base64 || raw.img_url || raw.photo || ''),
                 thickness_category: raw.thickness_category || raw.category || '',
                 guns: gunsArr,
                 reciprocator: reciprocator,
@@ -1333,7 +1318,7 @@
             }
         }
 
-        // --- 5. Supabase 讀取與寫入 (完美修復 Schema Cache 錯誤) ---
+        // --- 5. Supabase 讀取與寫入 (修復 Schema Cache 欄位遺失與自動修剪重試) ---
 
         /**
          * 從 Supabase 載入全量數據
@@ -1413,45 +1398,52 @@
         }
 
         /**
-         * 寫入 Supabase (完美修復：自動剔除非 Schema 欄位與自動重試)
+         * 寫入 Supabase (完美修復：自動捕獲遺失欄位錯誤並自動修剪重試)
          */
         async function saveToSupabase(rawPayload) {
             showLoading(true, "資料庫儲存中...");
             try {
                 let payload = JSON.parse(JSON.stringify(rawPayload));
 
-                // 徹底刪除可能引發 Could not find column of coating_params in schema cache 的虛擬欄位
-                const forbiddenKeys = ['guns', 'manual_a', 'manual_b', 'reciprocator', 'block_a', 'block_b'];
-                forbiddenKeys.forEach(k => delete payload[k]);
+                // 徹底刪除可能引發 schema cache 錯誤的內部虛擬物件屬性
+                const virtualNonColumnKeys = [
+                    'guns', 'auto_guns', 'manual_a', 'manual_b', 
+                    'reciprocator', 'block_a', 'block_b', 'electrical', 
+                    'manual_gun_a', 'manual_gun_b'
+                ];
+                virtualNonColumnKeys.forEach(k => delete payload[k]);
 
-                let retries = 5;
+                let retries = 30; // 允許多次自動剔除與重試
                 while (retries > 0) {
                     const { data, error } = await supabase.from(tableName).upsert([payload]).select();
                     if (!error) {
                         return data;
                     }
 
-                    console.warn("Supabase Upsert Error attempt:", error);
+                    console.warn(`Supabase Upsert Attempt (${retries} left):`, error);
 
-                    // 1. 若捕捉到缺欄位 Schema Cache 錯誤，自動刪除該錯誤欄位並自動重試
-                    const colMatch = error.message && error.message.match(/Could not find the '([^']+)' column/);
+                    // 智慧匹配 Supabase 的欄位遺失 Error Prompt (例如：Could not find the 'guns' column of...)
+                    const colMatch = error.message && error.message.match(/Could not find (?:the )?['"]?([^'"]+)['"]? column/i);
                     if (colMatch && colMatch[1]) {
-                        const invalidCol = colMatch[1];
-                        console.warn(`[Auto-Fix] 剔除無效 Schema 欄位: '${invalidCol}' 並自動重試...`);
+                        const invalidCol = colMatch[1].trim();
+                        console.warn(`[Auto-Fix] 數據庫不支援欄位: '${invalidCol}'，自動剔除該欄位並重新儲存...`);
                         delete payload[invalidCol];
                         retries--;
                         continue;
                     }
 
-                    // 2. 若為 JSONB / text 型態相容問題，將陣列轉換為 JSON 字串
+                    // 若涉及 JSONB 與 Array 的轉碼型態問題，自動修復序列化格式
                     if (error.message && (error.message.includes('array') || error.message.includes('json') || error.message.includes('type'))) {
-                        if (Array.isArray(payload.thickness_history)) payload.thickness_history = JSON.stringify(payload.thickness_history);
-                        if (Array.isArray(payload.ng_history)) payload.ng_history = JSON.stringify(payload.ng_history);
-                        if (Array.isArray(payload.remarks)) payload.remarks = JSON.stringify(payload.remarks);
+                        ['thickness_history', 'thickness_records', 'film_thickness_records', 'history_thickness', 'ng_history', 'ng_records', 'history_ng', 'remarks', 'remarks_list', 'dynamic_remarks'].forEach(key => {
+                            if (Array.isArray(payload[key])) {
+                                payload[key] = JSON.stringify(payload[key]);
+                            }
+                        });
                         retries--;
                         continue;
                     }
 
+                    // 其他無法處理的錯誤則拋出
                     throw error;
                 }
             } catch (err) {
@@ -1648,7 +1640,7 @@
         }
 
         /**
-         * 渲染全構件膜厚數據 Modal 表格 (修復圖 123623.jpg & 123624.jpg：第一欄圖片直鏈與破圖備援)
+         * 渲染全構件膜厚數據 Modal 表格
          */
         function renderThicknessModalTable() {
             const tableBody = document.getElementById('thicknessTableBody');
@@ -2012,7 +2004,7 @@
                 }
             });
 
-            // 表單提交 (完美修復：構建純平坦化 Payload，徹底移除導致 guns 欄位錯誤的物件)
+            // 表單提交 (完美相容雙 Schema：建立完整 Payload 傳送，自動容錯清理不支援欄位)
             document.getElementById('paramForm').addEventListener('submit', async (e) => {
                 e.preventDefault();
 
@@ -2033,16 +2025,18 @@
                     });
                 } else if (editingItemId) {
                     const existing = allParamsData.find(d => String(d.id) === String(editingItemId));
-                    if (existing) uploadedUrl = existing.image_url || "";
+                    if (existing) uploadedUrl = existing.image_url || existing.image_base64 || "";
                 }
 
-                // 構建純淨之扁平化 Payload (無 guns/manual_a/manual_b 等非 Schema 鍵值)
+                // 構建相容不同版本 Supabase 資料表的數據 Payload
                 const payload = {
                     item_name: itemName,
                     image_url: fixImageUrl(uploadedUrl),
+                    image_base64: fixImageUrl(uploadedUrl),
                     thickness_category: document.getElementById('thickness_category').value,
+                    category: document.getElementById('thickness_category').value,
                     
-                    // 自動槍 1~8
+                    // 自動槍 1~8 展平欄位
                     gun_1: document.getElementById('gun_1').value || '0',
                     gun_2: document.getElementById('gun_2').value || '0',
                     gun_3: document.getElementById('gun_3').value || '0',
@@ -2052,7 +2046,7 @@
                     gun_7: document.getElementById('gun_7').value || '0',
                     gun_8: document.getElementById('gun_8').value || '0',
 
-                    // 往復機
+                    // 往復機運行參數
                     speed_left: document.getElementById('speed_left').value,
                     speed_right: document.getElementById('speed_right').value,
                     up_turn_left: document.getElementById('up_turn_left').value,
@@ -2065,7 +2059,23 @@
                     voltage: document.getElementById('voltage').value,
                     current: document.getElementById('current').value,
 
-                    // 區塊 A
+                    // 區塊 A 面 (同時提供 manual_a_ 與 a_ 前綴欄位)
+                    manual_a_powder: parseInt(document.getElementById('a_powder').value, 10) || 0,
+                    manual_a_air: parseInt(document.getElementById('a_air').value, 10) || 0,
+                    manual_a_voltage: parseInt(document.getElementById('a_voltage').value, 10) || 70,
+                    manual_a_current: parseInt(document.getElementById('a_current').value, 10) || 15,
+                    manual_a_nozzle: document.getElementById('a_nozzle').value,
+                    manual_a_ring: document.getElementById('a_ring').value,
+                    manual_a_spray_count: parseInt(document.getElementById('a_spray_count').value, 10) || 1,
+                    manual_a_spray_left: parseInt(document.getElementById('a_spray_left').value, 10) || 0,
+                    manual_a_spray_top: parseInt(document.getElementById('a_spray_top').value, 10) || 0,
+                    manual_a_spray_bottom: parseInt(document.getElementById('a_spray_bottom').value, 10) || 0,
+                    manual_a_spray_right: parseInt(document.getElementById('a_spray_right').value, 10) || 0,
+                    manual_a_spray_mid_1: parseInt(document.getElementById('a_spray_mid_1').value, 10) || 0,
+                    manual_a_spray_mid_2: parseInt(document.getElementById('a_spray_mid_2').value, 10) || 0,
+                    manual_a_spray_mid_3: parseInt(document.getElementById('a_spray_mid_3').value, 10) || 0,
+                    manual_a_spray_mid_4: parseInt(document.getElementById('a_spray_mid_4').value, 10) || 0,
+
                     a_powder: parseInt(document.getElementById('a_powder').value, 10) || 0,
                     a_air: parseInt(document.getElementById('a_air').value, 10) || 0,
                     a_voltage: parseInt(document.getElementById('a_voltage').value, 10) || 70,
@@ -2073,16 +2083,24 @@
                     a_nozzle: document.getElementById('a_nozzle').value,
                     a_ring: document.getElementById('a_ring').value,
                     a_spray_count: parseInt(document.getElementById('a_spray_count').value, 10) || 1,
-                    a_spray_left: parseInt(document.getElementById('a_spray_left').value, 10) || 0,
-                    a_spray_top: parseInt(document.getElementById('a_spray_top').value, 10) || 0,
-                    a_spray_bottom: parseInt(document.getElementById('a_spray_bottom').value, 10) || 0,
-                    a_spray_right: parseInt(document.getElementById('a_spray_right').value, 10) || 0,
-                    a_spray_mid_1: parseInt(document.getElementById('a_spray_mid_1').value, 10) || 0,
-                    a_spray_mid_2: parseInt(document.getElementById('a_spray_mid_2').value, 10) || 0,
-                    a_spray_mid_3: parseInt(document.getElementById('a_spray_mid_3').value, 10) || 0,
-                    a_spray_mid_4: parseInt(document.getElementById('a_spray_mid_4').value, 10) || 0,
 
-                    // 區塊 B
+                    // 區塊 B 面 (同時提供 manual_b_ 與 b_ 前綴欄位)
+                    manual_b_powder: parseInt(document.getElementById('b_powder').value, 10) || 0,
+                    manual_b_air: parseInt(document.getElementById('b_air').value, 10) || 0,
+                    manual_b_voltage: parseInt(document.getElementById('b_voltage').value, 10) || 70,
+                    manual_b_current: parseInt(document.getElementById('b_current').value, 10) || 15,
+                    manual_b_nozzle: document.getElementById('b_nozzle').value,
+                    manual_b_ring: document.getElementById('b_ring').value,
+                    manual_b_spray_count: parseInt(document.getElementById('b_spray_count').value, 10) || 1,
+                    manual_b_spray_left: parseInt(document.getElementById('b_spray_left').value, 10) || 0,
+                    manual_b_spray_top: parseInt(document.getElementById('b_spray_top').value, 10) || 0,
+                    manual_b_spray_bottom: parseInt(document.getElementById('b_spray_bottom').value, 10) || 0,
+                    manual_b_spray_right: parseInt(document.getElementById('b_spray_right').value, 10) || 0,
+                    manual_b_spray_mid_1: parseInt(document.getElementById('b_spray_mid_1').value, 10) || 0,
+                    manual_b_spray_mid_2: parseInt(document.getElementById('b_spray_mid_2').value, 10) || 0,
+                    manual_b_spray_mid_3: parseInt(document.getElementById('b_spray_mid_3').value, 10) || 0,
+                    manual_b_spray_mid_4: parseInt(document.getElementById('b_spray_mid_4').value, 10) || 0,
+
                     b_powder: parseInt(document.getElementById('b_powder').value, 10) || 0,
                     b_air: parseInt(document.getElementById('b_air').value, 10) || 0,
                     b_voltage: parseInt(document.getElementById('b_voltage').value, 10) || 70,
@@ -2090,18 +2108,20 @@
                     b_nozzle: document.getElementById('b_nozzle').value,
                     b_ring: document.getElementById('b_ring').value,
                     b_spray_count: parseInt(document.getElementById('b_spray_count').value, 10) || 1,
-                    b_spray_left: parseInt(document.getElementById('b_spray_left').value, 10) || 0,
-                    b_spray_top: parseInt(document.getElementById('b_spray_top').value, 10) || 0,
-                    b_spray_bottom: parseInt(document.getElementById('b_spray_bottom').value, 10) || 0,
-                    b_spray_right: parseInt(document.getElementById('b_spray_right').value, 10) || 0,
-                    b_spray_mid_1: parseInt(document.getElementById('b_spray_mid_1').value, 10) || 0,
-                    b_spray_mid_2: parseInt(document.getElementById('b_spray_mid_2').value, 10) || 0,
-                    b_spray_mid_3: parseInt(document.getElementById('b_spray_mid_3').value, 10) || 0,
-                    b_spray_mid_4: parseInt(document.getElementById('b_spray_mid_4').value, 10) || 0,
 
+                    // 膜厚、NG、備註歷程紀錄 (涵蓋不同 Schema 名稱)
                     thickness_history: currentThicknessRecords,
+                    thickness_records: currentThicknessRecords,
+                    film_thickness_records: currentThicknessRecords,
+                    history_thickness: currentThicknessRecords,
+
                     ng_history: currentNgRecords,
-                    remarks: currentRemarks
+                    ng_records: currentNgRecords,
+                    history_ng: currentNgRecords,
+
+                    remarks: currentRemarks,
+                    remarks_list: currentRemarks,
+                    dynamic_remarks: currentRemarks
                 };
 
                 if (editingItemId) payload.id = editingItemId;

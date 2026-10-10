@@ -318,13 +318,13 @@
                             </div>
                             <div class="flex items-center gap-2 bg-slate-800/50 p-2 rounded-lg border border-slate-700">
                                 <span class="w-20 text-center text-slate-400 font-bold text-xs" data-i18n="lbl_recip_upturn">上換向點</span>
-                                <input type="text" id="up_turn_left" value="自動" class="flex-1 w-full bg-slate-900 p-2 rounded text-amber-400 font-mono border border-slate-600 text-center text-xs sm:text-sm" placeholder="左1">
-                                <input type="text" id="up_turn_right" value="自動" class="flex-1 w-full bg-slate-900 p-2 rounded text-amber-400 font-mono border border-slate-600 text-center text-xs sm:text-sm" placeholder="右2">
+                                <input type="text" id="up_turn_left" value="0" class="flex-1 w-full bg-slate-900 p-2 rounded text-amber-400 font-mono border border-slate-600 text-center text-xs sm:text-sm" placeholder="左1 (預設0表自動)">
+                                <input type="text" id="up_turn_right" value="0" class="flex-1 w-full bg-slate-900 p-2 rounded text-amber-400 font-mono border border-slate-600 text-center text-xs sm:text-sm" placeholder="右2 (預設0表自動)">
                             </div>
                             <div class="flex items-center gap-2 bg-slate-800/50 p-2 rounded-lg border border-slate-700">
                                 <span class="w-20 text-center text-slate-400 font-bold text-xs" data-i18n="lbl_recip_downturn">下換向點</span>
-                                <input type="text" id="down_turn_left" value="自動" class="flex-1 w-full bg-slate-900 p-2 rounded text-amber-400 font-mono border border-slate-600 text-center text-xs sm:text-sm" placeholder="左1">
-                                <input type="text" id="down_turn_right" value="自動" class="flex-1 w-full bg-slate-900 p-2 rounded text-amber-400 font-mono border border-slate-600 text-center text-xs sm:text-sm" placeholder="右2">
+                                <input type="text" id="down_turn_left" value="0" class="flex-1 w-full bg-slate-900 p-2 rounded text-amber-400 font-mono border border-slate-600 text-center text-xs sm:text-sm" placeholder="左1 (預設0表自動)">
+                                <input type="text" id="down_turn_right" value="0" class="flex-1 w-full bg-slate-900 p-2 rounded text-amber-400 font-mono border border-slate-600 text-center text-xs sm:text-sm" placeholder="右2 (預設0表自動)">
                             </div>
                             <div class="flex items-center gap-2 bg-slate-800/50 p-2 rounded-lg border border-slate-700">
                                 <span class="w-20 text-center text-slate-400 font-bold text-xs" data-i18n="lbl_recip_dist">工件距離</span>
@@ -412,85 +412,6 @@
                                             <button type="button" class="btn-adj bg-slate-700 hover:bg-slate-600 px-2.5 py-1 rounded font-bold transition" data-target="a_spray_count" data-step="1" data-min="1" data-max="20">+</button>
                                         </div>
                                     </div>
-
-                                    <!-- A 面：方位與中間分段噴塗次數控制區 -->
-                                    <div class="mt-3 pt-3 border-t border-indigo-500/30 space-y-2.5">
-                                        <div class="text-[11px] sm:text-xs font-bold text-indigo-300 flex items-center gap-1">
-                                            <span>📍 方位噴塗次數</span>
-                                        </div>
-                                        <div class="grid grid-cols-2 gap-2">
-                                            <div class="flex items-center justify-between bg-slate-950/60 p-1.5 rounded border border-slate-800">
-                                                <span class="text-slate-300 text-xs" data-i18n="lbl_spray_left">左側</span>
-                                                <div class="flex items-center gap-1">
-                                                    <button type="button" class="btn-adj bg-slate-700 hover:bg-slate-600 px-2 py-0.5 rounded text-xs font-bold" data-target="a_spray_left" data-step="-1" data-min="0" data-max="20">-</button>
-                                                    <input type="text" id="a_spray_left" value="0" class="w-10 bg-black text-center text-emerald-400 font-bold border border-slate-700 rounded py-0.5 text-xs font-mono">
-                                                    <button type="button" class="btn-adj bg-slate-700 hover:bg-slate-600 px-2 py-0.5 rounded text-xs font-bold" data-target="a_spray_left" data-step="1" data-min="0" data-max="20">+</button>
-                                                </div>
-                                            </div>
-                                            <div class="flex items-center justify-between bg-slate-950/60 p-1.5 rounded border border-slate-800">
-                                                <span class="text-slate-300 text-xs" data-i18n="lbl_spray_top">上方</span>
-                                                <div class="flex items-center gap-1">
-                                                    <button type="button" class="btn-adj bg-slate-700 hover:bg-slate-600 px-2 py-0.5 rounded text-xs font-bold" data-target="a_spray_top" data-step="-1" data-min="0" data-max="20">-</button>
-                                                    <input type="text" id="a_spray_top" value="0" class="w-10 bg-black text-center text-emerald-400 font-bold border border-slate-700 rounded py-0.5 text-xs font-mono">
-                                                    <button type="button" class="btn-adj bg-slate-700 hover:bg-slate-600 px-2 py-0.5 rounded text-xs font-bold" data-target="a_spray_top" data-step="1" data-min="0" data-max="20">+</button>
-                                                </div>
-                                            </div>
-                                            <div class="flex items-center justify-between bg-slate-950/60 p-1.5 rounded border border-slate-800">
-                                                <span class="text-slate-300 text-xs" data-i18n="lbl_spray_bottom">下方</span>
-                                                <div class="flex items-center gap-1">
-                                                    <button type="button" class="btn-adj bg-slate-700 hover:bg-slate-600 px-2 py-0.5 rounded text-xs font-bold" data-target="a_spray_bottom" data-step="-1" data-min="0" data-max="20">-</button>
-                                                    <input type="text" id="a_spray_bottom" value="0" class="w-10 bg-black text-center text-emerald-400 font-bold border border-slate-700 rounded py-0.5 text-xs font-mono">
-                                                    <button type="button" class="btn-adj bg-slate-700 hover:bg-slate-600 px-2 py-0.5 rounded text-xs font-bold" data-target="a_spray_bottom" data-step="1" data-min="0" data-max="20">+</button>
-                                                </div>
-                                            </div>
-                                            <div class="flex items-center justify-between bg-slate-950/60 p-1.5 rounded border border-slate-800">
-                                                <span class="text-slate-300 text-xs" data-i18n="lbl_spray_right">右側</span>
-                                                <div class="flex items-center gap-1">
-                                                    <button type="button" class="btn-adj bg-slate-700 hover:bg-slate-600 px-2 py-0.5 rounded text-xs font-bold" data-target="a_spray_right" data-step="-1" data-min="0" data-max="20">-</button>
-                                                    <input type="text" id="a_spray_right" value="0" class="w-10 bg-black text-center text-emerald-400 font-bold border border-slate-700 rounded py-0.5 text-xs font-mono">
-                                                    <button type="button" class="btn-adj bg-slate-700 hover:bg-slate-600 px-2 py-0.5 rounded text-xs font-bold" data-target="a_spray_right" data-step="1" data-min="0" data-max="20">+</button>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div class="text-[11px] sm:text-xs font-bold text-amber-300 flex items-center gap-1 pt-1">
-                                            <span>🎯 中間分段噴塗次數</span>
-                                        </div>
-                                        <div class="grid grid-cols-2 gap-2">
-                                            <div class="flex items-center justify-between bg-slate-950/60 p-1.5 rounded border border-slate-800">
-                                                <span class="text-slate-300 text-xs" data-i18n="lbl_spray_mid_1">一段</span>
-                                                <div class="flex items-center gap-1">
-                                                    <button type="button" class="btn-adj bg-slate-700 hover:bg-slate-600 px-2 py-0.5 rounded text-xs font-bold" data-target="a_spray_mid_1" data-step="-1" data-min="0" data-max="20">-</button>
-                                                    <input type="text" id="a_spray_mid_1" value="0" class="w-10 bg-black text-center text-amber-400 font-bold border border-slate-700 rounded py-0.5 text-xs font-mono">
-                                                    <button type="button" class="btn-adj bg-slate-700 hover:bg-slate-600 px-2 py-0.5 rounded text-xs font-bold" data-target="a_spray_mid_1" data-step="1" data-min="0" data-max="20">+</button>
-                                                </div>
-                                            </div>
-                                            <div class="flex items-center justify-between bg-slate-950/60 p-1.5 rounded border border-slate-800">
-                                                <span class="text-slate-300 text-xs" data-i18n="lbl_spray_mid_2">二段</span>
-                                                <div class="flex items-center gap-1">
-                                                    <button type="button" class="btn-adj bg-slate-700 hover:bg-slate-600 px-2 py-0.5 rounded text-xs font-bold" data-target="a_spray_mid_2" data-step="-1" data-min="0" data-max="20">-</button>
-                                                    <input type="text" id="a_spray_mid_2" value="0" class="w-10 bg-black text-center text-amber-400 font-bold border border-slate-700 rounded py-0.5 text-xs font-mono">
-                                                    <button type="button" class="btn-adj bg-slate-700 hover:bg-slate-600 px-2 py-0.5 rounded text-xs font-bold" data-target="a_spray_mid_2" data-step="1" data-min="0" data-max="20">+</button>
-                                                </div>
-                                            </div>
-                                            <div class="flex items-center justify-between bg-slate-950/60 p-1.5 rounded border border-slate-800">
-                                                <span class="text-slate-300 text-xs" data-i18n="lbl_spray_mid_3">三段</span>
-                                                <div class="flex items-center gap-1">
-                                                    <button type="button" class="btn-adj bg-slate-700 hover:bg-slate-600 px-2 py-0.5 rounded text-xs font-bold" data-target="a_spray_mid_3" data-step="-1" data-min="0" data-max="20">-</button>
-                                                    <input type="text" id="a_spray_mid_3" value="0" class="w-10 bg-black text-center text-amber-400 font-bold border border-slate-700 rounded py-0.5 text-xs font-mono">
-                                                    <button type="button" class="btn-adj bg-slate-700 hover:bg-slate-600 px-2 py-0.5 rounded text-xs font-bold" data-target="a_spray_mid_3" data-step="1" data-min="0" data-max="20">+</button>
-                                                </div>
-                                            </div>
-                                            <div class="flex items-center justify-between bg-slate-950/60 p-1.5 rounded border border-slate-800">
-                                                <span class="text-slate-300 text-xs" data-i18n="lbl_spray_mid_4">四段</span>
-                                                <div class="flex items-center gap-1">
-                                                    <button type="button" class="btn-adj bg-slate-700 hover:bg-slate-600 px-2 py-0.5 rounded text-xs font-bold" data-target="a_spray_mid_4" data-step="-1" data-min="0" data-max="20">-</button>
-                                                    <input type="text" id="a_spray_mid_4" value="0" class="w-10 bg-black text-center text-amber-400 font-bold border border-slate-700 rounded py-0.5 text-xs font-mono">
-                                                    <button type="button" class="btn-adj bg-slate-700 hover:bg-slate-600 px-2 py-0.5 rounded text-xs font-bold" data-target="a_spray_mid_4" data-step="1" data-min="0" data-max="20">+</button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
                                 </div>
                             </div>
 
@@ -553,85 +474,6 @@
                                             <button type="button" class="btn-adj bg-slate-700 hover:bg-slate-600 px-2.5 py-1 rounded font-bold transition" data-target="b_spray_count" data-step="1" data-min="1" data-max="20">+</button>
                                         </div>
                                     </div>
-
-                                    <!-- B 面：方位與中間分段噴塗次數控制區 -->
-                                    <div class="mt-3 pt-3 border-t border-teal-500/30 space-y-2.5">
-                                        <div class="text-[11px] sm:text-xs font-bold text-teal-300 flex items-center gap-1">
-                                            <span>📍 方位噴塗次數</span>
-                                        </div>
-                                        <div class="grid grid-cols-2 gap-2">
-                                            <div class="flex items-center justify-between bg-slate-950/60 p-1.5 rounded border border-slate-800">
-                                                <span class="text-slate-300 text-xs" data-i18n="lbl_spray_left">左側</span>
-                                                <div class="flex items-center gap-1">
-                                                    <button type="button" class="btn-adj bg-slate-700 hover:bg-slate-600 px-2 py-0.5 rounded text-xs font-bold" data-target="b_spray_left" data-step="-1" data-min="0" data-max="20">-</button>
-                                                    <input type="text" id="b_spray_left" value="0" class="w-10 bg-black text-center text-emerald-400 font-bold border border-slate-700 rounded py-0.5 text-xs font-mono">
-                                                    <button type="button" class="btn-adj bg-slate-700 hover:bg-slate-600 px-2 py-0.5 rounded text-xs font-bold" data-target="b_spray_left" data-step="1" data-min="0" data-max="20">+</button>
-                                                </div>
-                                            </div>
-                                            <div class="flex items-center justify-between bg-slate-950/60 p-1.5 rounded border border-slate-800">
-                                                <span class="text-slate-300 text-xs" data-i18n="lbl_spray_top">上方</span>
-                                                <div class="flex items-center gap-1">
-                                                    <button type="button" class="btn-adj bg-slate-700 hover:bg-slate-600 px-2 py-0.5 rounded text-xs font-bold" data-target="b_spray_top" data-step="-1" data-min="0" data-max="20">-</button>
-                                                    <input type="text" id="b_spray_top" value="0" class="w-10 bg-black text-center text-emerald-400 font-bold border border-slate-700 rounded py-0.5 text-xs font-mono">
-                                                    <button type="button" class="btn-adj bg-slate-700 hover:bg-slate-600 px-2 py-0.5 rounded text-xs font-bold" data-target="b_spray_top" data-step="1" data-min="0" data-max="20">+</button>
-                                                </div>
-                                            </div>
-                                            <div class="flex items-center justify-between bg-slate-950/60 p-1.5 rounded border border-slate-800">
-                                                <span class="text-slate-300 text-xs" data-i18n="lbl_spray_bottom">下方</span>
-                                                <div class="flex items-center gap-1">
-                                                    <button type="button" class="btn-adj bg-slate-700 hover:bg-slate-600 px-2 py-0.5 rounded text-xs font-bold" data-target="b_spray_bottom" data-step="-1" data-min="0" data-max="20">-</button>
-                                                    <input type="text" id="b_spray_bottom" value="0" class="w-10 bg-black text-center text-emerald-400 font-bold border border-slate-700 rounded py-0.5 text-xs font-mono">
-                                                    <button type="button" class="btn-adj bg-slate-700 hover:bg-slate-600 px-2 py-0.5 rounded text-xs font-bold" data-target="b_spray_bottom" data-step="1" data-min="0" data-max="20">+</button>
-                                                </div>
-                                            </div>
-                                            <div class="flex items-center justify-between bg-slate-950/60 p-1.5 rounded border border-slate-800">
-                                                <span class="text-slate-300 text-xs" data-i18n="lbl_spray_right">右側</span>
-                                                <div class="flex items-center gap-1">
-                                                    <button type="button" class="btn-adj bg-slate-700 hover:bg-slate-600 px-2 py-0.5 rounded text-xs font-bold" data-target="b_spray_right" data-step="-1" data-min="0" data-max="20">-</button>
-                                                    <input type="text" id="b_spray_right" value="0" class="w-10 bg-black text-center text-emerald-400 font-bold border border-slate-700 rounded py-0.5 text-xs font-mono">
-                                                    <button type="button" class="btn-adj bg-slate-700 hover:bg-slate-600 px-2 py-0.5 rounded text-xs font-bold" data-target="b_spray_right" data-step="1" data-min="0" data-max="20">+</button>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div class="text-[11px] sm:text-xs font-bold text-amber-300 flex items-center gap-1 pt-1">
-                                            <span>🎯 中間分段噴塗次數</span>
-                                        </div>
-                                        <div class="grid grid-cols-2 gap-2">
-                                            <div class="flex items-center justify-between bg-slate-950/60 p-1.5 rounded border border-slate-800">
-                                                <span class="text-slate-300 text-xs" data-i18n="lbl_spray_mid_1">一段</span>
-                                                <div class="flex items-center gap-1">
-                                                    <button type="button" class="btn-adj bg-slate-700 hover:bg-slate-600 px-2 py-0.5 rounded text-xs font-bold" data-target="b_spray_mid_1" data-step="-1" data-min="0" data-max="20">-</button>
-                                                    <input type="text" id="b_spray_mid_1" value="0" class="w-10 bg-black text-center text-amber-400 font-bold border border-slate-700 rounded py-0.5 text-xs font-mono">
-                                                    <button type="button" class="btn-adj bg-slate-700 hover:bg-slate-600 px-2 py-0.5 rounded text-xs font-bold" data-target="b_spray_mid_1" data-step="1" data-min="0" data-max="20">+</button>
-                                                </div>
-                                            </div>
-                                            <div class="flex items-center justify-between bg-slate-950/60 p-1.5 rounded border border-slate-800">
-                                                <span class="text-slate-300 text-xs" data-i18n="lbl_spray_mid_2">二段</span>
-                                                <div class="flex items-center gap-1">
-                                                    <button type="button" class="btn-adj bg-slate-700 hover:bg-slate-600 px-2 py-0.5 rounded text-xs font-bold" data-target="b_spray_mid_2" data-step="-1" data-min="0" data-max="20">-</button>
-                                                    <input type="text" id="b_spray_mid_2" value="0" class="w-10 bg-black text-center text-amber-400 font-bold border border-slate-700 rounded py-0.5 text-xs font-mono">
-                                                    <button type="button" class="btn-adj bg-slate-700 hover:bg-slate-600 px-2 py-0.5 rounded text-xs font-bold" data-target="b_spray_mid_2" data-step="1" data-min="0" data-max="20">+</button>
-                                                </div>
-                                            </div>
-                                            <div class="flex items-center justify-between bg-slate-950/60 p-1.5 rounded border border-slate-800">
-                                                <span class="text-slate-300 text-xs" data-i18n="lbl_spray_mid_3">三段</span>
-                                                <div class="flex items-center gap-1">
-                                                    <button type="button" class="btn-adj bg-slate-700 hover:bg-slate-600 px-2 py-0.5 rounded text-xs font-bold" data-target="b_spray_mid_3" data-step="-1" data-min="0" data-max="20">-</button>
-                                                    <input type="text" id="b_spray_mid_3" value="0" class="w-10 bg-black text-center text-amber-400 font-bold border border-slate-700 rounded py-0.5 text-xs font-mono">
-                                                    <button type="button" class="btn-adj bg-slate-700 hover:bg-slate-600 px-2 py-0.5 rounded text-xs font-bold" data-target="b_spray_mid_3" data-step="1" data-min="0" data-max="20">+</button>
-                                                </div>
-                                            </div>
-                                            <div class="flex items-center justify-between bg-slate-950/60 p-1.5 rounded border border-slate-800">
-                                                <span class="text-slate-300 text-xs" data-i18n="lbl_spray_mid_4">四段</span>
-                                                <div class="flex items-center gap-1">
-                                                    <button type="button" class="btn-adj bg-slate-700 hover:bg-slate-600 px-2 py-0.5 rounded text-xs font-bold" data-target="b_spray_mid_4" data-step="-1" data-min="0" data-max="20">-</button>
-                                                    <input type="text" id="b_spray_mid_4" value="0" class="w-10 bg-black text-center text-amber-400 font-bold border border-slate-700 rounded py-0.5 text-xs font-mono">
-                                                    <button type="button" class="btn-adj bg-slate-700 hover:bg-slate-600 px-2 py-0.5 rounded text-xs font-bold" data-target="b_spray_mid_4" data-step="1" data-min="0" data-max="20">+</button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -639,22 +481,20 @@
 
                     <!-- 歷史紀錄追加區 -->
                     <div class="pt-6 sm:pt-8 border-t border-slate-700 grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
-                        <!-- 膜厚檢測追加 -->
                         <div>
                             <h3 class="text-pink-400 font-bold text-base sm:text-lg mb-3 sm:mb-4 flex items-center gap-2" data-i18n="lbl_add_thickness">📊 新增膜厚檢測紀錄</h3>
                             <div class="bg-slate-800/50 p-3 sm:p-4 rounded-xl border border-slate-700 mb-4 flex flex-col gap-2.5">
                                 <input type="date" id="th_date" class="w-full bg-slate-900 border border-slate-600 rounded-lg p-2 text-white text-xs sm:text-sm">
                                 <div class="grid grid-cols-3 gap-2 text-xs">
-                                    <div class="flex flex-col gap-1"><span class="text-slate-400 text-[10px] sm:text-xs" data-i18n="lbl_front_sec">前段 (Min-Max)</span><div class="flex gap-1"><input type="number" id="th_f_min" placeholder="Min" class="w-full bg-black border border-slate-600 rounded p-1 text-center"><input type="number" id="th_f_max" placeholder="Max" class="w-full bg-black border border-slate-600 rounded p-1 text-center"></div></div>
-                                    <div class="flex flex-col gap-1"><span class="text-slate-400 text-[10px] sm:text-xs" data-i18n="lbl_mid_sec">中段 (Min-Max)</span><div class="flex gap-1"><input type="number" id="th_m_min" placeholder="Min" class="w-full bg-black border border-slate-600 rounded p-1 text-center"><input type="number" id="th_m_max" placeholder="Max" class="w-full bg-black border border-slate-600 rounded p-1 text-center"></div></div>
-                                    <div class="flex flex-col gap-1"><span class="text-slate-400 text-[10px] sm:text-xs" data-i18n="lbl_rear_sec">後段 (Min-Max)</span><div class="flex gap-1"><input type="number" id="th_r_min" placeholder="Min" class="w-full bg-black border border-slate-600 rounded p-1 text-center"><input type="number" id="th_r_max" placeholder="Max" class="w-full bg-black border border-slate-600 rounded p-1 text-center"></div></div>
+                                    <div class="flex flex-col gap-1"><span class="text-slate-400 text-[10px] sm:text-xs">前段 (Min-Max)</span><div class="flex gap-1"><input type="number" id="th_f_min" placeholder="Min" class="w-full bg-black border border-slate-600 rounded p-1 text-center"><input type="number" id="th_f_max" placeholder="Max" class="w-full bg-black border border-slate-600 rounded p-1 text-center"></div></div>
+                                    <div class="flex flex-col gap-1"><span class="text-slate-400 text-[10px] sm:text-xs">中段 (Min-Max)</span><div class="flex gap-1"><input type="number" id="th_m_min" placeholder="Min" class="w-full bg-black border border-slate-600 rounded p-1 text-center"><input type="number" id="th_m_max" placeholder="Max" class="w-full bg-black border border-slate-600 rounded p-1 text-center"></div></div>
+                                    <div class="flex flex-col gap-1"><span class="text-slate-400 text-[10px] sm:text-xs">後段 (Min-Max)</span><div class="flex gap-1"><input type="number" id="th_r_min" placeholder="Min" class="w-full bg-black border border-slate-600 rounded p-1 text-center"><input type="number" id="th_r_max" placeholder="Max" class="w-full bg-black border border-slate-600 rounded p-1 text-center"></div></div>
                                 </div>
-                                <button type="button" id="btnAddThickness" class="bg-pink-600 hover:bg-pink-500 text-white w-full py-2 rounded-lg font-bold shadow transition text-xs sm:text-sm" data-i18n="btn_add_thickness">＋ 加入膜厚紀錄</button>
+                                <button type="button" id="btnAddThickness" class="bg-pink-600 hover:bg-pink-500 text-white w-full py-2 rounded-lg font-bold shadow transition text-xs sm:text-sm">＋ 加入膜厚紀錄</button>
                             </div>
                             <div id="thicknessList" class="space-y-2 max-h-40 overflow-y-auto custom-scrollbar pr-2"></div>
                         </div>
 
-                        <!-- NG與備註追加 -->
                         <div class="space-y-6 sm:space-y-8">
                             <div>
                                 <h3 class="text-orange-400 font-bold text-base sm:text-lg mb-3 sm:mb-4 flex items-center gap-2" data-i18n="lbl_add_ng">⚠️ 新增 NG 異常紀錄</h3>
@@ -662,21 +502,21 @@
                                     <div class="flex flex-col sm:flex-row gap-2">
                                         <input type="date" id="ng_date" class="flex-1 bg-slate-900 border border-slate-600 rounded-lg p-2 text-white text-xs sm:text-sm">
                                         <select id="ng_location" class="flex-1 bg-slate-900 border border-slate-600 rounded-lg p-2 text-white text-xs sm:text-sm">
-                                            <option value="整體外觀面噴塗(A)面" data-i18n="opt_ng_loc_a">A面 外觀</option>
-                                            <option value="邊角溝槽噴塗面(B)面" data-i18n="opt_ng_loc_b">B面 邊角</option>
+                                            <option value="整體外觀面噴塗(A)面">A面 外觀</option>
+                                            <option value="邊角溝槽噴塗面(B)面">B面 邊角</option>
                                         </select>
                                     </div>
                                     <div class="flex gap-2">
                                         <select id="ng_reason" class="flex-1 bg-slate-900 border border-slate-600 rounded-lg p-2 text-white text-xs sm:text-sm">
-                                            <option value="膜厚不足" data-i18n="opt_ng_reason_1">膜厚不足</option>
-                                            <option value="膜厚太厚" data-i18n="opt_ng_reason_2">膜厚太厚</option>
-                                            <option value="溝槽未上粉" data-i18n="opt_ng_reason_3">溝槽未上粉</option>
-                                            <option value="積粉垂流" data-i18n="opt_ng_reason_4">積粉垂流</option>
-                                            <option value="滑粉" data-i18n="opt_ng_reason_5">滑粉</option>
-                                            <option value="爆粉" data-i18n="opt_ng_reason_6">爆粉</option>
-                                            <option value="皺痕" data-i18n="opt_ng_reason_7">皺痕</option>
+                                            <option value="膜厚不足">膜厚不足</option>
+                                            <option value="膜厚太厚">膜厚太厚</option>
+                                            <option value="溝槽未上粉">溝槽未上粉</option>
+                                            <option value="積粉垂流">積粉垂流</option>
+                                            <option value="滑粉">滑粉</option>
+                                            <option value="爆粉">爆粉</option>
+                                            <option value="皺痕">皺痕</option>
                                         </select>
-                                        <button type="button" id="btnAddNg" class="bg-orange-600 hover:bg-orange-500 text-white px-3 py-2 rounded-lg font-bold shadow transition text-xs sm:text-sm shrink-0" data-i18n="btn_add_ng">＋ 加入 NG</button>
+                                        <button type="button" id="btnAddNg" class="bg-orange-600 hover:bg-orange-500 text-white px-3 py-2 rounded-lg font-bold shadow transition text-xs sm:text-sm shrink-0">＋ 加入 NG</button>
                                     </div>
                                 </div>
                                 <div id="ngList" class="space-y-2 max-h-32 overflow-y-auto custom-scrollbar pr-2"></div>
@@ -686,7 +526,7 @@
                                 <h3 class="text-slate-300 font-bold text-base sm:text-lg mb-3 sm:mb-4 flex items-center gap-2" data-i18n="lbl_add_remark">📝 修正備註欄位</h3>
                                 <div class="flex gap-2 mb-4">
                                     <input type="text" id="new_remark" placeholder="輸入備註或特殊叮嚀..." class="flex-1 bg-slate-900 p-2.5 rounded-lg text-white border border-slate-600 focus:border-blue-500 outline-none text-xs sm:text-sm">
-                                    <button type="button" id="btnAddRemark" class="bg-slate-600 hover:bg-slate-500 px-3 py-2 rounded-lg font-bold text-white shadow transition text-xs sm:text-sm shrink-0" data-i18n="btn_add_remark">＋ 新增</button>
+                                    <button type="button" id="btnAddRemark" class="bg-slate-600 hover:bg-slate-500 px-3 py-2 rounded-lg font-bold text-white shadow transition text-xs sm:text-sm shrink-0">＋ 新增</button>
                                 </div>
                                 <div id="remarksList" class="grid grid-cols-1 gap-2"></div>
                             </div>
@@ -1163,7 +1003,7 @@
                 raw.gun_8 ?? '0'
             ];
 
-            // 2. 區塊 A 手動槍參數處理 (優先讀取 manual_gun_a JSONB，備援展平欄位)
+            // 2. 區塊 A 手動槍參數處理
             const parsedA = safeParseJSON(raw.manual_gun_a) || safeParseJSON(raw.manual_a) || {};
             const manualA = {
                 powder: parsedA.powder ?? raw.manual_a_powder ?? 0,
@@ -1183,7 +1023,7 @@
                 spray_mid_4: parsedA.spray_mid_4 ?? 0
             };
 
-            // 3. 區塊 B 手動槍參數處理 (優先讀取 manual_gun_b JSONB，備援展平欄位)
+            // 3. 區塊 B 手動槍參數處理
             const parsedB = safeParseJSON(raw.manual_gun_b) || safeParseJSON(raw.manual_b) || {};
             const manualB = {
                 powder: parsedB.powder ?? raw.manual_b_powder ?? 0,
@@ -1203,7 +1043,7 @@
                 spray_mid_4: parsedB.spray_mid_4 ?? 0
             };
 
-            // 4. 往復機運行參數 (int4 轉換回「自動」文字顯示)
+            // 4. 往復機運行參數 (int4 轉換回文字顯示，若為 0 則顯示「自動」)
             const formatTurn = (val) => {
                 if (val === 0 || val === '0' || val === '自動' || !val) return '自動';
                 return String(val);
@@ -1254,7 +1094,7 @@
             }
             if (!Array.isArray(rawRemarks)) rawRemarks = [];
 
-            // 8. 膜厚類別復原 (從 JSONB 或 remark_1 回推)
+            // 8. 膜厚類別復原
             let catName = raw.thickness_category || raw.category || (parsedA && parsedA.thickness_category) || '';
             if (!catName && raw.remark_1 && raw.remark_1.includes('膜厚類別:')) {
                 catName = raw.remark_1.replace('膜厚類別:', '').trim();
@@ -1304,7 +1144,7 @@
             }
         }
 
-        // --- 5. Supabase 讀取與寫入 (精準 Schema 白名單與強效自動除錯重試機制) ---
+        // --- 5. Supabase 讀取與寫入 (精準 Schema 白名單與強效防護機制) ---
 
         async function fetchAllCoatingParams() {
             showLoading(true, "連線資料庫讀取資料中...");
@@ -1372,14 +1212,14 @@
         }
 
         /**
-         * 寫入 Supabase (完美修復：白名單預先清理 + 自動重試防護機制)
+         * 寫入 Supabase (白名單預先清理 + 自動重試防護機制)
          */
         async function saveToSupabase(rawPayload) {
             showLoading(true, "資料庫儲存中...");
             try {
                 let payload = JSON.parse(JSON.stringify(rawPayload));
 
-                // 根據資料庫 Structure，確立 coating_params 的合法 Schema 欄位白名單（絕對排除 'guns'）
+                // 嚴格確立 coating_params 的合法 Schema 欄位白名單（絕對排除 'guns'）
                 const ALLOWED_COLUMNS = new Set([
                     'id', 'item_name',
                     'gun_1', 'gun_2', 'gun_3', 'gun_4', 'gun_5', 'gun_6', 'gun_7', 'gun_8',
@@ -1392,7 +1232,7 @@
                     'film_thickness_records', 'remarks_list', 'thickness_records', 'ng_records', 'dynamic_remarks'
                 ]);
 
-                // 第一關：預先強制剔除所有不屬於 coating_params 的非法頂層 Key
+                // 第一關：強制剔除所有不屬於 coating_params 的非法頂層 Key（如 'guns'）
                 Object.keys(payload).forEach(key => {
                     if (!ALLOWED_COLUMNS.has(key)) {
                         console.warn(`[Pre-Clean] 剔除非屬 coating_params 的欄位: '${key}'`);
@@ -1499,7 +1339,6 @@
             document.getElementById('resultBoard').style.display = 'block';
             document.getElementById('actionButtons').classList.remove('hidden');
 
-            // 1. 膜厚徽章
             const badge = document.getElementById('q_thickness_category_badge');
             if (item.thickness_category) {
                 badge.classList.remove('hidden');
@@ -1513,7 +1352,6 @@
                 badge.classList.add('hidden');
             }
 
-            // 2. 構件圖片
             const imgBox = document.getElementById('imageContainer');
             const imgEl = document.getElementById('q_matched_image');
             const imgLink = document.getElementById('q_matched_image_link');
@@ -1526,13 +1364,11 @@
                 imgBox.classList.add('hidden');
             }
 
-            // 3. 自動槍粉量 #1 ~ #8
             for (let i = 1; i <= 8; i++) {
                 const el = document.getElementById(`q_gun_${i}`);
                 if (el) el.textContent = item.guns[i - 1] ?? '0';
             }
 
-            // 4. 往復機運行參數
             const r = item.reciprocator;
             document.getElementById('q_speed_left').textContent = r.speed_left;
             document.getElementById('q_speed_right').textContent = r.speed_right;
@@ -1543,15 +1379,12 @@
             document.getElementById('q_dist_left').textContent = r.dist_left;
             document.getElementById('q_dist_right').textContent = r.dist_right;
 
-            // 5. 電壓電流
             document.getElementById('q_voltage').textContent = item.voltage;
             document.getElementById('q_current').textContent = item.current;
 
-            // 6. 手動槍區塊 A & B
             document.getElementById('q_manual_a_display').innerHTML = renderManualBlockHTML(item.manual_a, 'A');
             document.getElementById('q_manual_b_display').innerHTML = renderManualBlockHTML(item.manual_b, 'B');
 
-            // 7. 歷史膜厚紀錄
             const thBox = document.getElementById('q_thickness_display');
             if (item.thickness_history && item.thickness_history.length > 0) {
                 thBox.innerHTML = item.thickness_history.map(rec => `
@@ -1568,7 +1401,6 @@
                 thBox.innerHTML = '<div class="text-slate-500 italic p-2">尚無膜厚檢測紀錄</div>';
             }
 
-            // 8. 歷史 NG 紀錄
             const ngBox = document.getElementById('q_ng_display');
             if (item.ng_history && item.ng_history.length > 0) {
                 ngBox.innerHTML = item.ng_history.map(rec => `
@@ -1582,7 +1414,6 @@
                 ngBox.innerHTML = '<div class="text-slate-500 italic p-2">無 NG 異常紀錄</div>';
             }
 
-            // 9. 修正備註
             const remBox = document.getElementById('q_remarks_display');
             if (item.remarks && item.remarks.length > 0) {
                 remBox.innerHTML = item.remarks.map(txt => `
@@ -1845,10 +1676,10 @@
             });
 
             document.getElementById('btnFillAuto').addEventListener('click', () => {
-                document.getElementById('up_turn_left').value = '自動';
-                document.getElementById('up_turn_right').value = '自動';
-                document.getElementById('down_turn_left').value = '自動';
-                document.getElementById('down_turn_right').value = '自動';
+                document.getElementById('up_turn_left').value = '0';
+                document.getElementById('up_turn_right').value = '0';
+                document.getElementById('down_turn_left').value = '0';
+                document.getElementById('down_turn_right').value = '0';
             });
 
             document.getElementById('btnAiSearchTrigger').addEventListener('click', () => {
@@ -1935,7 +1766,7 @@
                 }
             });
 
-            // 表單提交 (精準對應 Supabase coating_params 表欄位，徹底排除 'guns')
+            // 表單提交處理 (嚴格對應 coating_params 欄位白名單，徹底排除 'guns')
             document.getElementById('paramForm').addEventListener('submit', async (e) => {
                 e.preventDefault();
 
@@ -1961,7 +1792,6 @@
 
                 const catVal = document.getElementById('thickness_category').value;
 
-                // 構建手動槍 A/B 詳細 JSON 物件
                 const manualAObj = {
                     powder: parseInt(document.getElementById('a_powder').value, 10) || 0,
                     air: parseInt(document.getElementById('a_air').value, 10) || 0,
@@ -2000,12 +1830,13 @@
                     thickness_category: catVal
                 };
 
+                // 將輸入值安全轉為整數 (若為「自動」或空值則轉為 0 以匹配 int4 欄位)
                 const parseRecipInt = (val) => {
+                    if (val === '自動' || !val) return 0;
                     const parsed = parseInt(val, 10);
                     return isNaN(parsed) ? 0 : parsed;
                 };
 
-                // 構建純淨相容的 Payload 物件 (直接對應數據庫實體欄位)
                 const payload = {
                     item_name: itemName,
                     image_url: fixImageUrl(uploadedUrl),

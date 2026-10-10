@@ -4,7 +4,7 @@
     <!-- ========================================================================================== -->
     <!-- 百富粉體塗裝自動槍參數系統 / Sistem Parameter Pelapisan Serbuk Baifu                        -->
     <!-- Architecture: Pure Frontend AI Architecture (Respan Span 01 Lite Enabled)                  -->
-    <!-- 完美修復版本：精準匹配 coating_params 48 個 Schema 欄位與資料型態修復                       -->
+    <!-- 完美修復版本：精準匹配 coating_params Schema 欄位與資料型態，徹底排除不支援欄位              -->
     <!-- ========================================================================================== -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -289,7 +289,7 @@
                         </div>
                     </div>
 
-                    <!-- 自動槍粉量數據 1~8 (對應獨立欄位 gun_1 ~ gun_8) -->
+                    <!-- 自動槍粉量數據 1~8 -->
                     <div class="pt-4 sm:pt-6 border-t border-slate-700">
                         <h3 class="text-blue-400 mb-3 sm:mb-4 font-bold text-base sm:text-lg flex items-center gap-2" data-i18n="card_gun_powder">🔫 自動槍粉量數據</h3>
                         <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-2 sm:gap-3">
@@ -1151,7 +1151,7 @@
         function normalizeItemData(raw) {
             if (!raw) return null;
 
-            // 1. 自動槍粉量 guns 處理 (對應獨立的 gun_1 ~ gun_8 欄位)
+            // 1. 自動槍粉量 guns 處理 (槍1 ~ 槍8 展平欄位)
             const gunsArr = [
                 raw.gun_1 ?? '0',
                 raw.gun_2 ?? '0',
@@ -1372,14 +1372,14 @@
         }
 
         /**
-         * 寫入 Supabase (完美修復：白名單預先清理，杜絕傳遞任何非資料庫真實欄位如 guns)
+         * 寫入 Supabase (完美修復：白名單預先清理 + 自動重試防護機制)
          */
         async function saveToSupabase(rawPayload) {
             showLoading(true, "資料庫儲存中...");
             try {
                 let payload = JSON.parse(JSON.stringify(rawPayload));
 
-                // 根據資料庫 Structure，確立 coating_params 的 48 個合法 Schema 欄位白名單
+                // 根據資料庫 Structure，確立 coating_params 的合法 Schema 欄位白名單（絕對排除 'guns'）
                 const ALLOWED_COLUMNS = new Set([
                     'id', 'item_name',
                     'gun_1', 'gun_2', 'gun_3', 'gun_4', 'gun_5', 'gun_6', 'gun_7', 'gun_8',
@@ -1392,7 +1392,7 @@
                     'film_thickness_records', 'remarks_list', 'thickness_records', 'ng_records', 'dynamic_remarks'
                 ]);
 
-                // 第一關：預先強制剔除所有不屬於 coating_params 的非法頂層 Key (例如 guns, category, reciprocator 等)
+                // 第一關：預先強制剔除所有不屬於 coating_params 的非法頂層 Key
                 Object.keys(payload).forEach(key => {
                     if (!ALLOWED_COLUMNS.has(key)) {
                         console.warn(`[Pre-Clean] 剔除非屬 coating_params 的欄位: '${key}'`);
@@ -1400,7 +1400,7 @@
                     }
                 });
 
-                let retries = 10;
+                let retries = 20;
                 while (retries > 0) {
                     const { data, error } = await supabase.from(tableName).upsert([payload]).select();
                     if (!error) return data;
@@ -1420,6 +1420,15 @@
                                 removedAny = true;
                             }
                         });
+                    }
+
+                    const colMatch = errMsg.match(/Could not find (?:the )?['"]?([^'"]+)['"]? column/i);
+                    if (colMatch && colMatch[1]) {
+                        const invalidCol = colMatch[1].trim();
+                        if (payload.hasOwnProperty(invalidCol)) {
+                            delete payload[invalidCol];
+                            removedAny = true;
+                        }
                     }
 
                     if (removedAny) {
@@ -1926,7 +1935,7 @@
                 }
             });
 
-            // 表單提交 (精準對應 Supabase coating_params 表欄位，杜絕傳遞不存在之 guns 欄位)
+            // 表單提交 (精準對應 Supabase coating_params 表欄位，徹底排除 'guns')
             document.getElementById('paramForm').addEventListener('submit', async (e) => {
                 e.preventDefault();
 
@@ -1996,7 +2005,7 @@
                     return isNaN(parsed) ? 0 : parsed;
                 };
 
-                // 構建純淨相容的 Payload 物件 (使用獨立的 gun_1 ~ gun_8 欄位，不包含錯誤的 guns 欄位)
+                // 構建純淨相容的 Payload 物件 (直接對應數據庫實體欄位)
                 const payload = {
                     item_name: itemName,
                     image_url: fixImageUrl(uploadedUrl),

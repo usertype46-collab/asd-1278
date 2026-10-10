@@ -289,7 +289,7 @@
                         </div>
                     </div>
 
-                    <!-- 自動槍粉量數據 1~8 -->
+                    <!-- 自動槍粉量數據 1~8 (對應獨立欄位 gun_1 ~ gun_8) -->
                     <div class="pt-4 sm:pt-6 border-t border-slate-700">
                         <h3 class="text-blue-400 mb-3 sm:mb-4 font-bold text-base sm:text-lg flex items-center gap-2" data-i18n="card_gun_powder">🔫 自動槍粉量數據</h3>
                         <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-2 sm:gap-3">
@@ -1151,7 +1151,7 @@
         function normalizeItemData(raw) {
             if (!raw) return null;
 
-            // 1. 自動槍粉量 guns 處理 (槍1 ~ 槍8 展平欄位)
+            // 1. 自動槍粉量 guns 處理 (對應獨立的 gun_1 ~ gun_8 欄位)
             const gunsArr = [
                 raw.gun_1 ?? '0',
                 raw.gun_2 ?? '0',
@@ -1304,7 +1304,7 @@
             }
         }
 
-        // --- 5. Supabase 讀取與寫入 (精準 Schema 白名單過濾修復機制) ---
+        // --- 5. Supabase 讀取與寫入 (精準 Schema 白名單與強效自動除錯重試機制) ---
 
         async function fetchAllCoatingParams() {
             showLoading(true, "連線資料庫讀取資料中...");
@@ -1372,27 +1372,30 @@
         }
 
         /**
-         * 寫入 Supabase (完美修復：比對截圖中的 48 個 Schema 欄位並自動刪除非法 Key)
+         * 寫入 Supabase (完美修復：白名單預先清理，杜絕傳遞任何非資料庫真實欄位如 guns)
          */
         async function saveToSupabase(rawPayload) {
             showLoading(true, "資料庫儲存中...");
             try {
                 let payload = JSON.parse(JSON.stringify(rawPayload));
 
-                // 根據資料庫截圖，確切宣告 coating_params 的 48 個合法 Schema 欄位白名單
-                const KNOWN_COATING_PARAMS_COLUMNS = new Set([
-                    'id', 'item_name', 'gun_1', 'gun_2', 'gun_3', 'gun_4', 'gun_5', 'gun_6', 'gun_7', 'gun_8',
+                // 根據資料庫 Structure，確立 coating_params 的 48 個合法 Schema 欄位白名單
+                const ALLOWED_COLUMNS = new Set([
+                    'id', 'item_name',
+                    'gun_1', 'gun_2', 'gun_3', 'gun_4', 'gun_5', 'gun_6', 'gun_7', 'gun_8',
                     'speed_left', 'speed_right', 'up_turn_left', 'up_turn_right', 'down_turn_left', 'down_turn_right',
-                    'dist_left', 'dist_right', 'voltage', 'current', 'remark_1', 'remark_2', 'remark_3', 'created_at',
-                    'image_url', 'manual_gun_a', 'manual_gun_b', 'thickness_history', 'remarks',
+                    'dist_left', 'dist_right', 'voltage', 'current',
+                    'remark_1', 'remark_2', 'remark_3', 'created_at', 'image_url',
+                    'manual_gun_a', 'manual_gun_b', 'thickness_history', 'remarks',
                     'manual_a_powder', 'manual_a_air', 'manual_a_voltage', 'manual_a_current', 'manual_a_nozzle', 'manual_a_ring', 'manual_a_spray_count',
                     'manual_b_powder', 'manual_b_air', 'manual_b_voltage', 'manual_b_current', 'manual_b_nozzle', 'manual_b_ring', 'manual_b_spray_count',
                     'film_thickness_records', 'remarks_list', 'thickness_records', 'ng_records', 'dynamic_remarks'
                 ]);
 
-                // 剔除所有不屬於 coating_params 的非法頂層 Key (如 guns, auto_guns, category 等)
+                // 第一關：預先強制剔除所有不屬於 coating_params 的非法頂層 Key (例如 guns, category, reciprocator 等)
                 Object.keys(payload).forEach(key => {
-                    if (!KNOWN_COATING_PARAMS_COLUMNS.has(key)) {
+                    if (!ALLOWED_COLUMNS.has(key)) {
+                        console.warn(`[Pre-Clean] 剔除非屬 coating_params 的欄位: '${key}'`);
                         delete payload[key];
                     }
                 });
@@ -1404,12 +1407,22 @@
 
                     console.warn(`Supabase Upsert Attempt (${retries} left):`, error);
 
-                    // 自動修剪未在 Cache 中更新的遺失欄位
-                    const colMatch = error.message && error.message.match(/Could not find (?:the )?['"]?([^'"]+)['"]? column/i);
-                    if (colMatch && colMatch[1]) {
-                        const invalidCol = colMatch[1].trim();
-                        console.warn(`[Auto-Fix] 數據庫不支援欄位: '${invalidCol}'，自動剔除...`);
-                        delete payload[invalidCol];
+                    const errMsg = (error.message || '') + ' ' + (error.details || '') + ' ' + (error.hint || '');
+                    let removedAny = false;
+
+                    const quoteMatches = errMsg.match(/['"]([^'"]+)['"]/g);
+                    if (quoteMatches) {
+                        quoteMatches.forEach(q => {
+                            const cleanKey = q.replace(/['"]/g, '').trim();
+                            if (payload.hasOwnProperty(cleanKey)) {
+                                console.warn(`[Auto-Fix] 數據庫不支援欄位: '${cleanKey}'，自動剔除...`);
+                                delete payload[cleanKey];
+                                removedAny = true;
+                            }
+                        });
+                    }
+
+                    if (removedAny) {
                         retries--;
                         continue;
                     }
@@ -1913,7 +1926,7 @@
                 }
             });
 
-            // 表單提交 (完美精準匹配 Supabase coating_params 表欄位)
+            // 表單提交 (精準對應 Supabase coating_params 表欄位，杜絕傳遞不存在之 guns 欄位)
             document.getElementById('paramForm').addEventListener('submit', async (e) => {
                 e.preventDefault();
 
@@ -1939,7 +1952,7 @@
 
                 const catVal = document.getElementById('thickness_category').value;
 
-                // 構建手動槍 A/B 詳細 JSON 物件 (內含膜厚類別與細項噴塗次數)
+                // 構建手動槍 A/B 詳細 JSON 物件
                 const manualAObj = {
                     powder: parseInt(document.getElementById('a_powder').value, 10) || 0,
                     air: parseInt(document.getElementById('a_air').value, 10) || 0,
@@ -1978,13 +1991,12 @@
                     thickness_category: catVal
                 };
 
-                // 將「自動」或非數字字串安全的轉成 int4 相容的整數數字 0
                 const parseRecipInt = (val) => {
                     const parsed = parseInt(val, 10);
                     return isNaN(parsed) ? 0 : parsed;
                 };
 
-                // 構建純淨的 48 欄位 Payload
+                // 構建純淨相容的 Payload 物件 (使用獨立的 gun_1 ~ gun_8 欄位，不包含錯誤的 guns 欄位)
                 const payload = {
                     item_name: itemName,
                     image_url: fixImageUrl(uploadedUrl),
@@ -2042,7 +2054,11 @@
                     remark_1: catVal ? `膜厚類別: ${catVal}` : ''
                 };
 
-                if (editingItemId) payload.id = editingItemId;
+                if (editingItemId && String(editingItemId).trim() !== '') {
+                    payload.id = editingItemId;
+                } else {
+                    payload.created_at = new Date().toISOString();
+                }
 
                 try {
                     await saveToSupabase(payload);

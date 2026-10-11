@@ -4,7 +4,7 @@
     <!-- ========================================================================================== -->
     <!-- 百富粉體塗裝自動槍參數系統 / Sistem Parameter Pelapisan Serbuk Baifu                        -->
     <!-- Architecture: Pure Frontend AI Architecture (Respan Span 01 Lite Enabled)                  -->
-    <!-- 完美修復版本：精準匹配 coating_params Schema 欄位與資料型態，徹底排除不支援欄位              -->
+    <!-- 完美修復版本：精準匹配 coating_params 48欄位 Schema 與資料型態，徹底排除不支援欄位        -->
     <!-- ========================================================================================== -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -1219,7 +1219,7 @@
             try {
                 let payload = JSON.parse(JSON.stringify(rawPayload));
 
-                // 嚴格確立 coating_params 的合法 Schema 欄位白名單（絕對排除 'guns'）
+                // 嚴格確立 coating_params 的合法 Schema 欄位白名單（絕對排除非法的 'guns' 屬性）
                 const ALLOWED_COLUMNS = new Set([
                     'id', 'item_name',
                     'gun_1', 'gun_2', 'gun_3', 'gun_4', 'gun_5', 'gun_6', 'gun_7', 'gun_8',
@@ -1830,7 +1830,6 @@
                     thickness_category: catVal
                 };
 
-                // 將輸入值安全轉為整數 (若為「自動」或空值則轉為 0 以匹配 int4 欄位)
                 const parseRecipInt = (val) => {
                     if (val === '自動' || !val) return 0;
                     const parsed = parseInt(val, 10);

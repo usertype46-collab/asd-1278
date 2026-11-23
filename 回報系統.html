@@ -60,16 +60,20 @@
                         📡 抓取目前GPS
                     </button>
                 </div>
-                <p id="gpsCaptureHint" class="text-[11px] text-emerald-700 mb-2">可點擊「抓取目前GPS」自動填入目前座標，或手動輸入經緯度與重點作業後儲存。</p>
+                <p id="gpsCaptureHint" class="text-[11px] text-emerald-700 mb-2">可點擊「抓取目前GPS」自動填入目前座標，或手動輸入經緯度、隸屬區域與重點作業後儲存。</p>
                 <form id="gpsLocationForm" onsubmit="saveStoreLocation(event)" class="space-y-2.5">
                     <input type="hidden" id="editGpsStoreId">
                     <input type="hidden" id="editGpsOriginalGroup">
                     <input type="hidden" id="editGpsOriginalName">
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        <select id="gpsStoreGroup" required class="border border-emerald-300 rounded px-2 py-1.5 text-sm bg-white focus:ring-2 focus:ring-emerald-500 outline-none">
-                            <option value="愛國群組">隸屬：愛國群組</option>
-                            <option value="中洲群組">隸屬：中洲群組</option>
-                        </select>
+                        <div class="flex gap-1">
+                            <select id="gpsStoreGroup" required class="flex-1 min-w-0 border border-emerald-300 rounded px-2 py-1.5 text-sm bg-white focus:ring-2 focus:ring-emerald-500 outline-none">
+                                <option value="愛國群組">隸屬：愛國群組</option>
+                                <option value="中洲群組">隸屬：中洲群組</option>
+                            </select>
+                            <button type="button" onclick="addNewRegion('gpsStoreGroup')" title="新增隸屬區域" class="bg-emerald-100 hover:bg-emerald-200 text-emerald-900 border border-emerald-300 px-2 py-1.5 rounded text-xs font-bold shrink-0 transition">➕區</button>
+                            <button type="button" onclick="editSelectedRegion('gpsStoreGroup')" title="修改所選隸屬區域" class="bg-blue-100 hover:bg-blue-200 text-blue-800 border border-blue-300 px-2 py-1.5 rounded text-xs font-bold shrink-0 transition">✏️區</button>
+                        </div>
                         <input type="text" id="gpsStoreName" placeholder="門市地點名稱（如：潮州中洲）" required class="border border-emerald-300 rounded px-2 py-1.5 text-sm bg-white focus:ring-2 focus:ring-emerald-500 outline-none">
                     </div>
                     <div class="grid grid-cols-2 gap-2">
@@ -123,10 +127,18 @@
                 <form id="shortcutForm" onsubmit="saveShortcut(event)" class="mb-4">
                     <input type="hidden" id="editShortcutId">
                     <div class="flex flex-col gap-2 mb-2">
-                        <select id="shortcutGroup" required class="border border-gray-300 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-green-500 outline-none">
-                            <option value="愛國群組">隸屬：愛國群組</option>
-                            <option value="中洲群組">隸屬：中洲群組</option>
-                        </select>
+                        <div class="flex gap-1.5">
+                            <select id="shortcutGroup" required class="flex-1 min-w-0 border border-gray-300 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-green-500 outline-none">
+                                <option value="愛國群組">隸屬：愛國群組</option>
+                                <option value="中洲群組">隸屬：中洲群組</option>
+                            </select>
+                            <button type="button" onclick="addNewRegion('shortcutGroup')" class="bg-green-100 hover:bg-green-200 text-green-800 border border-green-300 px-2 py-1 rounded text-xs font-bold shrink-0 transition">
+                                ➕ 新增區域
+                            </button>
+                            <button type="button" onclick="editSelectedRegion('shortcutGroup')" class="bg-blue-100 hover:bg-blue-200 text-blue-700 border border-blue-300 px-2 py-1 rounded text-xs font-bold shrink-0 transition">
+                                ✏️ 修改區域
+                            </button>
+                        </div>
                         <div class="flex gap-2">
                             <input type="text" id="shortcutName" placeholder="門市名稱" required class="flex-1 border border-gray-300 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-green-500 outline-none">
                             <input type="url" id="shortcutUrl" placeholder="LINE 網址 (https://...)" required class="flex-[2] border border-gray-300 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-green-500 outline-none">
@@ -374,10 +386,13 @@
         const supabaseClient = createClient(supabaseUrl, supabaseKey);
 
         const LOCAL_LOCATIONS_KEY = 'shopee_store_locations_v1';
+        const LOCAL_REGIONS_KEY = 'shopee_custom_regions_v1';
         const LOCAL_REPORTED_KEY = 'shopee_reported_records_v1';
         const LOCAL_REALLOC_STORES_KEY = 'shopee_realloc_stores_v1';
+        const DEFAULT_REGIONS = ['愛國群組', '中洲群組'];
         const KEY_TASKS_OPTIONS = ['有黑箱上架', '有NDD包裹上架', '有NDD打包', '有FBS打包'];
 
+        let regions = loadRegions();
         let shortcuts = [];
         let STORE_LOCATIONS = { '愛國群組': [], '中洲群組': [] };
         let currentVisibleGroup = null;
@@ -444,6 +459,172 @@
 
         let config = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
 
+        function loadRegions() {
+            try {
+                const raw = localStorage.getItem(LOCAL_REGIONS_KEY);
+                const parsed = raw ? JSON.parse(raw) : DEFAULT_REGIONS;
+                const clean = Array.isArray(parsed) ? parsed.map(r => String(r).trim()).filter(Boolean) : [];
+                return Array.from(new Set([...DEFAULT_REGIONS, ...clean]));
+            } catch (e) {
+                return [...DEFAULT_REGIONS];
+            }
+        }
+
+        function saveRegions() {
+            try {
+                localStorage.setItem(LOCAL_REGIONS_KEY, JSON.stringify(regions));
+            } catch (e) {}
+        }
+
+        function ensureRegionExists(regionName) {
+            const clean = String(regionName || '').trim();
+            if (!clean) return;
+            if (!regions.includes(clean)) {
+                regions.push(clean);
+                saveRegions();
+            }
+            if (!STORE_LOCATIONS[clean]) {
+                STORE_LOCATIONS[clean] = [];
+            }
+        }
+
+        function syncAllRegionsFromData() {
+            shortcuts.forEach(s => {
+                if (s && s.group_type) ensureRegionExists(s.group_type);
+            });
+            Object.keys(STORE_LOCATIONS || {}).forEach(grp => {
+                if (grp) ensureRegionExists(grp);
+            });
+            renderRegionSelects();
+        }
+
+        function renderRegionSelects(preferredShortcutGroup = null, preferredGpsGroup = null) {
+            const scSelect = document.getElementById('shortcutGroup');
+            const gpsSelect = document.getElementById('gpsStoreGroup');
+            const prevSc = preferredShortcutGroup || (scSelect ? scSelect.value : '');
+            const prevGps = preferredGpsGroup || (gpsSelect ? gpsSelect.value : '');
+
+            if (scSelect) {
+                scSelect.innerHTML = regions.map(r =>
+                    `<option value="${escapeHtml(r)}">隸屬：${escapeHtml(r)}</option>`
+                ).join('');
+                if (prevSc && regions.includes(prevSc)) {
+                    scSelect.value = prevSc;
+                } else if (regions.length > 0) {
+                    scSelect.value = regions[0];
+                }
+            }
+
+            if (gpsSelect) {
+                gpsSelect.innerHTML = regions.map(r =>
+                    `<option value="${escapeHtml(r)}">隸屬：${escapeHtml(r)}</option>`
+                ).join('');
+                if (prevGps && regions.includes(prevGps)) {
+                    gpsSelect.value = prevGps;
+                } else if (regions.length > 0) {
+                    gpsSelect.value = regions[0];
+                }
+            }
+        }
+
+        async function addNewRegion(targetSelectId = 'shortcutGroup') {
+            const inputName = prompt('請輸入新的「隸屬區域」名稱（例如：潮州群組、新園群組）：');
+            if (!inputName) return;
+            const newRegion = inputName.trim();
+            if (!newRegion) return alert('⚠️ 隸屬區域名稱不能為空白！');
+
+            if (regions.includes(newRegion)) {
+                alert(`ℹ️ 隸屬區域「${newRegion}」已存在，已為您自動切換選取。`);
+                renderRegionSelects(
+                    targetSelectId === 'shortcutGroup' ? newRegion : null,
+                    targetSelectId === 'gpsStoreGroup' ? newRegion : null
+                );
+                return;
+            }
+
+            regions.push(newRegion);
+            saveRegions();
+            if (!STORE_LOCATIONS[newRegion]) {
+                STORE_LOCATIONS[newRegion] = [];
+                saveLocalLocations();
+            }
+
+            renderRegionSelects(
+                targetSelectId === 'shortcutGroup' ? newRegion : null,
+                targetSelectId === 'gpsStoreGroup' ? newRegion : null
+            );
+            renderGpsStoreList();
+            if (lastKnownCoords) {
+                checkLocation(lastKnownCoords.lat, lastKnownCoords.lng);
+            }
+            alert(`✅ 已新增隸屬區域「${newRegion}」！`);
+        }
+
+        async function editSelectedRegion(targetSelectId = 'shortcutGroup') {
+            const selectEl = document.getElementById(targetSelectId);
+            const oldRegion = selectEl ? selectEl.value : '';
+            if (!oldRegion) return alert('⚠️ 請先選擇要修改的隸屬區域！');
+
+            const inputName = prompt(`修改隸屬區域「${oldRegion}」的名稱：`, oldRegion);
+            if (!inputName) return;
+            const newRegion = inputName.trim();
+            if (!newRegion || newRegion === oldRegion) return;
+
+            if (regions.includes(newRegion)) {
+                return alert(`⚠️ 隸屬區域名稱「${newRegion}」已存在，請使用其他名稱。`);
+            }
+
+            regions = regions.map(r => (r === oldRegion ? newRegion : r));
+            saveRegions();
+
+            const oldStores = STORE_LOCATIONS[oldRegion] || [];
+            const existingTargetStores = STORE_LOCATIONS[newRegion] || [];
+            STORE_LOCATIONS[newRegion] = [...existingTargetStores, ...oldStores];
+            delete STORE_LOCATIONS[oldRegion];
+            saveLocalLocations();
+
+            const affectedShortcuts = shortcuts.filter(s => s.group_type === oldRegion);
+            shortcuts.forEach(s => {
+                if (s.group_type === oldRegion) {
+                    s.group_type = newRegion;
+                }
+            });
+
+            renderRegionSelects(
+                targetSelectId === 'shortcutGroup' ? newRegion : null,
+                targetSelectId === 'gpsStoreGroup' ? newRegion : null
+            );
+            renderShortcuts();
+            renderGpsStoreList();
+
+            const cloudErrors = [];
+            for (const sc of affectedShortcuts) {
+                if (sc.id) {
+                    const res = await supabaseClient.from('shortcuts').update({ group_type: newRegion }).eq('id', sc.id);
+                    if (res.error) cloudErrors.push(res.error.message);
+                }
+            }
+            for (const st of oldStores) {
+                if (st.id) {
+                    const res = await supabaseClient.from('store_locations').update({ group_type: newRegion }).eq('id', st.id);
+                    if (res.error) cloudErrors.push(res.error.message);
+                } else if (st.name) {
+                    const res = await supabaseClient.from('store_locations').update({ group_type: newRegion }).eq('name', st.name).eq('group_type', oldRegion);
+                    if (res.error) cloudErrors.push(res.error.message);
+                }
+            }
+
+            if (lastKnownCoords) {
+                checkLocation(lastKnownCoords.lat, lastKnownCoords.lng);
+            }
+
+            if (cloudErrors.length > 0) {
+                alert(`✅ 已更新隸屬區域「${oldRegion}」→「${newRegion}」（雲端同步提示：${cloudErrors[0]}）`);
+            } else {
+                alert(`✅ 已將隸屬區域「${oldRegion}」修改為「${newRegion}」！`);
+            }
+        }
+
         function loadReportedRecords() {
             try {
                 const raw = localStorage.getItem(LOCAL_REPORTED_KEY);
@@ -507,7 +688,11 @@
 
         async function fetchShortcuts() {
             const { data } = await supabaseClient.from('shortcuts').select('*').order('created_at', { ascending: true });
-            if (data) { shortcuts = data; renderShortcuts(); }
+            if (data) {
+                shortcuts = data;
+                syncAllRegionsFromData();
+                renderShortcuts();
+            }
         }
 
         function normalizeKeyTasks(rawTasks) {
@@ -521,10 +706,16 @@
                 if (raw) {
                     const parsed = JSON.parse(raw);
                     if (parsed && typeof parsed === 'object') {
-                        STORE_LOCATIONS = {
-                            '愛國群組': Array.isArray(parsed['愛國群組']) ? parsed['愛國群組'].map(s => ({ ...s, keyTasks: normalizeKeyTasks(s.keyTasks) })) : [],
-                            '中洲群組': Array.isArray(parsed['中洲群組']) ? parsed['中洲群組'].map(s => ({ ...s, keyTasks: normalizeKeyTasks(s.keyTasks) })) : []
-                        };
+                        const nextMap = {};
+                        regions.forEach(r => { nextMap[r] = []; });
+                        Object.keys(parsed).forEach(grp => {
+                            if (!grp) return;
+                            ensureRegionExists(grp);
+                            nextMap[grp] = Array.isArray(parsed[grp])
+                                ? parsed[grp].map(s => ({ ...s, keyTasks: normalizeKeyTasks(s.keyTasks) }))
+                                : [];
+                        });
+                        STORE_LOCATIONS = nextMap;
                     }
                 }
             } catch (e) {}
@@ -538,14 +729,14 @@
 
         async function fetchLocations() {
             const previousLocalMap = {};
-            ['愛國群組', '中洲群組'].forEach(grp => {
+            Object.keys(STORE_LOCATIONS || {}).forEach(grp => {
                 (STORE_LOCATIONS[grp] || []).forEach(st => {
                     previousLocalMap[`${grp}__${st.name}`] = normalizeKeyTasks(st.keyTasks);
                 });
             });
 
             loadLocalLocations();
-            ['愛國群組', '中洲群組'].forEach(grp => {
+            Object.keys(STORE_LOCATIONS || {}).forEach(grp => {
                 (STORE_LOCATIONS[grp] || []).forEach(st => {
                     const key = `${grp}__${st.name}`;
                     if (!st.keyTasks && previousLocalMap[key]) {
@@ -557,19 +748,22 @@
             const { data, error } = await supabaseClient.from('store_locations').select('*');
             if (!error && data && data.length > 0) {
                 const localKeyTaskLookup = {};
-                ['愛國群組', '中洲群組'].forEach(grp => {
+                Object.keys(STORE_LOCATIONS || {}).forEach(grp => {
                     (STORE_LOCATIONS[grp] || []).forEach(st => {
                         localKeyTaskLookup[`${grp}__${st.name}`] = normalizeKeyTasks(st.keyTasks);
                     });
                 });
 
-                STORE_LOCATIONS = { '愛國群組': [], '中洲群組': [] };
+                const nextStoreLocations = {};
+                regions.forEach(r => { nextStoreLocations[r] = []; });
+
                 data.forEach(loc => {
                     const grp = loc.group_type || '愛國群組';
-                    if (!STORE_LOCATIONS[grp]) STORE_LOCATIONS[grp] = [];
+                    ensureRegionExists(grp);
+                    if (!nextStoreLocations[grp]) nextStoreLocations[grp] = [];
                     const cloudTasks = normalizeKeyTasks(loc.key_tasks || loc.keyTasks);
                     const fallbackTasks = localKeyTaskLookup[`${grp}__${loc.name}`] || [];
-                    STORE_LOCATIONS[grp].push({
+                    nextStoreLocations[grp].push({
                         id: loc.id,
                         name: loc.name,
                         lat: Number(loc.lat),
@@ -577,8 +771,10 @@
                         keyTasks: cloudTasks.length > 0 ? cloudTasks : fallbackTasks
                     });
                 });
+                STORE_LOCATIONS = nextStoreLocations;
                 saveLocalLocations();
             }
+            syncAllRegionsFromData();
             renderGpsStoreList();
             if (lastKnownCoords) {
                 checkLocation(lastKnownCoords.lat, lastKnownCoords.lng);
@@ -708,6 +904,7 @@
         /* ================= 4. GPS 距離、定位、重點作業與新增/編輯門市地點 ================= */
         function toggleGpsLocationManager() {
             document.getElementById('gpsLocationSection').classList.toggle('hidden');
+            syncAllRegionsFromData();
             renderGpsStoreList();
         }
 
@@ -729,19 +926,22 @@
             document.getElementById('editGpsOriginalGroup').value = '';
             document.getElementById('editGpsOriginalName').value = '';
             setSelectedGpsKeyTasks([]);
+            renderRegionSelects();
             document.getElementById('gpsFormTitle').innerText = '📍 新增門市地點與 GPS 定位';
             document.getElementById('saveGpsStoreBtn').innerText = '➕ 新增門市並添加 GPS 定位';
-            document.getElementById('gpsCaptureHint').innerText = '可點擊「抓取目前GPS」自動填入目前座標，或手動輸入經緯度與重點作業後儲存。';
+            document.getElementById('gpsCaptureHint').innerText = '可點擊「抓取目前GPS」自動填入目前座標，或手動輸入經緯度、隸屬區域與重點作業後儲存。';
         }
 
         function editStoreLocation(groupType, storeName) {
             const storeObj = (STORE_LOCATIONS[groupType] || []).find(s => s.name === storeName);
             if (!storeObj) return;
 
+            ensureRegionExists(groupType);
             document.getElementById('gpsLocationSection').classList.remove('hidden');
             document.getElementById('editGpsStoreId').value = storeObj.id || '';
             document.getElementById('editGpsOriginalGroup').value = groupType;
             document.getElementById('editGpsOriginalName').value = storeObj.name;
+            renderRegionSelects(null, groupType);
             document.getElementById('gpsStoreGroup').value = groupType;
             document.getElementById('gpsStoreName').value = storeObj.name;
             document.getElementById('gpsStoreLat').value = storeObj.lat;
@@ -750,7 +950,7 @@
 
             document.getElementById('gpsFormTitle').innerText = `✏️ 編輯門市地點：${storeObj.name}`;
             document.getElementById('saveGpsStoreBtn').innerText = '💾 儲存更新門市設定';
-            document.getElementById('gpsCaptureHint').innerText = '正在編輯已設定門市，修改後點擊「儲存更新門市設定」。';
+            document.getElementById('gpsCaptureHint').innerText = '正在編輯已設定門市（可修改隸屬區域或座標），修改後點擊「儲存更新門市設定」。';
         }
 
         function captureCurrentGpsForForm() {
@@ -793,6 +993,8 @@
             if (!rawName || Number.isNaN(lat) || Number.isNaN(lng)) {
                 return alert('⚠️ 請完整填寫門市名稱與有效的經緯度！');
             }
+
+            ensureRegionExists(group_type);
 
             if (isEditing && STORE_LOCATIONS[origGroup]) {
                 STORE_LOCATIONS[origGroup] = STORE_LOCATIONS[origGroup].filter(s => s.name !== origName);
@@ -859,10 +1061,10 @@
             }
 
             if (cloudError) {
-                alert(`✅ 已於本機${isEditing ? '更新' : '新增'}門市 GPS 與重點作業（雲端同步提示：${cloudError.message}）`);
+                alert(`✅ 已於本機${isEditing ? '更新' : '新增'}門市 GPS（隸屬：${group_type}）與重點作業（雲端同步提示：${cloudError.message}）`);
             } else {
                 await fetchLocations();
-                alert(`✅ 已${isEditing ? '儲存更新' : '新增'}門市「${rawName}」與 GPS 定位！`);
+                alert(`✅ 已${isEditing ? '儲存更新' : '新增'}門市「${rawName}」（隸屬：${group_type}）與 GPS 定位！`);
             }
 
             if (lastKnownCoords) {
@@ -893,7 +1095,7 @@
             const listEl = document.getElementById('gpsStoreList');
             if (!listEl) return;
             const allItems = [];
-            ['愛國群組', '中洲群組'].forEach(grp => {
+            Object.keys(STORE_LOCATIONS || {}).forEach(grp => {
                 (STORE_LOCATIONS[grp] || []).forEach(st => {
                     allItems.push({ ...st, group_type: grp });
                 });
@@ -996,22 +1198,17 @@
             let closestStore = null;
             let matchedObj = null;
 
-            for (let store of (STORE_LOCATIONS['愛國群組'] || [])) {
-                if (calculateDistance(userLat, userLng, store.lat, store.lng) <= 50) {
-                    newGroup = '愛國群組';
-                    matchedObj = store;
-                    closestStore = store.name.replace('智取店', ''); break;
-                }
-            }
-
-            if (!newGroup) {
-                for (let store of (STORE_LOCATIONS['中洲群組'] || [])) {
+            const groupOrder = Array.from(new Set([...regions, ...Object.keys(STORE_LOCATIONS || {})]));
+            for (const grp of groupOrder) {
+                for (const store of (STORE_LOCATIONS[grp] || [])) {
                     if (calculateDistance(userLat, userLng, store.lat, store.lng) <= 50) {
-                        newGroup = '中洲群組';
+                        newGroup = grp;
                         matchedObj = store;
-                        closestStore = store.name.replace('智取店', ''); break;
+                        closestStore = store.name.replace('智取店', '');
+                        break;
                     }
                 }
+                if (newGroup) break;
             }
 
             currentVisibleGroup = newGroup;
@@ -1073,7 +1270,11 @@
             `).join('');
         }
 
-        function toggleManageShortcuts() { document.getElementById('manageShortcutsSection').classList.toggle('hidden'); resetShortcutForm(); }
+        function toggleManageShortcuts() {
+            document.getElementById('manageShortcutsSection').classList.toggle('hidden');
+            syncAllRegionsFromData();
+            resetShortcutForm();
+        }
 
         async function saveShortcut(e) {
             e.preventDefault();
@@ -1081,8 +1282,22 @@
             const name = document.getElementById('shortcutName').value.trim();
             const url = document.getElementById('shortcutUrl').value.trim();
             if (!name || !url) return;
-            if (editShortcutId) await supabaseClient.from('shortcuts').update({ name, url, group_type }).eq('id', editShortcutId);
-            else await supabaseClient.from('shortcuts').insert([{ name, url, group_type }]);
+            ensureRegionExists(group_type);
+            if (editShortcutId) {
+                const { error } = await supabaseClient.from('shortcuts').update({ name, url, group_type }).eq('id', editShortcutId);
+                if (error) {
+                    shortcuts = shortcuts.map(s => s.id === editShortcutId ? { ...s, name, url, group_type } : s);
+                    renderShortcuts();
+                }
+            } else {
+                const { data, error } = await supabaseClient.from('shortcuts').insert([{ name, url, group_type }]).select();
+                if (error) {
+                    shortcuts.push({ id: 'local_' + genId(), name, url, group_type });
+                    renderShortcuts();
+                } else if (data && data.length > 0) {
+                    await fetchShortcuts();
+                }
+            }
             resetShortcutForm();
         }
 
@@ -1090,6 +1305,8 @@
             const s = shortcuts.find(x => x.id === id);
             if (!s) return;
             editShortcutId = id;
+            ensureRegionExists(s.group_type || '愛國群組');
+            renderRegionSelects(s.group_type || '愛國群組', null);
             document.getElementById('shortcutGroup').value = s.group_type || '愛國群組';
             document.getElementById('shortcutName').value = s.name;
             document.getElementById('shortcutUrl').value = s.url;
@@ -1099,12 +1316,17 @@
 
         async function deleteShortcut(id) {
             if (!confirm('確定要刪除此捷徑嗎？')) return;
-            await supabaseClient.from('shortcuts').delete().eq('id', id);
+            const { error } = await supabaseClient.from('shortcuts').delete().eq('id', id);
+            if (error) {
+                shortcuts = shortcuts.filter(s => s.id !== id);
+                renderShortcuts();
+            }
         }
 
         function resetShortcutForm() {
             editShortcutId = null;
             document.getElementById('shortcutForm').reset();
+            renderRegionSelects();
             document.getElementById('shortcutFormTitle').innerText = '新增捷徑';
             document.getElementById('saveShortcutBtn').innerText = '儲存';
         }
@@ -1141,7 +1363,7 @@
             const locSelect = document.getElementById('locationSelect');
             const baseStores = locSelect ? Array.from(locSelect.options).map(o => o.value) : [];
             const gpsStores = [];
-            ['愛國群組', '中洲群組'].forEach(grp => {
+            Object.keys(STORE_LOCATIONS || {}).forEach(grp => {
                 (STORE_LOCATIONS[grp] || []).forEach(st => {
                     gpsStores.push(st.name.replace('智取店', ''));
                 });
@@ -1754,6 +1976,7 @@
 
         // 初始化
         document.addEventListener('DOMContentLoaded', async () => {
+            renderRegionSelects();
             updateShiftStatus(); 
             setInterval(updateShiftStatus, 60000); 
             

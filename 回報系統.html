@@ -184,7 +184,7 @@
                         <span id="todayDate">讀取中</span>
                         <span id="shiftIndicator" class="text-[10px] px-1.5 py-0.5 rounded-full text-white bg-gray-400">時段</span>
                     </div>
-                    <select id="locationSelect" onchange="renderCategories()" class="flex-1 border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none text-sm h-full">
+                    <select id="locationSelect" onfocus="syncLocationSelectOptions()" onchange="renderCategories()" class="flex-1 border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none text-sm h-full">
                         <option value="潮州中洲">潮州中洲</option>
                         <option value="潮州光華">潮州光華</option>
                         <option value="潮州大同">潮州大同</option>
@@ -390,6 +390,10 @@
         const LOCAL_REPORTED_KEY = 'shopee_reported_records_v1';
         const LOCAL_REALLOC_STORES_KEY = 'shopee_realloc_stores_v1';
         const DEFAULT_REGIONS = ['愛國群組', '中洲群組'];
+        const DEFAULT_BASE_STORES = [
+            '潮州中洲', '潮州光華', '潮州大同', '潮州光春', '潮州愛國',
+            '潮州四維', '潮州文化', '潮州延平', '潮州太平', '潮州新生', '新園仙吉'
+        ];
         const KEY_TASKS_OPTIONS = ['有黑箱上架', '有NDD包裹上架', '有NDD打包', '有FBS打包'];
 
         let regions = loadRegions();
@@ -458,6 +462,44 @@
         };
 
         let config = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+
+        function normalizeStoreDisplayName(name) {
+            return String(name || '').replace('智取店', '').trim();
+        }
+
+        function getAllAvailableStores() {
+            const storeSet = new Set(DEFAULT_BASE_STORES);
+            Object.keys(STORE_LOCATIONS || {}).forEach(grp => {
+                (STORE_LOCATIONS[grp] || []).forEach(st => {
+                    const clean = normalizeStoreDisplayName(st.name);
+                    if (clean) storeSet.add(clean);
+                });
+            });
+            if (config && Array.isArray(config.reallocStores)) {
+                config.reallocStores.forEach(stName => {
+                    const clean = normalizeStoreDisplayName(stName);
+                    if (clean) storeSet.add(clean);
+                });
+            }
+            return Array.from(storeSet);
+        }
+
+        function syncLocationSelectOptions(preferredStore = null) {
+            const locSelect = document.getElementById('locationSelect');
+            if (!locSelect) return;
+            const currentVal = preferredStore || locSelect.value || DEFAULT_BASE_STORES[0];
+            const allStores = getAllAvailableStores();
+
+            locSelect.innerHTML = allStores.map(storeName =>
+                `<option value="${escapeHtml(storeName)}">${escapeHtml(storeName)}</option>`
+            ).join('');
+
+            if (currentVal && allStores.includes(currentVal)) {
+                locSelect.value = currentVal;
+            } else if (allStores.length > 0) {
+                locSelect.value = allStores[0];
+            }
+        }
 
         function loadRegions() {
             try {
@@ -553,6 +595,8 @@
                 targetSelectId === 'shortcutGroup' ? newRegion : null,
                 targetSelectId === 'gpsStoreGroup' ? newRegion : null
             );
+            syncLocationSelectOptions();
+            renderReallocStoreCheckboxes();
             renderGpsStoreList();
             if (lastKnownCoords) {
                 checkLocation(lastKnownCoords.lat, lastKnownCoords.lng);
@@ -594,6 +638,8 @@
                 targetSelectId === 'shortcutGroup' ? newRegion : null,
                 targetSelectId === 'gpsStoreGroup' ? newRegion : null
             );
+            syncLocationSelectOptions();
+            renderReallocStoreCheckboxes();
             renderShortcuts();
             renderGpsStoreList();
 
@@ -775,9 +821,13 @@
                 saveLocalLocations();
             }
             syncAllRegionsFromData();
+            syncLocationSelectOptions();
+            renderReallocStoreCheckboxes();
             renderGpsStoreList();
             if (lastKnownCoords) {
                 checkLocation(lastKnownCoords.lat, lastKnownCoords.lng);
+            } else {
+                renderCategories();
             }
         }
 
@@ -803,6 +853,7 @@
                     }
                 });
                 if (changed) syncConfigToSupabase();
+                syncLocationSelectOptions();
                 renderReallocStoreCheckboxes();
                 renderCategories();
             } else {
@@ -811,6 +862,7 @@
                     if (savedRealloc) config.reallocStores = JSON.parse(savedRealloc);
                 } catch (e) {}
                 await supabaseClient.from('report_settings').upsert([{ id: 1, config_data: config }]);
+                syncLocationSelectOptions();
                 renderReallocStoreCheckboxes();
                 renderCategories();
             }
@@ -820,6 +872,7 @@
             try {
                 localStorage.setItem(LOCAL_REALLOC_STORES_KEY, JSON.stringify(config.reallocStores || []));
             } catch (e) {}
+            syncLocationSelectOptions();
             renderReallocStoreCheckboxes();
             renderCategories();
             await supabaseClient.from('report_settings').upsert([{ id: 1, config_data: config }]);
@@ -897,6 +950,7 @@
             document.getElementById('shiftIndicator').innerText = shiftName;
             document.getElementById('shiftIndicator').className = `text-[10px] px-2 py-1 rounded-full text-white shadow-sm ${shiftColor}`;
             
+            syncLocationSelectOptions();
             updateWarningBanner();
             renderCategories(); 
         }
@@ -1016,17 +1070,12 @@
                 STORE_LOCATIONS[group_type].push(newEntry);
             }
             saveLocalLocations();
-            renderGpsStoreList();
 
-            const locSelect = document.getElementById('locationSelect');
-            const cleanStoreName = rawName.replace('智取店', '');
-            if (!Array.from(locSelect.options).some(opt => opt.value === cleanStoreName)) {
-                const opt = document.createElement('option');
-                opt.value = cleanStoreName;
-                opt.textContent = cleanStoreName;
-                locSelect.appendChild(opt);
-                renderReallocStoreCheckboxes();
-            }
+            const cleanStoreName = normalizeStoreDisplayName(rawName);
+            syncLocationSelectOptions(cleanStoreName || null);
+            renderReallocStoreCheckboxes();
+            renderGpsStoreList();
+            renderCategories();
 
             let cloudError = null;
             if (isEditing) {
@@ -1064,7 +1113,7 @@
                 alert(`✅ 已於本機${isEditing ? '更新' : '新增'}門市 GPS（隸屬：${group_type}）與重點作業（雲端同步提示：${cloudError.message}）`);
             } else {
                 await fetchLocations();
-                alert(`✅ 已${isEditing ? '儲存更新' : '新增'}門市「${rawName}」（隸屬：${group_type}）與 GPS 定位！`);
+                alert(`✅ 已${isEditing ? '儲存更新' : '新增'}門市「${rawName}」（隸屬：${group_type}）與 GPS 定位，回報門市選單已同步！`);
             }
 
             if (lastKnownCoords) {
@@ -1079,7 +1128,10 @@
                 STORE_LOCATIONS[groupType] = STORE_LOCATIONS[groupType].filter(s => s.name !== storeName);
                 saveLocalLocations();
             }
+            syncLocationSelectOptions();
+            renderReallocStoreCheckboxes();
             renderGpsStoreList();
+            renderCategories();
 
             if (id) {
                 await supabaseClient.from('store_locations').delete().eq('id', id);
@@ -1204,7 +1256,7 @@
                     if (calculateDistance(userLat, userLng, store.lat, store.lng) <= 50) {
                         newGroup = grp;
                         matchedObj = store;
-                        closestStore = store.name.replace('智取店', '');
+                        closestStore = normalizeStoreDisplayName(store.name);
                         break;
                     }
                 }
@@ -1223,17 +1275,12 @@
                 gpsSpan.innerText = `📍 在 ${newGroup} 範圍內`;
                 
                 if (closestStore) {
-                    const locSelect = document.getElementById('locationSelect');
-                    for (let i = 0; i < locSelect.options.length; i++) {
-                        if (locSelect.options[i].value === closestStore) {
-                            if (locSelect.selectedIndex !== i) { locSelect.selectedIndex = i; }
-                            break;
-                        }
-                    }
+                    syncLocationSelectOptions(closestStore);
                 }
             } else {
                 gpsSpan.className = 'text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500';
                 gpsSpan.innerText = `📍 未進入任何門市 50m 內`;
+                syncLocationSelectOptions();
             }
             renderCategories();
             renderShortcuts();
@@ -1357,18 +1404,6 @@
         function toggleReallocStoresPanel() {
             document.getElementById('reallocStoresPanel').classList.toggle('hidden');
             renderReallocStoreCheckboxes();
-        }
-
-        function getAllAvailableStores() {
-            const locSelect = document.getElementById('locationSelect');
-            const baseStores = locSelect ? Array.from(locSelect.options).map(o => o.value) : [];
-            const gpsStores = [];
-            Object.keys(STORE_LOCATIONS || {}).forEach(grp => {
-                (STORE_LOCATIONS[grp] || []).forEach(st => {
-                    gpsStores.push(st.name.replace('智取店', ''));
-                });
-            });
-            return Array.from(new Set([...baseStores, ...gpsStores]));
         }
 
         function renderReallocStoreCheckboxes() {
@@ -1528,6 +1563,7 @@
         }
 
         function renderCategories(selectId = null) {
+            syncLocationSelectOptions();
             const select = document.getElementById('categorySelect');
             const currentLocation = document.getElementById('locationSelect').value;
             const dayOfWeek = new Date().getDay();
@@ -1977,6 +2013,7 @@
         // 初始化
         document.addEventListener('DOMContentLoaded', async () => {
             renderRegionSelects();
+            syncLocationSelectOptions();
             updateShiftStatus(); 
             setInterval(updateShiftStatus, 60000); 
             

@@ -1,0 +1,2268 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>cPanel · VistaPanel 網站管理系統</title>
+    <!-- Font Awesome 6 (CDN) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* ==================== 全域重置與變數 ==================== */
+        :root {
+            --cp-bg: #f5f7fa;
+            --cp-sidebar: #1e293b;
+            --cp-sidebar-hover: #334155;
+            --cp-sidebar-active: #0ea5e9;
+            --cp-card: #ffffff;
+            --cp-border: #e2e8f0;
+            --cp-text: #1e293b;
+            --cp-text-muted: #64748b;
+            --cp-primary: #0ea5e9;
+            --cp-primary-dark: #0284c7;
+            --cp-success: #22c55e;
+            --cp-warning: #f59e0b;
+            --cp-danger: #ef4444;
+            --cp-radius: 10px;
+            --cp-shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.06);
+            --cp-shadow-lg: 0 10px 25px rgba(0,0,0,.1);
+            --cp-sidebar-width: 250px;
+            --cp-topbar-height: 60px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans TC", sans-serif;
+            background: var(--cp-bg);
+            color: var(--cp-text);
+            font-size: 14px;
+            line-height: 1.5;
+            overflow-x: hidden;
+        }
+
+        button {
+            cursor: pointer;
+            font-family: inherit;
+            font-size: inherit;
+            border: none;
+            background: none;
+        }
+
+        input, select, textarea {
+            font-family: inherit;
+            font-size: inherit;
+        }
+
+        a {
+            color: var(--cp-primary);
+            text-decoration: none;
+        }
+
+        /* ==================== 佈局骨架 ==================== */
+        .cp-layout {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* ==================== 側邊欄 ==================== */
+        .cp-sidebar {
+            width: var(--cp-sidebar-width);
+            background: var(--cp-sidebar);
+            color: #cbd5e1;
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            z-index: 100;
+            overflow-y: auto;
+            transition: transform .25s ease;
+        }
+
+        .cp-sidebar::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        .cp-sidebar::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 10px;
+        }
+
+        .cp-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 18px 20px;
+            border-bottom: 1px solid #334155;
+            flex-shrink: 0;
+        }
+
+        .cp-brand-icon {
+            width: 34px;
+            height: 34px;
+            background: linear-gradient(135deg, #0ea5e9, #6366f1);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 16px;
+            font-weight: 800;
+        }
+
+        .cp-brand-text {
+            font-size: 16px;
+            font-weight: 700;
+            color: #f1f5f9;
+            letter-spacing: .3px;
+        }
+
+        .cp-brand-text span {
+            color: var(--cp-primary);
+        }
+
+        .cp-nav {
+            flex: 1;
+            padding: 12px 10px;
+        }
+
+        .cp-nav-group {
+            margin-bottom: 6px;
+        }
+
+        .cp-nav-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            color: #64748b;
+            padding: 10px 12px 6px;
+            font-weight: 700;
+        }
+
+        .cp-nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 9px 12px;
+            border-radius: 8px;
+            color: #cbd5e1;
+            font-size: 13px;
+            font-weight: 500;
+            transition: background .15s, color .15s;
+            width: 100%;
+            text-align: left;
+            margin-bottom: 2px;
+        }
+
+        .cp-nav-item i {
+            width: 18px;
+            text-align: center;
+            font-size: 14px;
+            color: #94a3b8;
+            transition: color .15s;
+        }
+
+        .cp-nav-item:hover {
+            background: var(--cp-sidebar-hover);
+            color: #f1f5f9;
+        }
+
+        .cp-nav-item:hover i {
+            color: var(--cp-primary);
+        }
+
+        .cp-nav-item.active {
+            background: var(--cp-primary);
+            color: #fff;
+            font-weight: 600;
+        }
+
+        .cp-nav-item.active i {
+            color: #fff;
+        }
+
+        .cp-sidebar-footer {
+            padding: 14px 18px;
+            border-top: 1px solid #334155;
+            font-size: 11px;
+            color: #64748b;
+            flex-shrink: 0;
+        }
+
+        .cp-sidebar-footer strong {
+            color: #94a3b8;
+            display: block;
+            margin-bottom: 2px;
+        }
+
+        /* ==================== 主區域 ==================== */
+        .cp-main {
+            flex: 1;
+            margin-left: var(--cp-sidebar-width);
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        /* ==================== 頂部導航欄 ==================== */
+        .cp-topbar {
+            height: var(--cp-topbar-height);
+            background: var(--cp-card);
+            border-bottom: 1px solid var(--cp-border);
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            gap: 16px;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            box-shadow: 0 1px 2px rgba(0,0,0,.04);
+        }
+
+        .cp-menu-toggle {
+            display: none;
+            font-size: 20px;
+            color: var(--cp-text);
+            padding: 4px;
+        }
+
+        .cp-search-wrap {
+            flex: 1;
+            max-width: 420px;
+            position: relative;
+        }
+
+        .cp-search-wrap i {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--cp-text-muted);
+            font-size: 13px;
+        }
+
+        .cp-search-input {
+            width: 100%;
+            height: 38px;
+            padding: 0 12px 0 36px;
+            border: 1px solid var(--cp-border);
+            border-radius: 8px;
+            background: #f8fafc;
+            outline: none;
+            transition: border .15s, background .15s;
+        }
+
+        .cp-search-input:focus {
+            border-color: var(--cp-primary);
+            background: #fff;
+            box-shadow: 0 0 0 3px rgba(14,165,233,.1);
+        }
+
+        .cp-topbar-right {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-left: auto;
+        }
+
+        .cp-topbar-btn {
+            width: 38px;
+            height: 38px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--cp-text-muted);
+            font-size: 16px;
+            transition: background .15s, color .15s;
+            position: relative;
+        }
+
+        .cp-topbar-btn:hover {
+            background: #f1f5f9;
+            color: var(--cp-text);
+        }
+
+        .cp-badge-dot {
+            position: absolute;
+            top: 8px;
+            right: 9px;
+            width: 7px;
+            height: 7px;
+            background: var(--cp-danger);
+            border-radius: 50%;
+            border: 1.5px solid #fff;
+        }
+
+        .cp-user-chip {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 10px 4px 4px;
+            border-radius: 30px;
+            transition: background .15s;
+            cursor: pointer;
+        }
+
+        .cp-user-chip:hover {
+            background: #f1f5f9;
+        }
+
+        .cp-avatar {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #0ea5e9, #6366f1);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .cp-username {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--cp-text);
+        }
+
+        /* ==================== 內容區 ==================== */
+        .cp-content {
+            padding: 24px;
+            flex: 1;
+        }
+
+        .cp-page {
+            display: none;
+            animation: cpFadeIn .2s ease;
+        }
+
+        .cp-page.active {
+            display: block;
+        }
+
+        @keyframes cpFadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .cp-page-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 22px;
+            flex-wrap: wrap;
+        }
+
+        .cp-page-header h1 {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--cp-text);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .cp-page-header h1 i {
+            color: var(--cp-primary);
+            font-size: 20px;
+        }
+
+        .cp-page-header p {
+            color: var(--cp-text-muted);
+            font-size: 13px;
+            margin-top: 4px;
+        }
+
+        /* ==================== 卡片與網格 ==================== */
+        .cp-card {
+            background: var(--cp-card);
+            border-radius: var(--cp-radius);
+            box-shadow: var(--cp-shadow);
+            border: 1px solid var(--cp-border);
+            overflow: hidden;
+        }
+
+        .cp-card-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--cp-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .cp-card-header h2 {
+            font-size: 15px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .cp-card-header h2 i {
+            color: var(--cp-primary);
+        }
+
+        .cp-card-body {
+            padding: 20px;
+        }
+
+        .cp-grid {
+            display: grid;
+            gap: 16px;
+        }
+
+        .cp-grid-2 { grid-template-columns: repeat(2, 1fr); }
+        .cp-grid-3 { grid-template-columns: repeat(3, 1fr); }
+        .cp-grid-4 { grid-template-columns: repeat(4, 1fr); }
+
+        /* ==================== 儀表板專用 ==================== */
+        .cp-stat-card {
+            background: var(--cp-card);
+            border-radius: var(--cp-radius);
+            padding: 18px 20px;
+            border: 1px solid var(--cp-border);
+            box-shadow: var(--cp-shadow);
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            transition: transform .15s, box-shadow .15s;
+        }
+
+        .cp-stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--cp-shadow-lg);
+        }
+
+        .cp-stat-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .cp-stat-icon.blue { background: #e0f2fe; color: #0284c7; }
+        .cp-stat-icon.green { background: #dcfce7; color: #16a34a; }
+        .cp-stat-icon.amber { background: #fef3c7; color: #d97706; }
+        .cp-stat-icon.purple { background: #ede9fe; color: #7c3aed; }
+
+        .cp-stat-info h3 {
+            font-size: 22px;
+            font-weight: 800;
+            line-height: 1.2;
+        }
+
+        .cp-stat-info p {
+            font-size: 12px;
+            color: var(--cp-text-muted);
+            margin-top: 2px;
+        }
+
+        /* 快速啟動模組 */
+        .cp-quick-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            gap: 12px;
+        }
+
+        .cp-quick-item {
+            background: var(--cp-card);
+            border: 1px solid var(--cp-border);
+            border-radius: var(--cp-radius);
+            padding: 18px 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            text-align: center;
+            transition: border .15s, box-shadow .15s, transform .15s;
+            color: var(--cp-text);
+            font-size: 12.5px;
+            font-weight: 600;
+        }
+
+        .cp-quick-item i {
+            font-size: 22px;
+            color: var(--cp-primary);
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f0f9ff;
+            border-radius: 10px;
+        }
+
+        .cp-quick-item:hover {
+            border-color: var(--cp-primary);
+            box-shadow: 0 4px 12px rgba(14,165,233,.12);
+            transform: translateY(-2px);
+        }
+
+        /* 帳戶資訊列 */
+        .cp-account-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px 24px;
+            padding: 14px 20px;
+            background: #f8fafc;
+            border-bottom: 1px solid var(--cp-border);
+            font-size: 12.5px;
+        }
+
+        .cp-account-bar span {
+            color: var(--cp-text-muted);
+        }
+
+        .cp-account-bar strong {
+            color: var(--cp-text);
+            font-weight: 600;
+        }
+
+        /* ==================== 表格 ==================== */
+        .cp-table-wrap {
+            overflow-x: auto;
+        }
+
+        .cp-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .cp-table th {
+            text-align: left;
+            padding: 11px 16px;
+            background: #f8fafc;
+            color: var(--cp-text-muted);
+            font-weight: 600;
+            font-size: 11.5px;
+            text-transform: uppercase;
+            letter-spacing: .4px;
+            border-bottom: 1px solid var(--cp-border);
+            white-space: nowrap;
+        }
+
+        .cp-table td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--cp-border);
+            vertical-align: middle;
+        }
+
+        .cp-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .cp-table tbody tr:hover {
+            background: #f8fafc;
+        }
+
+        .cp-table .cp-actions {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        /* ==================== 按鈕 ==================== */
+        .cp-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 8px 16px;
+            border-radius: 7px;
+            font-size: 13px;
+            font-weight: 600;
+            transition: background .15s, color .15s, border .15s, box-shadow .15s;
+            border: 1px solid transparent;
+            white-space: nowrap;
+        }
+
+        .cp-btn-primary {
+            background: var(--cp-primary);
+            color: #fff;
+        }
+
+        .cp-btn-primary:hover {
+            background: var(--cp-primary-dark);
+        }
+
+        .cp-btn-outline {
+            background: #fff;
+            border-color: var(--cp-border);
+            color: var(--cp-text);
+        }
+
+        .cp-btn-outline:hover {
+            border-color: var(--cp-primary);
+            color: var(--cp-primary);
+        }
+
+        .cp-btn-sm {
+            padding: 5px 10px;
+            font-size: 12px;
+            border-radius: 6px;
+        }
+
+        .cp-btn-danger {
+            background: #fef2f2;
+            color: var(--cp-danger);
+            border-color: #fecaca;
+        }
+
+        .cp-btn-danger:hover {
+            background: var(--cp-danger);
+            color: #fff;
+        }
+
+        /* ==================== 檔案管理器 ==================== */
+        .cp-file-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            border-bottom: 1px solid var(--cp-border);
+            flex-wrap: wrap;
+            background: #f8fafc;
+        }
+
+        .cp-breadcrumb {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12.5px;
+            color: var(--cp-text-muted);
+            padding: 0 0 12px;
+            flex-wrap: wrap;
+        }
+
+        .cp-breadcrumb a {
+            color: var(--cp-primary);
+            font-weight: 500;
+        }
+
+        .cp-breadcrumb i {
+            font-size: 9px;
+            color: #cbd5e1;
+        }
+
+        .cp-file-list {
+            list-style: none;
+        }
+
+        .cp-file-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 16px;
+            border-bottom: 1px solid var(--cp-border);
+            transition: background .12s;
+        }
+
+        .cp-file-item:last-child {
+            border-bottom: none;
+        }
+
+        .cp-file-item:hover {
+            background: #f8fafc;
+        }
+
+        .cp-file-icon {
+            width: 34px;
+            height: 34px;
+            border-radius: 7px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+
+        .cp-file-icon.folder { background: #fef3c7; color: #d97706; }
+        .cp-file-icon.file { background: #e0f2fe; color: #0284c7; }
+        .cp-file-icon.image { background: #dcfce7; color: #16a34a; }
+        .cp-file-icon.archive { background: #ede9fe; color: #7c3aed; }
+
+        .cp-file-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .cp-file-name {
+            font-weight: 600;
+            font-size: 13px;
+            color: var(--cp-text);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .cp-file-meta {
+            font-size: 11.5px;
+            color: var(--cp-text-muted);
+        }
+
+        .cp-file-actions {
+            display: flex;
+            gap: 4px;
+            flex-shrink: 0;
+        }
+
+        /* ==================== 進度條 / 用量 ==================== */
+        .cp-usage-bar {
+            height: 8px;
+            background: #e2e8f0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 6px;
+        }
+
+        .cp-usage-fill {
+            height: 100%;
+            border-radius: 10px;
+            transition: width .4s ease;
+        }
+
+        .cp-usage-fill.blue { background: linear-gradient(90deg, #0ea5e9, #6366f1); }
+        .cp-usage-fill.green { background: linear-gradient(90deg, #22c55e, #10b981); }
+        .cp-usage-fill.amber { background: linear-gradient(90deg, #f59e0b, #f97316); }
+
+        /* ==================== 表單 ==================== */
+        .cp-form-group {
+            margin-bottom: 16px;
+        }
+
+        .cp-form-group label {
+            display: block;
+            font-size: 12.5px;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: var(--cp-text);
+        }
+
+        .cp-form-control {
+            width: 100%;
+            height: 40px;
+            padding: 0 12px;
+            border: 1px solid var(--cp-border);
+            border-radius: 7px;
+            background: #fff;
+            outline: none;
+            transition: border .15s, box-shadow .15s;
+        }
+
+        .cp-form-control:focus {
+            border-color: var(--cp-primary);
+            box-shadow: 0 0 0 3px rgba(14,165,233,.1);
+        }
+
+        select.cp-form-control {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            padding-right: 34px;
+        }
+
+        /* ==================== 郵箱 / 資料庫專用 ==================== */
+        .cp-email-list, .cp-db-list {
+            list-style: none;
+        }
+
+        .cp-email-item, .cp-db-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--cp-border);
+        }
+
+        .cp-email-item:last-child, .cp-db-item:last-child {
+            border-bottom: none;
+        }
+
+        .cp-email-item:hover, .cp-db-item:hover {
+            background: #f8fafc;
+        }
+
+        .cp-email-avatar, .cp-db-icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 15px;
+            flex-shrink: 0;
+        }
+
+        .cp-email-avatar { background: #e0f2fe; color: #0284c7; }
+        .cp-db-icon { background: #ede9fe; color: #7c3aed; border-radius: 9px; }
+
+        .cp-email-info, .cp-db-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .cp-email-info strong, .cp-db-info strong {
+            display: block;
+            font-size: 13.5px;
+        }
+
+        .cp-email-info span, .cp-db-info span {
+            font-size: 12px;
+            color: var(--cp-text-muted);
+        }
+
+        /* ==================== 統計頁 ==================== */
+        .cp-chart-placeholder {
+            height: 180px;
+            background: repeating-linear-gradient(0deg, #f8fafc, #f8fafc 1px, transparent 1px, transparent 40px),
+                        repeating-linear-gradient(90deg, #f8fafc, #f8fafc 1px, transparent 1px, transparent 60px);
+            border-radius: 8px;
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-around;
+            padding: 16px 20px 0;
+            gap: 8px;
+        }
+
+        .cp-chart-bar {
+            flex: 1;
+            max-width: 40px;
+            background: linear-gradient(180deg, #0ea5e9, #6366f1);
+            border-radius: 4px 4px 0 0;
+            position: relative;
+            transition: opacity .15s;
+            min-height: 10px;
+        }
+
+        .cp-chart-bar:hover {
+            opacity: .8;
+        }
+
+        .cp-chart-bar::after {
+            content: attr(data-label);
+            position: absolute;
+            bottom: -22px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 10px;
+            color: var(--cp-text-muted);
+            white-space: nowrap;
+        }
+
+        /* ==================== 安全性 ==================== */
+        .cp-security-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--cp-border);
+            flex-wrap: wrap;
+        }
+
+        .cp-security-item:last-child {
+            border-bottom: none;
+        }
+
+        .cp-security-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .cp-security-icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 9px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 15px;
+            flex-shrink: 0;
+        }
+
+        .cp-security-icon.on { background: #dcfce7; color: #16a34a; }
+        .cp-security-icon.off { background: #f1f5f9; color: #64748b; }
+
+        .cp-toggle {
+            position: relative;
+            width: 44px;
+            height: 24px;
+            background: #cbd5e1;
+            border-radius: 30px;
+            transition: background .2s;
+            flex-shrink: 0;
+        }
+
+        .cp-toggle::after {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 18px;
+            height: 18px;
+            background: #fff;
+            border-radius: 50%;
+            transition: transform .2s;
+            box-shadow: 0 1px 3px rgba(0,0,0,.2);
+        }
+
+        .cp-toggle.on {
+            background: var(--cp-success);
+        }
+
+        .cp-toggle.on::after {
+            transform: translateX(20px);
+        }
+
+        /* ==================== 通知橫幅 ==================== */
+        .cp-alert {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 14px 18px;
+            border-radius: var(--cp-radius);
+            margin-bottom: 20px;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .cp-alert-info {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            color: #1e40af;
+        }
+
+        .cp-alert-warning {
+            background: #fffbeb;
+            border: 1px solid #fde68a;
+            color: #92400e;
+        }
+
+        .cp-alert i {
+            font-size: 16px;
+            margin-top: 1px;
+            flex-shrink: 0;
+        }
+
+        /* ==================== 響應式 ==================== */
+        @media (max-width: 1024px) {
+            .cp-grid-4 { grid-template-columns: repeat(2, 1fr); }
+            .cp-grid-3 { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        @media (max-width: 768px) {
+            .cp-sidebar {
+                transform: translateX(-100%);
+            }
+
+            .cp-sidebar.open {
+                transform: translateX(0);
+                box-shadow: 0 0 40px rgba(0,0,0,.3);
+            }
+
+            .cp-main {
+                margin-left: 0;
+            }
+
+            .cp-menu-toggle {
+                display: block;
+            }
+
+            .cp-grid-2,
+            .cp-grid-3,
+            .cp-grid-4 {
+                grid-template-columns: 1fr;
+            }
+
+            .cp-content {
+                padding: 16px;
+            }
+
+            .cp-page-header h1 {
+                font-size: 18px;
+            }
+
+            .cp-topbar {
+                padding: 0 14px;
+                gap: 10px;
+            }
+
+            .cp-username {
+                display: none;
+            }
+
+            .cp-account-bar {
+                gap: 6px 16px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .cp-quick-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .cp-stat-card {
+                padding: 14px 16px;
+            }
+
+            .cp-stat-info h3 {
+                font-size: 18px;
+            }
+        }
+
+        /* 側邊欄遮罩（移動端） */
+        .cp-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,.4);
+            z-index: 99;
+        }
+
+        .cp-overlay.show {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+
+<!-- ==================== 佈局 ==================== -->
+<div class="cp-layout">
+
+    <!-- ========== 側邊欄 ========== -->
+    <aside class="cp-sidebar" id="cpSidebar">
+        <div class="cp-brand">
+            <div class="cp-brand-icon">cP</div>
+            <div class="cp-brand-text">cPanel <span>Vista</span></div>
+        </div>
+
+        <nav class="cp-nav">
+            <div class="cp-nav-group">
+                <div class="cp-nav-label">主要</div>
+                <button class="cp-nav-item active" data-page="dashboard">
+                    <i class="fas fa-th-large"></i> 控制台
+                </button>
+                <button class="cp-nav-item" data-page="files">
+                    <i class="fas fa-folder-open"></i> 檔案管理器
+                </button>
+                <button class="cp-nav-item" data-page="databases">
+                    <i class="fas fa-database"></i> MySQL 資料庫
+                </button>
+                <button class="cp-nav-item" data-page="email">
+                    <i class="fas fa-envelope"></i> 電子郵件
+                </button>
+                <button class="cp-nav-item" data-page="domains">
+                    <i class="fas fa-globe"></i> 網域管理
+                </button>
+                <button class="cp-nav-item" data-page="ftp">
+                    <i class="fas fa-exchange-alt"></i> FTP 帳戶
+                </button>
+            </div>
+
+            <div class="cp-nav-group">
+                <div class="cp-nav-label">進階</div>
+                <button class="cp-nav-item" data-page="backup">
+                    <i class="fas fa-archive"></i> 備份
+                </button>
+                <button class="cp-nav-item" data-page="security">
+                    <i class="fas fa-shield-alt"></i> 安全性
+                </button>
+                <button class="cp-nav-item" data-page="stats">
+                    <i class="fas fa-chart-bar"></i> 統計與用量
+                </button>
+                <button class="cp-nav-item" data-page="account">
+                    <i class="fas fa-user-cog"></i> 帳戶設定
+                </button>
+            </div>
+        </nav>
+
+        <div class="cp-sidebar-footer">
+            <strong>byethost VistaPanel</strong>
+            v3.2.1 · 模擬介面
+        </div>
+    </aside>
+
+    <div class="cp-overlay" id="cpOverlay"></div>
+
+    <!-- ========== 主區域 ========== -->
+    <div class="cp-main">
+
+        <!-- ===== 頂部欄 ===== -->
+        <header class="cp-topbar">
+            <button class="cp-menu-toggle" id="cpMenuToggle">
+                <i class="fas fa-bars"></i>
+            </button>
+
+            <div class="cp-search-wrap">
+                <i class="fas fa-search"></i>
+                <input type="text" class="cp-search-input" placeholder="搜尋功能...（按 / 快速聚焦）" id="cpSearch">
+            </div>
+
+            <div class="cp-topbar-right">
+                <button class="cp-topbar-btn" title="通知">
+                    <i class="fas fa-bell"></i>
+                    <span class="cp-badge-dot"></span>
+                </button>
+                <button class="cp-topbar-btn" title="說明">
+                    <i class="fas fa-question-circle"></i>
+                </button>
+                <div class="cp-user-chip" title="帳戶選單">
+                    <div class="cp-avatar">BY</div>
+                    <span class="cp-username">byethost_user</span>
+                    <i class="fas fa-chevron-down" style="font-size:10px;color:#94a3b8;"></i>
+                </div>
+            </div>
+        </header>
+
+        <!-- ===== 內容區 ===== -->
+        <main class="cp-content">
+
+            <!-- ============================================================
+                 頁面 1：控制台 / 儀表板
+            ============================================================ -->
+            <section class="cp-page active" id="page-dashboard">
+                <div class="cp-page-header">
+                    <div>
+                        <h1><i class="fas fa-th-large"></i> 控制台</h1>
+                        <p>歡迎回來，byethost_user。以下是您的帳戶概覽。</p>
+                    </div>
+                    <button class="cp-btn cp-btn-primary" onclick="cpShowToast('已重新整理帳戶資料')">
+                        <i class="fas fa-sync-alt"></i> 重新整理
+                    </button>
+                </div>
+
+                <!-- 帳戶摘要列 -->
+                <div class="cp-account-bar">
+                    <span>主網域：<strong>example.byethost10.com</strong></span>
+                    <span>方案：<strong>Free Hosting (5GB)</strong></span>
+                    <span>伺服器：<strong>byethost10</strong></span>
+                    <span>IP 位址：<strong>185.27.134.xxx</strong></span>
+                </div>
+
+                <!-- 用量統計卡片 -->
+                <div class="cp-grid cp-grid-4" style="margin-bottom:20px;">
+                    <div class="cp-stat-card">
+                        <div class="cp-stat-icon blue"><i class="fas fa-hdd"></i></div>
+                        <div class="cp-stat-info">
+                            <h3>1.24 GB</h3>
+                            <p>已使用磁碟空間 / 5 GB</p>
+                            <div class="cp-usage-bar"><div class="cp-usage-fill blue" style="width:24.8%"></div></div>
+                        </div>
+                    </div>
+                    <div class="cp-stat-card">
+                        <div class="cp-stat-icon green"><i class="fas fa-chart-line"></i></div>
+                        <div class="cp-stat-info">
+                            <h3>38.7 GB</h3>
+                            <p>本月頻寬 / 200 GB</p>
+                            <div class="cp-usage-bar"><div class="cp-usage-fill green" style="width:19.35%"></div></div>
+                        </div>
+                    </div>
+                    <div class="cp-stat-card">
+                        <div class="cp-stat-icon amber"><i class="fas fa-envelope"></i></div>
+                        <div class="cp-stat-info">
+                            <h3>3 / 無限</h3>
+                            <p>電子郵件帳戶</p>
+                        </div>
+                    </div>
+                    <div class="cp-stat-card">
+                        <div class="cp-stat-icon purple"><i class="fas fa-database"></i></div>
+                        <div class="cp-stat-info">
+                            <h3>2 / 50</h3>
+                            <p>MySQL 資料庫</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 快速啟動 -->
+                <div class="cp-card" style="margin-bottom:20px;">
+                    <div class="cp-card-header">
+                        <h2><i class="fas fa-bolt"></i> 快速啟動</h2>
+                    </div>
+                    <div class="cp-card-body">
+                        <div class="cp-quick-grid">
+                            <button class="cp-quick-item" data-goto="files">
+                                <i class="fas fa-folder-open"></i> 檔案管理器
+                            </button>
+                            <button class="cp-quick-item" data-goto="databases">
+                                <i class="fas fa-database"></i> MySQL 資料庫
+                            </button>
+                            <button class="cp-quick-item" data-goto="email">
+                                <i class="fas fa-envelope"></i> 電子郵件
+                            </button>
+                            <button class="cp-quick-item" data-goto="domains">
+                                <i class="fas fa-globe"></i> 網域管理
+                            </button>
+                            <button class="cp-quick-item" data-goto="ftp">
+                                <i class="fas fa-exchange-alt"></i> FTP 帳戶
+                            </button>
+                            <button class="cp-quick-item" data-goto="backup">
+                                <i class="fas fa-archive"></i> 備份
+                            </button>
+                            <button class="cp-quick-item" data-goto="security">
+                                <i class="fas fa-shield-alt"></i> 安全性
+                            </button>
+                            <button class="cp-quick-item" data-goto="stats">
+                                <i class="fas fa-chart-bar"></i> 統計
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 系統通知 -->
+                <div class="cp-alert cp-alert-info">
+                    <i class="fas fa-info-circle"></i>
+                    <div>
+                        <strong>系統通知：</strong>您的 SSL 憑證將於 30 天後到期。請前往「安全性」頁面進行續約或自動續約設定。
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================================
+                 頁面 2：檔案管理器
+            ============================================================ -->
+            <section class="cp-page" id="page-files">
+                <div class="cp-page-header">
+                    <div>
+                        <h1><i class="fas fa-folder-open"></i> 檔案管理器</h1>
+                        <p>管理您的網站檔案、目錄與 FTP 內容。目前位置：<strong>/htdocs</strong></p>
+                    </div>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                        <button class="cp-btn cp-btn-outline cp-btn-sm" onclick="cpShowToast('已建立新目錄（模擬）')">
+                            <i class="fas fa-folder-plus"></i> 新增目錄
+                        </button>
+                        <button class="cp-btn cp-btn-primary cp-btn-sm" onclick="cpShowToast('上傳對話框已開啟（模擬）')">
+                            <i class="fas fa-upload"></i> 上傳檔案
+                        </button>
+                    </div>
+                </div>
+
+                <div class="cp-breadcrumb">
+                    <a href="#" onclick="cpShowToast('返回根目錄');return false;">主目錄</a>
+                    <i class="fas fa-chevron-right"></i>
+                    <a href="#" onclick="cpShowToast('前往 public_html');return false;">public_html</a>
+                    <i class="fas fa-chevron-right"></i>
+                    <span>htdocs</span>
+                </div>
+
+                <div class="cp-card">
+                    <div class="cp-file-toolbar">
+                        <button class="cp-btn cp-btn-outline cp-btn-sm" onclick="cpShowToast('已選取全部項目')">
+                            <i class="fas fa-check-double"></i> 全選
+                        </button>
+                        <button class="cp-btn cp-btn-outline cp-btn-sm" onclick="cpShowToast('已複製選取項目')">
+                            <i class="fas fa-copy"></i> 複製
+                        </button>
+                        <button class="cp-btn cp-btn-outline cp-btn-sm" onclick="cpShowToast('已移動選取項目')">
+                            <i class="fas fa-arrows-alt"></i> 移動
+                        </button>
+                        <button class="cp-btn cp-btn-danger cp-btn-sm" onclick="cpShowToast('已刪除選取項目（模擬）')">
+                            <i class="fas fa-trash-alt"></i> 刪除
+                        </button>
+                    </div>
+
+                    <ul class="cp-file-list">
+                        <li class="cp-file-item">
+                            <div class="cp-file-icon folder"><i class="fas fa-folder"></i></div>
+                            <div class="cp-file-info">
+                                <div class="cp-file-name">wp-content</div>
+                                <div class="cp-file-meta">目錄 · 2026-11-20 14:32</div>
+                            </div>
+                            <div class="cp-file-actions">
+                                <button class="cp-btn cp-btn-outline cp-btn-sm" onclick="cpShowToast('開啟目錄 wp-content')"><i class="fas fa-folder-open"></i></button>
+                                <button class="cp-btn cp-btn-outline cp-btn-sm" onclick="cpShowToast('重新命名 wp-content')"><i class="fas fa-pen"></i></button>
+                            </div>
+                        </li>
+                        <li class="cp-file-item">
+                            <div class="cp-file-icon folder"><i class="fas fa-folder"></i></div>
+                            <div class="cp-file-info">
+                                <div class="cp-file-name">wp-includes</div>
+                                <div class="cp-file-meta">目錄 · 2026-11-20 14:30</div>
+                            </div>
+                            <div class="cp-file-actions">
+                                <button class="cp-btn cp-btn-outline cp-btn-sm" onclick="cpShowToast('開啟目錄 wp-includes')"><i class="fas fa-folder-open"></i></button>
+                                <button class="cp-btn cp-btn-outline cp-btn-sm" onclick="cpShowToast('重新命名 wp-includes')"><i class="fas fa-pen"></i></button>
+                            </div>
+                        </li>
+                        <li class="cp-file-item">
+                            <div class="cp-file-icon file"><i class="fas fa-file-code"></i></div>
+                            <div class="cp-file-info">
+                                <div class="cp-file-name">index.php</div>
+                                <div class="cp-file-meta">PHP 檔案 · 12.4 KB · 2026-11-20 14:28</div>
+                            </div>
+                            <div class="cp-file-actions">
+                                <button class="cp-btn cp-btn-outline cp-btn-sm" onclick="cpShowToast('編輯 index.php')"><i class="fas fa-edit"></i></button>
+                                <button class="cp-btn cp-btn-outline cp-btn-sm" onclick="cpShowToast('下載 index.php')"><i class="fas fa-download"></i></button>
+                            </div>
+                        </li>
+                        <li class="cp-file-item">
+                            <div class="cp-file-icon file"><i class="fas fa-file-alt"></i></div>
+                            <div class="cp-file-info">
+                                <div class="cp-file-name">wp-config.php</div>
+                                <div class="cp-file-meta">PHP 檔案 · 3.1 KB · 2026-11-20 14:28</div>
+                            </div>
+                            <div class="cp-file-actions">
+                                <button class="cp-btn cp-btn-outline cp-btn-sm" onclick="cpShowToast('編輯 wp-config.php')"><i class="fas fa-edit"></i></button>
+                                <button class="cp-btn cp-btn-outline cp-btn-sm" onclick="cpShowToast('下載 wp-config.php')"><i class="fas fa-download"></i></button>
+                            </div>
+                        </li>
+                        <li class="cp-file-item">
+                            <div class="cp-file-icon image"><i class="fas fa-image"></i></div>
+                            <div class="cp-file-info">
+                                <div class="cp-file-name">logo.png</div>
+                                <div class="cp-file-meta">PNG 圖片 · 48.2 KB · 2026-11-19 09:15</div>
+                            </div>
+                            <div class="cp-file-actions">
+                                <button class="cp-btn cp-btn-outline cp-btn-sm" onclick="cpShowToast('預覽 logo.png')"><i class="fas fa-eye"></i></button>
+                                <button class="cp-btn cp-btn-outline cp-btn-sm" onclick="cpShowToast('下載 logo.png')"><i class="fas fa-download"></i></button>
+                            </div>
+                        </li>
+                        <li class="cp-file-item">
+                            <div class="cp-file-icon archive"><i class="fas fa-file-archive"></i></div>
+                            <div class="cp-file-info">
+                                <div class="cp-file-name">backup-2026-11-19.zip</div>
+                                <div class="cp-file-meta">ZIP 壓縮檔 · 256.8 MB · 2026-11-19 03:00</div>
+                            </div>
+                            <div class="cp-file-actions">
+                                <button class="cp-btn cp-btn-outline cp-btn-sm" onclick="cpShowToast('解壓縮 backup-2026-11-19.zip')"><i class="fas fa-file-export"></i></button>
+                                <button class="cp-btn cp-btn-outline cp-btn-sm" onclick="cpShowToast('下載 backup-2026-11-19.zip')"><i class="fas fa-download"></i></button>
+                            </div>
+                        </li>
+                        <li class="cp-file-item">
+                            <div class="cp-file-icon file"><i class="fas fa-file"></i></div>
+                            <div class="cp-file-info">
+                                <div class="cp-file-name">.htaccess</div>
+                                <div class="cp-file-meta">設定檔 · 1.2 KB · 2026-11-18 22:10</div>
+                            </div>
+                            <div class="cp-file-actions">
+                                <button class="cp-btn cp-btn-outline cp-btn-sm" onclick="cpShowToast('編輯 .htaccess')"><i class="fas fa-edit"></i></button>
+                                <button class="cp-btn cp-btn-outline cp-btn-sm" onclick="cpShowToast('下載 .htaccess')"><i class="fas fa-download"></i></button>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- ============================================================
+                 頁面 3：MySQL 資料庫
+            ============================================================ -->
+            <section class="cp-page" id="page-databases">
+                <div class="cp-page-header">
+                    <div>
+                        <h1><i class="fas fa-database"></i> MySQL 資料庫</h1>
+                        <p>建立、管理與刪除 MySQL / MariaDB 資料庫及使用者。</p>
+                    </div>
+                    <button class="cp-btn cp-btn-primary" onclick="cpShowToast('已開啟建立資料庫精靈（模擬）')">
+                        <i class="fas fa-plus"></i> 建立資料庫
+                    </button>
+                </div>
+
+                <div class="cp-alert cp-alert-info">
+                    <i class="fas fa-lightbulb"></i>
+                    <div>
+                        建議使用「資料庫精靈」來建立您的第一個資料庫與使用者，可自動完成權限配對。
+                    </div>
+                </div>
+
+                <div class="cp-grid cp-grid-2">
+                    <!-- 資料庫列表 -->
+                    <div class="cp-card">
+                        <div class="cp-card-header">
+                            <h2><i class="fas fa-server"></i> 資料庫</h2>
+                            <span style="font-size:12px;color:var(--cp-text-muted);">2 / 50 已使用</span>
+                        </div>
+                        <ul class="cp-db-list">
+                            <li class="cp-db-item">
+                                <div class="cp-db-icon"><i class="fas fa-database"></i></div>
+                                <div class="cp-db-info">
+                                    <strong>byethost_wp1</strong>
+                                    <span>大小：24.6 MB · 使用者：byethost_wpuser</span>
+                                </div>
+                                <div class="cp-actions">
+                                    <button class="cp-btn cp-btn-outline cp-btn-sm" onclick="cpShowToast('進入 phpMyAdmin（模擬）')"><i class="fas fa-external-link-alt"></i></button>
+                                    <button class="cp-btn cp-btn-danger cp-btn-sm" onclick="cpShowToast('刪除 byethost_wp1（模擬）')"><i class="fas fa-trash-alt"></i></button>
+                                </div>
+                            </li>
+                            <li class="cp-db-item">
+                                <div class="cp-db-icon"><i class="fas fa-database"></i></div>
+                                <div class="cp-db-info">
+                                    <strong>byethost_appdb</strong>
+                                    <span>大小：8.2 MB · 使用者：byethost_appuser</span>
+                                </div>
+                                <div class="cp-actions">
+                                    <button class="cp-btn cp-btn-outline cp-btn-sm" onclick="cpShowToast('進入 phpMyAdmin（模擬）')"><i class="fas fa-external-link-alt"></i></button>
+                                    <button class="cp-btn cp-btn-danger cp-btn-sm" onclick="cpShowToast('刪除 byethost_appdb（模擬）')"><i class="fas fa-trash-alt"></i></button>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- 資料庫使用者 -->
+                    <div class="cp-card">
+                        <div class="cp-card-header">
+                            <h2><i class="fas fa-users"></i> 資料庫使用者</h2>
+                            <button class="cp-btn cp-btn-outline cp-btn-sm" onclick="cpShowToast('已開啟新增使用者（模擬）')">
+                                <i class="fas fa-user-plus"></i> 新增
+                            </button>
+                        </div>
+                        <ul class="cp-db-list">
+                            <li class="cp-db-item">
+                                <div class="cp-db-icon" style="background:#fef3c7;color:#d97706;"><i class="fas fa-user"></i></div>
+                                <div class="cp-db-info">
+                                    <strong>byethost_wpuser</strong>
+                                    <span>權限：ALL PRIVILEGES · 主機：localhost</span>
+                                </div>
+                                <button class="cp-btn cp-btn-outline cp-btn-sm" onclick="cpShowToast('變更 byethost_wpuser 權限')"><i class="fas fa-key"></i></button>
+                            </li>
+                            <li class="cp-db-item">
+                                <div class="cp-db-icon" style="background:#fef3c7;color:#d97706;"><i class="fas fa-user"></i></div>
+                                <div class="cp-db-info">
+                                    <strong>byethost_appuser</strong>
+                                    <span>權限：SELECT, INSERT, UPDATE · 主機：localhost</span>
+                                </div>
+                                <button class="cp-btn cp-btn-outline cp-btn-sm" onclick="cpShowToast('變更 byethost_appuser 權限')"><i class="fas fa-key"></i></button>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- phpMyAdmin 快速入口 -->
+                <div class="cp-card" style="margin-top:16px;">
+                    <div class="cp-card-body" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <i class="fas fa-tools" style="font-size:20px;color:var(--cp-primary);"></i>
+                            <div>
+                                <strong style="font-size:14px;">phpMyAdmin</strong>
+                                <div style="font-size:12px;color:var(--cp-text-muted);">透過網頁介面管理資料庫結構與資料</div>
+                            </div>
+                        </div>
+                        <button class="cp-btn cp-btn-primary cp-btn-sm" onclick="cpShowToast('正在開啟 phpMyAdmin（模擬）')">
+                            開啟 phpMyAdmin <i class="fas fa-external-link-alt"></i>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================================
+                 頁面 4：電子郵件
+            ============================================================ -->
+            <section class="cp-page" id="page-email">
+                <div class="cp-page-header">
+                    <div>
+                        <h1><i class="fas fa-envelope"></i> 電子郵件</h1>
+                        <p>管理電子郵件帳戶、轉寄規則、自動回覆與垃圾郵件防護。</p>
+                    </div>
+                    <button class="cp-btn cp-btn-primary" onclick="cpShowToast('已開啟建立電子郵件帳戶（模擬）')">
+                        <i class="fas fa-plus"></i> 建立帳戶
+                    </button>
+                </div>
+
+                <div class="cp-card">
+                    <div class="cp-card-header">
+                        <h2><i class="fas fa-inbox"></i> 郵件帳戶</h2>
+                        <span style="font-size:12px;color:var(--cp-text-muted);">3 個帳戶 · 無限配額</span>
+                    </div>
+                    <ul class="cp-email-list">
+                        <li class="cp-email-item">
+                            <div class="cp-email-avatar"><i class="fas fa-user"></i></div>
+                            <div class="cp-email-info">
+                                <strong>admin@example.byethost10.com</strong>
+                                <span>已使用 128 MB / 無限 · 最後登入：2026-11-24 09:12</span>
+                            </div>
+                            <div class="cp-actions">
+                                <button class="cp-btn cp-btn-outline cp-btn-sm" onclick="cpShowToast('開啟 Webmail：admin')"><i class="fas fa-envelope-open-text"></i></button>
+                                <button class="cp-btn cp-btn-outline cp-btn-sm" onclick="cpShowToast('管理 admin 帳戶設定')"><i class="fas fa-cog"></i></button>
+                            </div>
+                        </li>
+                        <li class="cp-email-item">
+                            <div class="cp-email-avatar"><i class="fas fa-user"></i></div>
+                            <div class="cp-email-info">
+                                <strong>support@example.byethost10.com</strong>
+                                <span>已使用 54 MB / 無限 · 最後登入：2026-11-23 18:40</span>
+                            </div>
+                            <div class="cp-actions">
+                                <button class="cp-btn cp-btn-outline cp-btn-sm" onclick="cpShowToast('開啟 Webmail：support')"><i class="fas fa-envelope-open-text"></i></button>
+                                <button class="cp-btn cp-btn-outline cp-btn-sm" onclick="cpShowToast('管理 support 帳戶設定')"><i class="fas fa-cog"></i></button>
+                            </div>
+                        </li>
+                        <li class="cp-email-item">
+                            <div class="cp-email-avatar"><i class="fas fa-user"></i></div>
+                            <div class="cp-email-info">
+                                <strong>noreply@example.byethost10.com</strong>
+                                <span>已使用 2 MB / 無限 · 最後登入：2026-11-20 07:05</span>
+                            </div>
+                            <div class="cp-actions">
+                                <button class="cp-btn cp-btn-outline cp-btn-sm" onclick="cpShowToast('開啟 Webmail：noreply')"><i class="fas fa-envelope-open-text"></i></button>
+                                <button class="cp-btn cp-btn-outline cp-btn-sm" onclick="cpShowToast('管理 noreply 帳戶設定')"><i class="fas fa-cog"></i></button>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="cp-grid cp-grid-3" style="margin-top:16px;">
+                    <div class="cp-card">
+                        <div class="cp-card-body" style="text-align:center;padding:24px 16px;">
+                            <i class="fas fa-share" style="font-size:24px;color:var(--cp-primary);margin-bottom:10px;"></i>
+                            <h3 style="font-size:14px;margin-bottom:6px;">轉寄規則</h3>
+                            <p style="font-size:12px;color:var(--cp-text-muted);margin-bottom:12px;">管理電子郵件轉寄地址</p>
+                            <button class="cp-btn cp-btn-outline cp-btn-sm" onclick="cpShowToast('管理轉寄規則（模擬）')">管理轉寄</button>
+                        </div>
+                    </div>
+                    <div class="cp-card">
+                        <div class="cp-card-body" style="text-align:center;padding:24px 16px;">
+                            <i class="fas fa-robot" style="font-size:24px;color:var(--cp-success);margin-bottom:10px;"></i>
+                            <h3 style="font-size:14px;margin-bottom:6px;">自動回覆</h3>
+                            <p style="font-size:12px;color:var(--cp-text-muted);margin-bottom:12px;">設定假期或離線自動回覆</p>
+                            <button class="cp-btn cp-btn-outline cp-btn-sm" onclick="cpShowToast('設定自動回覆（模擬）')">設定回覆</button>
+                        </div>
+                    </div>
+                    <div class="cp-card">
+                        <div class="cp-card-body" style="text-align:center;padding:24px 16px;">
+                            <i class="fas fa-shield-virus" style="font-size:24px;color:var(--cp-danger);margin-bottom:10px;"></i>
+                            <h3 style="font-size:14px;margin-bottom:6px;">垃圾郵件防護</h3>
+                            <p style="font-size:12px;color:var(--cp-text-muted);margin-bottom:12px;">SpamAssassin 已啟用</p>
+                            <button class="cp-btn cp-btn-outline cp-btn-sm" onclick="cpShowToast('設定垃圾郵件防護（模擬）')">設定防護</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================================
+                 頁面 5：網域管理
+            ============================================================ -->
+            <section class="cp-page" id="page-domains">
+                <div class="cp-page-header">
+                    <div>
+                        <h1><i class="fas fa-globe"></i> 網域管理</h1>
+                        <p>管理主網域、子網域、別名網域與重新導向規則。</p>
+                    </div>
+                    <button class="cp-btn cp-btn-primary" onclick="cpShowToast('已開啟建立子網域（模擬）')">
+                        <i class="fas fa-plus"></i> 建立子網域
+                    </button>
+                </div>
+
+                <div class="cp-card" style="margin-bottom:16px;">
+                    <div class="cp-card-header">
+                        <h2><i class="fas fa-star"></i> 主網域</h2>
+                    </div>
+                    <div class="cp-card-body">
+                        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+                            <div style="display:flex;align-items:center;gap:12px;">
+                                <div style="width:42px;height:42px;border-radius:10px;background:#e0f2fe;color:#0284c7;display:flex;align-items:center;justify-content:center;font-size:18px;">
+                                    <i class="fas fa-globe"></i>
+                                </div>
+                                <div>
+                                    <strong style="font-size:15px;">example.byethost10.com</strong>
+                                    <div style="font-size:12px;color:var(--cp-text-muted);">文件根目錄：/htdocs · SSL：已啟用</div>
+                                </div>
+                            </div>
+                            <span style="background:#dcfce7;color:#16a34a;padding:4px 12px;border-radius:20px;font-size:11.5px;font-weight:600;">作用中</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="cp-grid cp-grid-2">
+                    <div class="cp-card">
+                        <div class="cp-card-header">
+                            <h2><i class="fas fa-sitemap"></i> 子網域</h2>
+                            <button class="cp-btn cp-btn-outline cp-btn-sm" onclick="cpShowToast('建立子網域（模擬）')">新增</button>
+                        </div>
+                        <div class="cp-table-wrap">
+                            <table class="cp-table">
+                                <thead>
+                                    <tr><th>子網域</th><th>根目錄</th><th>操作</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><strong>blog.example.byethost10.com</strong></td>
+                                        <td>/htdocs/blog</td>
+                                        <td><button class="cp-btn cp-btn-danger cp-btn-sm" onclick="cpShowToast('移除子網域（模擬）')">移除</button></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>shop.example.byethost10.com</strong></td>
+                                        <td>/htdocs/shop</td>
+                                        <td><button class="cp-btn cp-btn-danger cp-btn-sm" onclick="cpShowToast('移除子網域（模擬）')">移除</button></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="cp-card">
+                        <div class="cp-card-header">
+                            <h2><i class="fas fa-link"></i> 別名網域 / 重新導向</h2>
+                        </div>
+                        <div class="cp-table-wrap">
+                            <table class="cp-table">
+                                <thead>
+                                    <tr><th>來源</th><th>目標</th><th>類型</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>www.example.byethost10.com</td>
+                                        <td>example.byethost10.com</td>
+                                        <td>301 永久</td>
+                                    </tr>
+                                    <tr>
+                                        <td>old-site.byethost10.com</td>
+                                        <td>example.byethost10.com</td>
+                                        <td>302 暫時</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================================
+                 頁面 6：FTP 帳戶
+            ============================================================ -->
+            <section class="cp-page" id="page-ftp">
+                <div class="cp-page-header">
+                    <div>
+                        <h1><i class="fas fa-exchange-alt"></i> FTP 帳戶</h1>
+                        <p>管理 FTP 使用者、連線設定與匿名 FTP 存取權限。</p>
+                    </div>
+                    <button class="cp-btn cp-btn-primary" onclick="cpShowToast('已開啟建立 FTP 帳戶（模擬）')">
+                        <i class="fas fa-user-plus"></i> 建立 FTP 帳戶
+                    </button>
+                </div>
+
+                <div class="cp-card">
+                    <div class="cp-card-header">
+                        <h2><i class="fas fa-users"></i> FTP 使用者</h2>
+                        <span style="font-size:12px;color:var(--cp-text-muted);">2 個帳戶</span>
+                    </div>
+                    <div class="cp-table-wrap">
+                        <table class="cp-table">
+                            <thead>
+                                <tr>
+                                    <th>使用者名稱</th>
+                                    <th>主目錄</th>
+                                    <th>配額</th>
+                                    <th>最後登入</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>byethost_ftp1</strong></td>
+                                    <td>/htdocs</td>
+                                    <td>無限</td>
+                                    <td>2026-11-24 08:30</td>
+                                    <td>
+                                        <div class="cp-actions">
+                                            <button class="cp-btn cp-btn-outline cp-btn-sm" onclick="cpShowToast('變更 byethost_ftp1 密碼')">密碼</button>
+                                            <button class="cp-btn cp-btn-danger cp-btn-sm" onclick="cpShowToast('刪除 byethost_ftp1（模擬）')">刪除</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>byethost_deploy</strong></td>
+                                    <td>/htdocs/public</td>
+                                    <td>500 MB</td>
+                                    <td>2026-11-23 22:10</td>
+                                    <td>
+                                        <div class="cp-actions">
+                                            <button class="cp-btn cp-btn-outline cp-btn-sm" onclick="cpShowToast('變更 byethost_deploy 密碼')">密碼</button>
+                                            <button class="cp-btn cp-btn-danger cp-btn-sm" onclick="cpShowToast('刪除 byethost_deploy（模擬）')">刪除</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="cp-grid cp-grid-2" style="margin-top:16px;">
+                    <div class="cp-card">
+                        <div class="cp-card-body" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+                            <div>
+                                <strong style="font-size:14px;">匿名 FTP 存取</strong>
+                                <div style="font-size:12px;color:var(--cp-text-muted);">允許任何人以 anonymous 登入（不建議）</div>
+                            </div>
+                            <div class="cp-toggle" onclick="cpToggle(this);cpShowToast('匿名 FTP 設定已切換')"></div>
+                        </div>
+                    </div>
+                    <div class="cp-card">
+                        <div class="cp-card-body" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+                            <div>
+                                <strong style="font-size:14px;">FTP 連線加密</strong>
+                                <div style="font-size:12px;color:var(--cp-text-muted);">強制使用 FTPS（TLS）</div>
+                            </div>
+                            <div class="cp-toggle on" onclick="cpToggle(this);cpShowToast('FTP 加密設定已切換')"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="cp-card" style="margin-top:16px;">
+                    <div class="cp-card-body">
+                        <h3 style="font-size:13px;margin-bottom:10px;"><i class="fas fa-info-circle" style="color:var(--cp-primary);"></i> 連線資訊</h3>
+                        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;font-size:12.5px;">
+                            <div><span style="color:var(--cp-text-muted);">FTP 主機：</span><strong>ftp.byethost10.com</strong></div>
+                            <div><span style="color:var(--cp-text-muted);">連接埠：</span><strong>21（FTPS: 990）</strong></div>
+                            <div><span style="color:var(--cp-text-muted);">加密方式：</span><strong>Explicit FTPS</strong></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================================
+                 頁面 7：備份
+            ============================================================ -->
+            <section class="cp-page" id="page-backup">
+                <div class="cp-page-header">
+                    <div>
+                        <h1><i class="fas fa-archive"></i> 備份</h1>
+                        <p>建立完整帳戶備份、下載備份檔案或還原先前的備份。</p>
+                    </div>
+                    <button class="cp-btn cp-btn-primary" onclick="cpShowToast('已開始產生完整備份（模擬）')">
+                        <i class="fas fa-download"></i> 建立完整備份
+                    </button>
+                </div>
+
+                <div class="cp-alert cp-alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <div>
+                        備份檔案可能包含敏感資訊。請妥善保管下載的備份，避免公開分享。
+                    </div>
+                </div>
+
+                <div class="cp-card">
+                    <div class="cp-card-header">
+                        <h2><i class="fas fa-history"></i> 備份記錄</h2>
+                    </div>
+                    <div class="cp-table-wrap">
+                        <table class="cp-table">
+                            <thead>
+                                <tr>
+                                    <th>備份名稱</th>
+                                    <th>類型</th>
+                                    <th>大小</th>
+                                    <th>建立時間</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>backup-2026-11-24_full.tar.gz</strong></td>
+                                    <td>完整帳戶</td>
+                                    <td>482 MB</td>
+                                    <td>2026-11-24 03:00</td>
+                                    <td>
+                                        <div class="cp-actions">
+                                            <button class="cp-btn cp-btn-outline cp-btn-sm" onclick="cpShowToast('下載備份（模擬）')"><i class="fas fa-download"></i></button>
+                                            <button class="cp-btn cp-btn-outline cp-btn-sm" onclick="cpShowToast('還原備份（模擬）')"><i class="fas fa-undo"></i></button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>backup-2026-11-23_full.tar.gz</strong></td>
+                                    <td>完整帳戶</td>
+                                    <td>479 MB</td>
+                                    <td>2026-11-23 03:00</td>
+                                    <td>
+                                        <div class="cp-actions">
+                                            <button class="cp-btn cp-btn-outline cp-btn-sm" onclick="cpShowToast('下載備份（模擬）')"><i class="fas fa-download"></i></button>
+                                            <button class="cp-btn cp-btn-outline cp-btn-sm" onclick="cpShowToast('還原備份（模擬）')"><i class="fas fa-undo"></i></button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>backup-2026-11-22_db.sql.gz</strong></td>
+                                    <td>僅資料庫</td>
+                                    <td>18 MB</td>
+                                    <td>2026-11-22 03:00</td>
+                                    <td>
+                                        <div class="cp-actions">
+                                            <button class="cp-btn cp-btn-outline cp-btn-sm" onclick="cpShowToast('下載備份（模擬）')"><i class="fas fa-download"></i></button>
+                                            <button class="cp-btn cp-btn-outline cp-btn-sm" onclick="cpShowToast('還原備份（模擬）')"><i class="fas fa-undo"></i></button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="cp-card" style="margin-top:16px;">
+                    <div class="cp-card-body" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+                        <div>
+                            <strong style="font-size:14px;">自動備份</strong>
+                            <div style="font-size:12px;color:var(--cp-text-muted);">每天 03:00 自動建立完整備份，保留 7 天</div>
+                        </div>
+                        <div class="cp-toggle on" onclick="cpToggle(this);cpShowToast('自動備份設定已切換')"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================================
+                 頁面 8：安全性
+            ============================================================ -->
+            <section class="cp-page" id="page-security">
+                <div class="cp-page-header">
+                    <div>
+                        <h1><i class="fas fa-shield-alt"></i> 安全性</h1>
+                        <p>管理 SSL 憑證、IP 封鎖、目錄密碼保護與其他帳戶防護措施。</p>
+                    </div>
+                </div>
+
+                <div class="cp-card">
+                    <div class="cp-card-header">
+                        <h2><i class="fas fa-lock"></i> 安全功能</h2>
+                    </div>
+
+                    <div class="cp-security-item">
+                        <div class="cp-security-info">
+                            <div class="cp-security-icon on"><i class="fas fa-certificate"></i></div>
+                            <div>
+                                <strong>SSL/TLS 憑證</strong>
+                                <div style="font-size:12px;color:var(--cp-text-muted);">Let's Encrypt · 有效期限：2026-12-24 · 自動續約已啟用</div>
+                            </div>
+                        </div>
+                        <button class="cp-btn cp-btn-outline cp-btn-sm" onclick="cpShowToast('管理 SSL 憑證（模擬）')">管理</button>
+                    </div>
+
+                    <div class="cp-security-item">
+                        <div class="cp-security-info">
+                            <div class="cp-security-icon on"><i class="fas fa-firewall"></i></div>
+                            <div>
+                                <strong>Web 應用程式防火牆（WAF）</strong>
+                                <div style="font-size:12px;color:var(--cp-text-muted);">ModSecurity 已啟用 · 規則集：OWASP Core</div>
+                            </div>
+                        </div>
+                        <div class="cp-toggle on" onclick="cpToggle(this);cpShowToast('WAF 設定已切換')"></div>
+                    </div>
+
+                    <div class="cp-security-item">
+                        <div class="cp-security-info">
+                            <div class="cp-security-icon on"><i class="fas fa-ban"></i></div>
+                            <div>
+                                <strong>IP 位址封鎖</strong>
+                                <div style="font-size:12px;color:var(--cp-text-muted);">目前封鎖 3 個 IP 位址</div>
+                            </div>
+                        </div>
+                        <button class="cp-btn cp-btn-outline cp-btn-sm" onclick="cpShowToast('管理 IP 封鎖清單（模擬）')">管理</button>
+                    </div>
+
+                    <div class="cp-security-item">
+                        <div class="cp-security-info">
+                            <div class="cp-security-icon off"><i class="fas fa-key"></i></div>
+                            <div>
+                                <strong>目錄密碼保護</strong>
+                                <div style="font-size:12px;color:var(--cp-text-muted);">未啟用 · 可為特定目錄加上額外密碼</div>
+                            </div>
+                        </div>
+                        <button class="cp-btn cp-btn-outline cp-btn-sm" onclick="cpShowToast('設定目錄密碼保護（模擬）')">設定</button>
+                    </div>
+
+                    <div class="cp-security-item">
+                        <div class="cp-security-info">
+                            <div class="cp-security-icon on"><i class="fas fa-virus-slash"></i></div>
+                            <div>
+                                <strong>ClamAV 防毒掃描</strong>
+                                <div style="font-size:12px;color:var(--cp-text-muted);">每日自動掃描 · 上次掃描：2026-11-24 04:00 · 無威脅</div>
+                            </div>
+                        </div>
+                        <button class="cp-btn cp-btn-outline cp-btn-sm" onclick="cpShowToast('立即執行防毒掃描（模擬）')">立即掃描</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================================
+                 頁面 9：統計與用量
+            ============================================================ -->
+            <section class="cp-page" id="page-stats">
+                <div class="cp-page-header">
+                    <div>
+                        <h1><i class="fas fa-chart-bar"></i> 統計與用量</h1>
+                        <p>檢視頻寬、磁碟空間、訪客與錯誤記錄等統計資訊。</p>
+                    </div>
+                </div>
+
+                <div class="cp-grid cp-grid-2" style="margin-bottom:16px;">
+                    <div class="cp-card">
+                        <div class="cp-card-header">
+                            <h2><i class="fas fa-chart-area"></i> 每月頻寬使用量（GB）</h2>
+                        </div>
+                        <div class="cp-card-body">
+                            <div class="cp-chart-placeholder">
+                                <div class="cp-chart-bar" style="height:35%" data-label="6月"></div>
+                                <div class="cp-chart-bar" style="height:52%" data-label="7月"></div>
+                                <div class="cp-chart-bar" style="height:48%" data-label="8月"></div>
+                                <div class="cp-chart-bar" style="height:70%" data-label="9月"></div>
+                                <div class="cp-chart-bar" style="height:62%" data-label="10月"></div>
+                                <div class="cp-chart-bar" style="height:85%" data-label="11月"></div>
+                            </div>
+                            <div style="text-align:center;margin-top:26px;font-size:12px;color:var(--cp-text-muted);">
+                                本月已使用 <strong style="color:var(--cp-text);">38.7 GB</strong> / 200 GB（19.35%）
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="cp-card">
+                        <div class="cp-card-header">
+                            <h2><i class="fas fa-hdd"></i> 磁碟空間使用量</h2>
+                        </div>
+                        <div class="cp-card-body">
+                            <div style="margin-bottom:18px;">
+                                <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:4px;">
+                                    <span>已使用</span><strong>1.24 GB / 5 GB</strong>
+                                </div>
+                                <div class="cp-usage-bar" style="height:10px;">
+                                    <div class="cp-usage-fill blue" style="width:24.8%;"></div>
+                                </div>
+                            </div>
+                            <div style="font-size:12.5px;">
+                                <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--cp-border);">
+                                    <span style="color:var(--cp-text-muted);">網站檔案（htdocs）</span><strong>856 MB</strong>
+                                </div>
+                                <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--cp-border);">
+                                    <span style="color:var(--cp-text-muted);">電子郵件</span><strong>184 MB</strong>
+                                </div>
+                                <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--cp-border);">
+                                    <span style="color:var(--cp-text-muted);">資料庫</span><strong>32.8 MB</strong>
+                                </div>
+                                <div style="display:flex;justify-content:space-between;padding:8px 0;">
+                                    <span style="color:var(--cp-text-muted);">備份與其他</span><strong>167.2 MB</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="cp-grid cp-grid-2">
+                    <div class="cp-card">
+                        <div class="cp-card-header">
+                            <h2><i class="fas fa-eye"></i> 最新訪客</h2>
+                        </div>
+                        <div class="cp-table-wrap">
+                            <table class="cp-table">
+                                <thead>
+                                    <tr><th>IP 位址</th><th>請求頁面</th><th>時間</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td>203.0.113.42</td><td>/index.php</td><td>2 分鐘前</td></tr>
+                                    <tr><td>198.51.100.17</td><td>/wp-login.php</td><td>5 分鐘前</td></tr>
+                                    <tr><td>192.0.2.88</td><td>/about</td><td>8 分鐘前</td></tr>
+                                    <tr><td>203.0.113.91</td><td>/contact</td><td>12 分鐘前</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="cp-card">
+                        <div class="cp-card-header">
+                            <h2><i class="fas fa-exclamation-circle"></i> 錯誤記錄摘要</h2>
+                        </div>
+                        <div class="cp-card-body" style="font-size:12.5px;">
+                            <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--cp-border);">
+                                <span>404 找不到頁面</span><strong>23 次</strong>
+                            </div>
+                            <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--cp-border);">
+                                <span>403 禁止存取</span><strong>7 次</strong>
+                            </div>
+                            <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--cp-border);">
+                                <span>500 內部伺服器錯誤</span><strong>2 次</strong>
+                            </div>
+                            <div style="display:flex;justify-content:space-between;padding:8px 0;">
+                                <span>PHP 警告</span><strong>5 次</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================================
+                 頁面 10：帳戶設定
+            ============================================================ -->
+            <section class="cp-page" id="page-account">
+                <div class="cp-page-header">
+                    <div>
+                        <h1><i class="fas fa-user-cog"></i> 帳戶設定</h1>
+                        <p>管理您的個人資料、密碼、語言與聯絡資訊。</p>
+                    </div>
+                </div>
+
+                <div class="cp-grid cp-grid-2">
+                    <div class="cp-card">
+                        <div class="cp-card-header">
+                            <h2><i class="fas fa-id-card"></i> 個人資料</h2>
+                        </div>
+                        <div class="cp-card-body">
+                            <div class="cp-form-group">
+                                <label>使用者名稱</label>
+                                <input type="text" class="cp-form-control" value="byethost_user" readonly style="background:#f8fafc;color:var(--cp-text-muted);">
+                            </div>
+                            <div class="cp-form-group">
+                                <label>主要電子郵件</label>
+                                <input type="email" class="cp-form-control" value="user@example.com">
+                            </div>
+                            <div class="cp-form-group">
+                                <label>顯示語言</label>
+                                <select class="cp-form-control">
+                                    <option selected>繁體中文（台灣）</option>
+                                    <option>简体中文</option>
+                                    <option>English</option>
+                                    <option>日本語</option>
+                                </select>
+                            </div>
+                            <button class="cp-btn cp-btn-primary" onclick="cpShowToast('個人資料已儲存（模擬）')">
+                                <i class="fas fa-save"></i> 儲存變更
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="cp-card">
+                        <div class="cp-card-header">
+                            <h2><i class="fas fa-lock"></i> 變更密碼</h2>
+                        </div>
+                        <div class="cp-card-body">
+                            <div class="cp-form-group">
+                                <label>目前密碼</label>
+                                <input type="password" class="cp-form-control" placeholder="請輸入目前密碼">
+                            </div>
+                            <div class="cp-form-group">
+                                <label>新密碼</label>
+                                <input type="password" class="cp-form-control" placeholder="至少 12 個字元">
+                            </div>
+                            <div class="cp-form-group">
+                                <label>確認新密碼</label>
+                                <input type="password" class="cp-form-control" placeholder="再次輸入新密碼">
+                            </div>
+                            <button class="cp-btn cp-btn-primary" onclick="cpShowToast('密碼已更新（模擬）')">
+                                <i class="fas fa-key"></i> 更新密碼
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="cp-card" style="margin-top:16px;">
+                    <div class="cp-card-header">
+                        <h2><i class="fas fa-envelope"></i> 聯絡資訊</h2>
+                    </div>
+                    <div class="cp-card-body">
+                        <div class="cp-grid cp-grid-2">
+                            <div class="cp-form-group">
+                                <label>備用電子郵件</label>
+                                <input type="email" class="cp-form-control" value="backup@example.com">
+                            </div>
+                            <div class="cp-form-group">
+                                <label>手機號碼（選填）</label>
+                                <input type="tel" class="cp-form-control" placeholder="+886 912 345 678">
+                            </div>
+                        </div>
+                        <button class="cp-btn cp-btn-outline" onclick="cpShowToast('聯絡資訊已儲存（模擬）')">
+                            <i class="fas fa-save"></i> 更新聯絡資訊
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+</div>
+
+<!-- ==================== Toast 通知容器 ==================== -->
+<div id="cpToastContainer" style="position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none;"></div>
+
+<script>
+    /* ============================================================
+       cPanel VistaPanel 模擬系統 · 互動邏輯
+       ============================================================ */
+
+    (function() {
+        'use strict';
+
+        // ---------- 頁面導航 ----------
+        const navItems = document.querySelectorAll('.cp-nav-item');
+        const pages = document.querySelectorAll('.cp-page');
+        const menuToggle = document.getElementById('cpMenuToggle');
+        const sidebar = document.getElementById('cpSidebar');
+        const overlay = document.getElementById('cpOverlay');
+
+        function switchPage(pageId) {
+            // 更新導航按鈕狀態
+            navItems.forEach(function(btn) {
+                btn.classList.toggle('active', btn.dataset.page === pageId);
+            });
+
+            // 切換頁面顯示
+            pages.forEach(function(page) {
+                page.classList.toggle('active', page.id === 'page-' + pageId);
+            });
+
+            // 更新 URL hash（可選，方便直接連結）
+            if (history.replaceState) {
+                history.replaceState(null, null, '#' + pageId);
+            }
+
+            // 關閉移動端側邊欄
+            sidebar.classList.remove('open');
+            overlay.classList.remove('show');
+
+            // 滾動到頂部
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // 側邊欄導航點擊
+        navItems.forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                switchPage(this.dataset.page);
+            });
+        });
+
+        // 快速啟動按鈕（data-goto）
+        document.querySelectorAll('[data-goto]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                switchPage(this.dataset.goto);
+            });
+        });
+
+        // 初始化：讀取 hash
+        function initFromHash() {
+            var hash = window.location.hash.replace('#', '');
+            if (hash) {
+                var target = document.querySelector('.cp-nav-item[data-page="' + hash + '"]');
+                if (target) {
+                    switchPage(hash);
+                    return;
+                }
+            }
+            switchPage('dashboard');
+        }
+
+        // 監聽 hash 變化（瀏覽器上一頁/下一頁）
+        window.addEventListener('hashchange', function() {
+            var hash = window.location.hash.replace('#', '');
+            if (hash) {
+                switchPage(hash);
+            }
+        });
+
+        // ---------- 移動端側邊欄 ----------
+        menuToggle.addEventListener('click', function() {
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('show', sidebar.classList.contains('open'));
+        });
+
+        overlay.addEventListener('click', function() {
+            sidebar.classList.remove('open');
+            overlay.classList.remove('show');
+        });
+
+        // ---------- 搜尋功能（簡易模擬） ----------
+        var searchInput = document.getElementById('cpSearch');
+        var searchTimer = null;
+
+        searchInput.addEventListener('input', function() {
+            clearTimeout(searchTimer);
+            var query = this.value.trim().toLowerCase();
+
+            if (!query) {
+                // 恢復所有導航項目
+                navItems.forEach(function(item) {
+                    item.style.display = '';
+                });
+                return;
+            }
+
+            searchTimer = setTimeout(function() {
+                navItems.forEach(function(item) {
+                    var text = item.textContent.toLowerCase();
+                    item.style.display = text.indexOf(query) !== -1 ? '' : 'none';
+                });
+            }, 200);
+        });
+
+        // 快捷鍵 "/" 聚焦搜尋
+        document.addEventListener('keydown', function(e) {
+            if (e.key === '/' && document.activeElement !== searchInput &&
+                document.activeElement.tagName !== 'INPUT' &&
+                document.activeElement.tagName !== 'TEXTAREA' &&
+                document.activeElement.tagName !== 'SELECT') {
+                e.preventDefault();
+                searchInput.focus();
+                searchInput.select();
+            }
+        });
+
+        // ---------- 開關切換 ----------
+        window.cpToggle = function(el) {
+            el.classList.toggle('on');
+        };
+
+        // ---------- Toast 通知 ----------
+        var toastContainer = document.getElementById('cpToastContainer');
+
+        window.cpShowToast = function(message, type) {
+            type = type || 'info';
+            var toast = document.createElement('div');
+            toast.style.cssText =
+                'pointer-events:auto;display:flex;align-items:center;gap:10px;' +
+                'padding:12px 18px;border-radius:10px;font-size:13px;font-weight:500;' +
+                'box-shadow:0 10px 25px rgba(0,0,0,.15);max-width:360px;' +
+                'animation:cpToastIn .25s ease;' +
+                'background:' + (type === 'success' ? '#dcfce7' : type === 'error' ? '#fef2f2' : '#eff6ff') + ';' +
+                'color:' + (type === 'success' ? '#166534' : type === 'error' ? '#991b1b' : '#1e40af') + ';' +
+                'border:1px solid ' + (type === 'success' ? '#bbf7d0' : type === 'error' ? '#fecaca' : '#bfdbfe') + ';';
+
+            var icon = type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle';
+            toast.innerHTML = '<i class="fas ' + icon + '"></i><span>' + message + '</span>';
+            toastContainer.appendChild(toast);
+
+            setTimeout(function() {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(20px)';
+                toast.style.transition = 'opacity .25s, transform .25s';
+                setTimeout(function() {
+                    if (toast.parentNode) {
+                        toast.parentNode.removeChild(toast);
+                    }
+                }, 300);
+            }, 3000);
+        };
+
+        // 注入 Toast 動畫 keyframes
+        if (!document.getElementById('cpToastStyles')) {
+            var style = document.createElement('style');
+            style.id = 'cpToastStyles';
+            style.textContent = '@keyframes cpToastIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}';
+            document.head.appendChild(style);
+        }
+
+        // ---------- 初始化 ----------
+        initFromHash();
+
+        // ---------- 視窗大小變化時關閉側邊欄（桌面端） ----------
+        window.addEventListener('resize', function() {
+            if (window.innerWidth > 768) {
+                sidebar.classList.remove('open');
+                overlay.classList.remove('show');
+            }
+        });
+
+    })();
+</script>
+
+</body>
+</html>

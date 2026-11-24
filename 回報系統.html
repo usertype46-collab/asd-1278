@@ -184,7 +184,7 @@
                         <span id="todayDate">讀取中</span>
                         <span id="shiftIndicator" class="text-[10px] px-1.5 py-0.5 rounded-full text-white bg-gray-400">時段</span>
                     </div>
-                    <select id="locationSelect" onfocus="syncLocationSelectOptions()" onchange="renderCategories()" class="flex-1 border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none text-sm h-full">
+                    <select id="locationSelect" onchange="onLocationSelectChange()" class="flex-1 border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none text-sm h-full">
                         <option value="潮州中洲">潮州中洲</option>
                         <option value="潮州光華">潮州光華</option>
                         <option value="潮州大同">潮州大同</option>
@@ -223,7 +223,7 @@
                         <div id="reallocStoreCheckboxes" class="grid grid-cols-2 sm:grid-cols-3 gap-1.5 text-xs"></div>
                     </div>
 
-                    <select id="categorySelect" onchange="onCategoryChange()" class="w-full border border-gray-300 rounded px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500 outline-none text-sm font-medium"></select>
+                    <select id="categorySelect" onchange="onCategoryChange(true)" class="w-full border border-gray-300 rounded px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500 outline-none text-sm font-medium"></select>
 
                     <!-- 情境規則說明與附件（例如：SCS,FBS黑箱 到貨照片） -->
                     <div id="scenarioRuleHintBox" class="hidden mt-2.5 p-2.5 rounded-lg bg-white/90 border border-blue-200 text-xs text-gray-700 space-y-2">
@@ -263,7 +263,7 @@
                         </div>
                     </div>
                     <div class="flex items-center flex-wrap gap-2">
-                        <select id="line2Select" onchange="onL2Change()" class="border border-gray-300 rounded px-2 py-1 outline-none text-sm bg-white min-w-[120px]"></select>
+                        <select id="line2Select" onchange="onL2Change(true)" class="border border-gray-300 rounded px-2 py-1 outline-none text-sm bg-white min-w-[120px]"></select>
                         <span id="line2Inputs" class="flex gap-1"></span>
                     </div>
                 </div>
@@ -278,7 +278,7 @@
                         </div>
                     </div>
                     <div class="flex items-center flex-wrap gap-2">
-                        <select id="line3Select" onchange="onL3Change()" class="border border-gray-300 rounded px-2 py-1 outline-none text-sm bg-white min-w-[120px]"></select>
+                        <select id="line3Select" onchange="onL3Change(true)" class="border border-gray-300 rounded px-2 py-1 outline-none text-sm bg-white min-w-[120px]"></select>
                         <span id="line3Inputs" class="flex gap-1"></span>
                     </div>
                 </div>
@@ -293,7 +293,7 @@
                         </div>
                     </div>
                     <div class="flex items-center flex-wrap gap-2">
-                        <select id="line4Select" onchange="onL4Change()" class="border border-gray-300 rounded px-2 py-1 outline-none text-sm bg-white min-w-[120px]"></select>
+                        <select id="line4Select" onchange="onL4Change(true)" class="border border-gray-300 rounded px-2 py-1 outline-none text-sm bg-white min-w-[120px]"></select>
                         <span id="line4Inputs" class="flex gap-1"></span>
                     </div>
                 </div>
@@ -408,6 +408,16 @@
         let reportedRecords = loadReportedRecords();
         let blackBoxPhotoAttached = false;
 
+        // 防止閃爍與數量回溯的狀態快取
+        let lastLocationOptionsSignature = '';
+        let lastCategoriesSignature = '';
+        let lastL2Signature = '';
+        let lastL3Signature = '';
+        let lastL4Signature = '';
+        let lastShortcutsSignature = '';
+        let lastGpsStateSignature = '';
+        let dynamicInputDrafts = { l2: {}, l3: {}, l4: {} };
+
         const INPUT_HELP = '若需要手動輸入數值，請用「中括號」包住變數名稱。\n範例：「滯留[箱數]箱[裸數]裸」或「缺[數量]」';
 
         const SCENARIO_RULE_DESCRIPTIONS = {
@@ -463,6 +473,39 @@
 
         let config = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
 
+        function saveDraftInputsFromDom() {
+            ['l2', 'l3', 'l4'].forEach(prefix => {
+                const container = document.getElementById(
+                    prefix === 'l2' ? 'line2Inputs' : prefix === 'l3' ? 'line3Inputs' : 'line4Inputs'
+                );
+                if (!container) return;
+                const inputs = container.querySelectorAll('input[type="number"]');
+                if (inputs.length > 0) {
+                    const snapshot = {};
+                    inputs.forEach((inp, idx) => {
+                        snapshot[idx] = inp.value;
+                    });
+                    dynamicInputDrafts[prefix] = snapshot;
+                }
+            });
+        }
+
+        function clearDraftInputsForLevels(levels = ['l2', 'l3', 'l4']) {
+            levels.forEach(lvl => {
+                dynamicInputDrafts[lvl] = {};
+            });
+        }
+
+        function onDynamicNumberInput(levelPrefix, index, value) {
+            if (!dynamicInputDrafts[levelPrefix]) dynamicInputDrafts[levelPrefix] = {};
+            dynamicInputDrafts[levelPrefix][index] = value;
+        }
+
+        function onLocationSelectChange() {
+            lastCategoriesSignature = '';
+            renderCategories();
+        }
+
         function normalizeStoreDisplayName(name) {
             return String(name || '').replace('智取店', '').trim();
         }
@@ -489,14 +532,18 @@
             if (!locSelect) return;
             const currentVal = preferredStore || locSelect.value || DEFAULT_BASE_STORES[0];
             const allStores = getAllAvailableStores();
+            const nextSig = allStores.join('|');
 
-            locSelect.innerHTML = allStores.map(storeName =>
-                `<option value="${escapeHtml(storeName)}">${escapeHtml(storeName)}</option>`
-            ).join('');
+            if (nextSig !== lastLocationOptionsSignature) {
+                lastLocationOptionsSignature = nextSig;
+                locSelect.innerHTML = allStores.map(storeName =>
+                    `<option value="${escapeHtml(storeName)}">${escapeHtml(storeName)}</option>`
+                ).join('');
+            }
 
-            if (currentVal && allStores.includes(currentVal)) {
+            if (currentVal && allStores.includes(currentVal) && locSelect.value !== currentVal) {
                 locSelect.value = currentVal;
-            } else if (allStores.length > 0) {
+            } else if (!locSelect.value && allStores.length > 0) {
                 locSelect.value = allStores[0];
             }
         }
@@ -599,7 +646,7 @@
             renderReallocStoreCheckboxes();
             renderGpsStoreList();
             if (lastKnownCoords) {
-                checkLocation(lastKnownCoords.lat, lastKnownCoords.lng);
+                checkLocation(lastKnownCoords.lat, lastKnownCoords.lng, true);
             }
             alert(`✅ 已新增隸屬區域「${newRegion}」！`);
         }
@@ -640,6 +687,7 @@
             );
             syncLocationSelectOptions();
             renderReallocStoreCheckboxes();
+            lastShortcutsSignature = '';
             renderShortcuts();
             renderGpsStoreList();
 
@@ -661,7 +709,7 @@
             }
 
             if (lastKnownCoords) {
-                checkLocation(lastKnownCoords.lat, lastKnownCoords.lng);
+                checkLocation(lastKnownCoords.lat, lastKnownCoords.lng, true);
             }
 
             if (cloudErrors.length > 0) {
@@ -735,9 +783,13 @@
         async function fetchShortcuts() {
             const { data } = await supabaseClient.from('shortcuts').select('*').order('created_at', { ascending: true });
             if (data) {
-                shortcuts = data;
-                syncAllRegionsFromData();
-                renderShortcuts();
+                const prevSig = JSON.stringify(shortcuts);
+                const nextSig = JSON.stringify(data);
+                if (prevSig !== nextSig) {
+                    shortcuts = data;
+                    syncAllRegionsFromData();
+                    renderShortcuts();
+                }
             }
         }
 
@@ -774,6 +826,7 @@
         }
 
         async function fetchLocations() {
+            const prevLocationsSig = JSON.stringify(STORE_LOCATIONS);
             const previousLocalMap = {};
             Object.keys(STORE_LOCATIONS || {}).forEach(grp => {
                 (STORE_LOCATIONS[grp] || []).forEach(st => {
@@ -820,13 +873,16 @@
                 STORE_LOCATIONS = nextStoreLocations;
                 saveLocalLocations();
             }
+
+            const nextLocationsSig = JSON.stringify(STORE_LOCATIONS);
             syncAllRegionsFromData();
             syncLocationSelectOptions();
             renderReallocStoreCheckboxes();
             renderGpsStoreList();
+
             if (lastKnownCoords) {
-                checkLocation(lastKnownCoords.lat, lastKnownCoords.lng);
-            } else {
+                checkLocation(lastKnownCoords.lat, lastKnownCoords.lng, prevLocationsSig !== nextLocationsSig);
+            } else if (prevLocationsSig !== nextLocationsSig) {
                 renderCategories();
             }
         }
@@ -834,28 +890,36 @@
         async function fetchConfig() {
             const { data } = await supabaseClient.from('report_settings').select('config_data').eq('id', 1).single();
             if (data && data.config_data) {
-                config = data.config_data;
-                if (!config.l4) config.l4 = {};
-                if (!Array.isArray(config.reallocStores)) {
+                const incoming = data.config_data;
+                if (!incoming.l4) incoming.l4 = {};
+                if (!Array.isArray(incoming.reallocStores)) {
                     try {
                         const savedRealloc = localStorage.getItem(LOCAL_REALLOC_STORES_KEY);
-                        config.reallocStores = savedRealloc ? JSON.parse(savedRealloc) : ['潮州中洲', '潮州愛國'];
+                        incoming.reallocStores = savedRealloc ? JSON.parse(savedRealloc) : ['潮州中洲', '潮州愛國'];
                     } catch (e) {
-                        config.reallocStores = ['潮州中洲', '潮州愛國'];
+                        incoming.reallocStores = ['潮州中洲', '潮州愛國'];
                     }
                 }
                 let changed = false;
                 DEFAULT_CONFIG.categories.forEach(defaultCat => {
-                    if (!config.categories.find(c => c.text === defaultCat.text)) {
-                        config.categories.push({ id: defaultCat.id, text: defaultCat.text });
-                        if (!config.l2[defaultCat.id]) config.l2[defaultCat.id] = [];
+                    if (!incoming.categories.find(c => c.text === defaultCat.text)) {
+                        incoming.categories.push({ id: defaultCat.id, text: defaultCat.text });
+                        if (!incoming.l2[defaultCat.id]) incoming.l2[defaultCat.id] = [];
                         changed = true;
                     }
                 });
-                if (changed) syncConfigToSupabase();
-                syncLocationSelectOptions();
-                renderReallocStoreCheckboxes();
-                renderCategories();
+
+                const prevConfigSig = JSON.stringify(config);
+                const nextConfigSig = JSON.stringify(incoming);
+                config = incoming;
+
+                if (changed) {
+                    syncConfigToSupabase();
+                } else if (prevConfigSig !== nextConfigSig) {
+                    syncLocationSelectOptions();
+                    renderReallocStoreCheckboxes();
+                    renderCategories();
+                }
             } else {
                 try {
                     const savedRealloc = localStorage.getItem(LOCAL_REALLOC_STORES_KEY);
@@ -874,6 +938,10 @@
             } catch (e) {}
             syncLocationSelectOptions();
             renderReallocStoreCheckboxes();
+            lastCategoriesSignature = '';
+            lastL2Signature = '';
+            lastL3Signature = '';
+            lastL4Signature = '';
             renderCategories();
             await supabaseClient.from('report_settings').upsert([{ id: 1, config_data: config }]);
         }
@@ -916,20 +984,24 @@
 
             if (warnings.length === 0) {
                 banner.classList.add('hidden');
-                listEl.innerHTML = '';
+                if (listEl.innerHTML !== '') listEl.innerHTML = '';
                 return;
             }
 
             banner.classList.remove('hidden');
-            listEl.innerHTML = warnings.map(w =>
+            const nextHtml = warnings.map(w =>
                 `<li><span class="underline">${escapeHtml(w.text)}</span>：${escapeHtml(w.reason)}</li>`
             ).join('');
+            if (listEl.innerHTML !== nextHtml) {
+                listEl.innerHTML = nextHtml;
+            }
         }
 
         function updateShiftStatus() {
             const now = new Date();
             const hour = now.getHours();
             const day = now.getDay();
+            const prevShift = currentShift;
             
             let shiftName = "其他時段";
             let shiftColor = "bg-gray-400";
@@ -946,13 +1018,21 @@
                 currentShift = 'other';
             }
             
-            document.getElementById('todayDate').innerText = `${now.getMonth() + 1}/${now.getDate()}`;
-            document.getElementById('shiftIndicator').innerText = shiftName;
-            document.getElementById('shiftIndicator').className = `text-[10px] px-2 py-1 rounded-full text-white shadow-sm ${shiftColor}`;
+            const dateText = `${now.getMonth() + 1}/${now.getDate()}`;
+            const dateEl = document.getElementById('todayDate');
+            const shiftEl = document.getElementById('shiftIndicator');
+            if (dateEl.innerText !== dateText) dateEl.innerText = dateText;
+            if (shiftEl.innerText !== shiftName) shiftEl.innerText = shiftName;
+            const nextShiftClass = `text-[10px] px-2 py-1 rounded-full text-white shadow-sm ${shiftColor}`;
+            if (shiftEl.className !== nextShiftClass) shiftEl.className = nextShiftClass;
             
             syncLocationSelectOptions();
             updateWarningBanner();
-            renderCategories(); 
+            if (prevShift !== currentShift || lastCategoriesSignature === '') {
+                renderCategories();
+            } else {
+                refreshCategoryStatusesOnly();
+            }
         }
 
         /* ================= 4. GPS 距離、定位、重點作業與新增/編輯門市地點 ================= */
@@ -1022,7 +1102,7 @@
                     document.getElementById('gpsStoreLat').value = lat;
                     document.getElementById('gpsStoreLng').value = lng;
                     hint.innerText = `✅ 已取得目前座標：${lat}, ${lng}`;
-                    checkLocation(lat, lng);
+                    checkLocation(lat, lng, true);
                 },
                 (err) => {
                     hint.innerText = `❌ 抓取 GPS 失敗：${err.message || '請確認定位權限'}`;
@@ -1075,6 +1155,7 @@
             syncLocationSelectOptions(cleanStoreName || null);
             renderReallocStoreCheckboxes();
             renderGpsStoreList();
+            lastCategoriesSignature = '';
             renderCategories();
 
             let cloudError = null;
@@ -1117,7 +1198,7 @@
             }
 
             if (lastKnownCoords) {
-                checkLocation(lastKnownCoords.lat, lastKnownCoords.lng);
+                checkLocation(lastKnownCoords.lat, lastKnownCoords.lng, true);
             }
             resetGpsLocationForm();
         }
@@ -1131,6 +1212,7 @@
             syncLocationSelectOptions();
             renderReallocStoreCheckboxes();
             renderGpsStoreList();
+            lastCategoriesSignature = '';
             renderCategories();
 
             if (id) {
@@ -1139,7 +1221,7 @@
                 await supabaseClient.from('store_locations').delete().eq('name', storeName).eq('group_type', groupType);
             }
             if (lastKnownCoords) {
-                checkLocation(lastKnownCoords.lat, lastKnownCoords.lng);
+                checkLocation(lastKnownCoords.lat, lastKnownCoords.lng, true);
             }
         }
 
@@ -1226,16 +1308,20 @@
                         lat: position.coords.latitude,
                         lng: position.coords.longitude
                     };
-                    checkLocation(position.coords.latitude, position.coords.longitude);
+                    checkLocation(position.coords.latitude, position.coords.longitude, false);
                 }, error => {
-                    currentGpsMatchedStore = null;
-                    currentGpsMatchedStoreObj = null;
-                    updateGpsStoreKeyTasksBanner();
-                    const gpsSpan = document.getElementById('gpsStatus');
-                    gpsSpan.innerText = '📍 定位拒絕或失敗';
-                    gpsSpan.className = 'text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700';
-                    renderCategories();
-                }, { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 });
+                    const nextGpsSig = 'error';
+                    if (lastGpsStateSignature !== nextGpsSig) {
+                        lastGpsStateSignature = nextGpsSig;
+                        currentGpsMatchedStore = null;
+                        currentGpsMatchedStoreObj = null;
+                        updateGpsStoreKeyTasksBanner();
+                        const gpsSpan = document.getElementById('gpsStatus');
+                        gpsSpan.innerText = '📍 定位拒絕或失敗';
+                        gpsSpan.className = 'text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700';
+                        renderCategories();
+                    }
+                }, { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 });
             } else {
                 currentGpsMatchedStore = null;
                 currentGpsMatchedStoreObj = null;
@@ -1245,7 +1331,7 @@
             }
         }
 
-        function checkLocation(userLat, userLng) {
+        function checkLocation(userLat, userLng, forceUpdate = false) {
             let newGroup = null;
             let closestStore = null;
             let matchedObj = null;
@@ -1263,6 +1349,16 @@
                 if (newGroup) break;
             }
 
+            const tasksSig = matchedObj ? normalizeKeyTasks(matchedObj.keyTasks).join(',') : '';
+            const nextGpsSig = `${newGroup || ''}__${closestStore || ''}__${tasksSig}`;
+
+            // 若所在群組、門市與重點作業未變，不重繪 DOM，避免畫面閃爍與輸入數量被清空
+            if (!forceUpdate && nextGpsSig === lastGpsStateSignature) {
+                return;
+            }
+            lastGpsStateSignature = nextGpsSig;
+
+            const storeChanged = closestStore !== currentGpsMatchedStore;
             currentVisibleGroup = newGroup;
             currentGpsMatchedStore = closestStore;
             currentGpsMatchedStoreObj = matchedObj;
@@ -1274,7 +1370,7 @@
                 gpsSpan.className = 'text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700';
                 gpsSpan.innerText = `📍 在 ${newGroup} 範圍內`;
                 
-                if (closestStore) {
+                if (closestStore && storeChanged) {
                     syncLocationSelectOptions(closestStore);
                 }
             } else {
@@ -1287,12 +1383,25 @@
         }
 
         /* ================= 5. 捷徑管理與渲染 ================= */
-        function renderShortcuts() {
+        function renderShortcuts(forceRender = false) {
             const btnContainer = document.getElementById('shortcutButtons');
+            const visibleShortcuts = currentVisibleGroup
+                ? shortcuts.filter(s => s.group_type === currentVisibleGroup)
+                : [];
+            const nextShortcutSig = JSON.stringify({
+                group: currentVisibleGroup,
+                visible: visibleShortcuts,
+                all: shortcuts
+            });
+
+            if (!forceRender && nextShortcutSig === lastShortcutsSignature) {
+                return;
+            }
+            lastShortcutsSignature = nextShortcutSig;
+
             if (!currentVisibleGroup) {
                 btnContainer.innerHTML = `<div class="col-span-3 text-xs text-gray-400 text-center py-3 bg-gray-50 rounded border border-dashed border-gray-300">目前距離過遠，捷徑隱藏中。</div>`;
             } else {
-                const visibleShortcuts = shortcuts.filter(s => s.group_type === currentVisibleGroup);
                 if (visibleShortcuts.length === 0) {
                     btnContainer.innerHTML = `<div class="col-span-3 text-xs text-gray-400 text-center py-3 bg-gray-50 rounded border border-dashed border-gray-300">已進入 ${escapeHtml(currentVisibleGroup)}，但尚未設定捷徑。<br>請點擊右上方「管理」新增。</div>`;
                 } else {
@@ -1334,13 +1443,13 @@
                 const { error } = await supabaseClient.from('shortcuts').update({ name, url, group_type }).eq('id', editShortcutId);
                 if (error) {
                     shortcuts = shortcuts.map(s => s.id === editShortcutId ? { ...s, name, url, group_type } : s);
-                    renderShortcuts();
+                    renderShortcuts(true);
                 }
             } else {
                 const { data, error } = await supabaseClient.from('shortcuts').insert([{ name, url, group_type }]).select();
                 if (error) {
                     shortcuts.push({ id: 'local_' + genId(), name, url, group_type });
-                    renderShortcuts();
+                    renderShortcuts(true);
                 } else if (data && data.length > 0) {
                     await fetchShortcuts();
                 }
@@ -1366,7 +1475,7 @@
             const { error } = await supabaseClient.from('shortcuts').delete().eq('id', id);
             if (error) {
                 shortcuts = shortcuts.filter(s => s.id !== id);
-                renderShortcuts();
+                renderShortcuts(true);
             }
         }
 
@@ -1478,8 +1587,9 @@
         function selectCategoryFromCard(catId) {
             const select = document.getElementById('categorySelect');
             if (!select) return;
+            if (select.value === catId) return;
             select.value = catId;
-            onCategoryChange();
+            onCategoryChange(true);
         }
 
         function renderScenarioStatusCards(filteredCategories) {
@@ -1489,7 +1599,10 @@
 
             const shiftLabel = document.getElementById('shiftIndicator').innerText;
             const reportedCount = filteredCategories.filter(c => isCategoryReported(c.text)).length;
-            summaryEl.innerText = `${shiftLabel}情境回報進度：${reportedCount} / ${filteredCategories.length} 已回報`;
+            const nextSummary = `${shiftLabel}情境回報進度：${reportedCount} / ${filteredCategories.length} 已回報`;
+            if (summaryEl.innerText !== nextSummary) {
+                summaryEl.innerText = nextSummary;
+            }
 
             grid.innerHTML = filteredCategories.map(cat => {
                 const st = getCategoryVisualState(cat.text);
@@ -1523,7 +1636,8 @@
                 return;
             }
 
-            const rawText = select.options[select.selectedIndex].getAttribute('data-raw') || '';
+            const selectedOpt = select.options[select.selectedIndex];
+            const rawText = selectedOpt ? (selectedOpt.getAttribute('data-raw') || '') : '';
             const st = getCategoryVisualState(rawText);
             wrapper.className = `${st.boxClass} p-3 rounded-lg border-2 transition-colors`;
             badge.className = `text-[10px] px-2 py-0.5 rounded-full font-bold ${st.badgeClass}`;
@@ -1562,9 +1676,7 @@
             }
         }
 
-        function renderCategories(selectId = null) {
-            syncLocationSelectOptions();
-            const select = document.getElementById('categorySelect');
+        function getFilteredCategoriesList() {
             const currentLocation = document.getElementById('locationSelect').value;
             const dayOfWeek = new Date().getDay();
             const reallocStores = Array.isArray(config.reallocStores) ? config.reallocStores : ['潮州中洲', '潮州愛國'];
@@ -1572,7 +1684,7 @@
 
             updateReallocGpsNotice(currentLocation, reallocStores);
             
-            const filteredCategories = config.categories.filter(c => {
+            return config.categories.filter(c => {
                 const t = c.text;
                 if (t === '包裹重新分配') {
                     const isStoreAllowed = reallocStores.includes(currentLocation);
@@ -1589,27 +1701,82 @@
                 if (eveningOnly.includes(t)) return currentShift === 'evening';
                 return true; 
             });
+        }
 
-            const currentSelected = selectId || select.value;
+        function refreshCategoryStatusesOnly() {
+            const select = document.getElementById('categorySelect');
+            const filteredCategories = getFilteredCategoriesList();
+            Array.from(select.options).forEach(opt => {
+                if (!opt.value) return;
+                const rawText = opt.getAttribute('data-raw') || '';
+                const st = getCategoryVisualState(rawText);
+                const nextLabel = `${rawText} [${st.label}]`;
+                if (opt.text !== nextLabel) opt.text = nextLabel;
+            });
+            renderScenarioStatusCards(filteredCategories);
+            updateWarningBanner();
+        }
+
+        function renderCategories(selectId = null, forceRebuild = false) {
+            syncLocationSelectOptions();
+            const select = document.getElementById('categorySelect');
+            const filteredCategories = getFilteredCategoriesList();
+            const currentSelected = selectId !== null ? selectId : select.value;
+
+            const nextCatSig = JSON.stringify(
+                filteredCategories.map(c => ({
+                    id: c.id,
+                    text: c.text,
+                    state: getCategoryVisualState(c.text).status
+                }))
+            );
+
+            // 若情境清單與狀態完全未變，不重寫 <select> 與子層級，徹底避免閃爍與數量被清空
+            if (!forceRebuild && nextCatSig === lastCategoriesSignature) {
+                if (currentSelected && filteredCategories.some(c => c.id === currentSelected) && select.value !== currentSelected) {
+                    select.value = currentSelected;
+                    onCategoryChange(true);
+                } else {
+                    updateSelectedCategoryBoxStyle();
+                    updateWarningBanner();
+                }
+                return;
+            }
+            lastCategoriesSignature = nextCatSig;
+
+            saveDraftInputsFromDom();
+
+            const prevSelected = select.value;
             select.innerHTML = '<option value="" disabled selected>請選擇回報情境...</option>' + 
                 filteredCategories.map(c => {
                     const st = getCategoryVisualState(c.text);
                     return `<option value="${c.id}" data-raw="${escapeHtml(c.text)}">${escapeHtml(c.text)} [${st.label}]</option>`;
                 }).join('');
             
-            if (currentSelected && filteredCategories.some(c => c.id === currentSelected)) { select.value = currentSelected; } 
-            else { select.value = ""; }
+            const targetSelected = (currentSelected && filteredCategories.some(c => c.id === currentSelected))
+                ? currentSelected
+                : '';
+            select.value = targetSelected;
 
+            const isSameCategory = prevSelected && prevSelected === targetSelected;
             renderScenarioStatusCards(filteredCategories);
             updateWarningBanner();
-            onCategoryChange();
+            onCategoryChange(!isSameCategory);
         }
 
-        function onCategoryChange() {
+        function onCategoryChange(resetDrafts = false) {
             const catId = document.getElementById('categorySelect').value;
             const l2Container = document.getElementById('line2Container');
             const l3Container = document.getElementById('line3Container');
             const l4Container = document.getElementById('line4Container');
+
+            if (resetDrafts) {
+                clearDraftInputsForLevels(['l2', 'l3', 'l4']);
+                lastL2Signature = '';
+                lastL3Signature = '';
+                lastL4Signature = '';
+            }
+
             updateSelectedCategoryBoxStyle();
             document.querySelectorAll('#scenarioStatusGrid button').forEach(btn => {
                 btn.classList.remove('ring-2', 'ring-blue-600');
@@ -1618,7 +1785,10 @@
                 }
             });
             if (!catId) {
-                l2Container.classList.add('hidden'); l3Container.classList.add('hidden'); l4Container.classList.add('hidden'); return;
+                l2Container.classList.add('hidden');
+                l3Container.classList.add('hidden');
+                l4Container.classList.add('hidden');
+                return;
             }
             l2Container.classList.remove('hidden'); 
             l3Container.classList.remove('hidden');
@@ -1629,15 +1799,32 @@
         function renderL2(catId, selectId = null) {
             const select = document.getElementById('line2Select');
             const options = config.l2[catId] || [];
-            if (options.length === 0) select.innerHTML = '<option value="" disabled selected>無選項</option>';
-            else {
-                select.innerHTML = options.map(o => `<option value="${o.id}" data-raw="${escapeHtml(o.text)}">${escapeHtml(o.text.replace(/\[.*?\]/g, ' ')).trim()}</option>`).join('');
-                if (selectId && options.find(o => o.id === selectId)) select.value = selectId;
+            const prevSelected = selectId || select.value;
+            const nextSig = `${catId}__` + JSON.stringify(options);
+
+            if (nextSig !== lastL2Signature) {
+                lastL2Signature = nextSig;
+                saveDraftInputsFromDom();
+                if (options.length === 0) {
+                    select.innerHTML = '<option value="" disabled selected>無選項</option>';
+                } else {
+                    select.innerHTML = options.map(o => `<option value="${o.id}" data-raw="${escapeHtml(o.text)}">${escapeHtml(o.text.replace(/\[.*?\]/g, ' ')).trim()}</option>`).join('');
+                    if (prevSelected && options.find(o => o.id === prevSelected)) {
+                        select.value = prevSelected;
+                    }
+                }
+            } else if (selectId && options.find(o => o.id === selectId) && select.value !== selectId) {
+                select.value = selectId;
             }
-            onL2Change();
+            onL2Change(false);
         }
 
-        function onL2Change() {
+        function onL2Change(userTriggered = false) {
+            if (userTriggered) {
+                clearDraftInputsForLevels(['l2', 'l3', 'l4']);
+                lastL3Signature = '';
+                lastL4Signature = '';
+            }
             parseInputs('line2Select', 'line2Inputs', 'l2');
             const l2Id = document.getElementById('line2Select').value;
             renderL3(l2Id);
@@ -1646,15 +1833,31 @@
         function renderL3(l2Id, selectId = null) {
             const select = document.getElementById('line3Select');
             const options = l2Id ? (config.l3[l2Id] || []) : [];
-            if (options.length === 0) select.innerHTML = '<option value="" disabled selected>無選項</option>';
-            else {
-                select.innerHTML = options.map(o => `<option value="${o.id}" data-raw="${escapeHtml(o.text)}">${escapeHtml(o.text.replace(/\[.*?\]/g, ' ')).trim()}</option>`).join('');
-                if (selectId && options.find(o => o.id === selectId)) select.value = selectId;
+            const prevSelected = selectId || select.value;
+            const nextSig = `${l2Id || ''}__` + JSON.stringify(options);
+
+            if (nextSig !== lastL3Signature) {
+                lastL3Signature = nextSig;
+                saveDraftInputsFromDom();
+                if (options.length === 0) {
+                    select.innerHTML = '<option value="" disabled selected>無選項</option>';
+                } else {
+                    select.innerHTML = options.map(o => `<option value="${o.id}" data-raw="${escapeHtml(o.text)}">${escapeHtml(o.text.replace(/\[.*?\]/g, ' ')).trim()}</option>`).join('');
+                    if (prevSelected && options.find(o => o.id === prevSelected)) {
+                        select.value = prevSelected;
+                    }
+                }
+            } else if (selectId && options.find(o => o.id === selectId) && select.value !== selectId) {
+                select.value = selectId;
             }
-            onL3Change();
+            onL3Change(false);
         }
 
-        function onL3Change() { 
+        function onL3Change(userTriggered = false) { 
+            if (userTriggered) {
+                clearDraftInputsForLevels(['l3', 'l4']);
+                lastL4Signature = '';
+            }
             parseInputs('line3Select', 'line3Inputs', 'l3'); 
             const l3Id = document.getElementById('line3Select').value;
             renderL4(l3Id);
@@ -1663,28 +1866,57 @@
         function renderL4(l3Id, selectId = null) {
             const select = document.getElementById('line4Select');
             const options = l3Id ? (config.l4[l3Id] || []) : [];
-            if (options.length === 0) {
-                select.innerHTML = '<option value="" disabled selected>無選項</option>';
-            } else {
-                select.innerHTML = options.map(o => `<option value="${o.id}" data-raw="${escapeHtml(o.text)}">${escapeHtml(o.text.replace(/\[.*?\]/g, ' ')).trim()}</option>`).join('');
-                if (selectId && options.find(o => o.id === selectId)) select.value = selectId;
+            const prevSelected = selectId || select.value;
+            const nextSig = `${l3Id || ''}__` + JSON.stringify(options);
+
+            if (nextSig !== lastL4Signature) {
+                lastL4Signature = nextSig;
+                saveDraftInputsFromDom();
+                if (options.length === 0) {
+                    select.innerHTML = '<option value="" disabled selected>無選項</option>';
+                } else {
+                    select.innerHTML = options.map(o => `<option value="${o.id}" data-raw="${escapeHtml(o.text)}">${escapeHtml(o.text.replace(/\[.*?\]/g, ' ')).trim()}</option>`).join('');
+                    if (prevSelected && options.find(o => o.id === prevSelected)) {
+                        select.value = prevSelected;
+                    }
+                }
+            } else if (selectId && options.find(o => o.id === selectId) && select.value !== selectId) {
+                select.value = selectId;
             }
-            onL4Change();
+            onL4Change(false);
         }
 
-        function onL4Change() { 
+        function onL4Change(userTriggered = false) { 
+            if (userTriggered) {
+                clearDraftInputsForLevels(['l4']);
+            }
             parseInputs('line4Select', 'line4Inputs', 'l4'); 
         }
 
         function parseInputs(selectId, containerId, levelPrefix) {
             const select = document.getElementById(selectId);
             const container = document.getElementById(containerId);
-            if (!select || !select.value || select.options[select.selectedIndex].disabled) { container.innerHTML = ''; return; }
-            const rawText = select.options[select.selectedIndex].getAttribute('data-raw');
+            if (!select || !select.value || (select.selectedIndex >= 0 && select.options[select.selectedIndex].disabled)) {
+                if (container.innerHTML !== '') container.innerHTML = '';
+                container.dataset.inputSig = '';
+                return;
+            }
+            const rawText = select.options[select.selectedIndex].getAttribute('data-raw') || '';
+            const inputSig = `${select.value}__${rawText}`;
+
+            // 若目前該層級選項與輸入欄位結構相同，保留既有 DOM 與使用者輸入值，不重新覆蓋
+            if (container.dataset.inputSig === inputSig) {
+                return;
+            }
+            container.dataset.inputSig = inputSig;
+
             const regex = /\[(.*?)\]/g;
             let match, html = '', i = 0;
             while ((match = regex.exec(rawText)) !== null) {
-                html += `<input type="number" id="${levelPrefix}_in_${i}" placeholder="${match[1]}" class="w-16 border border-gray-300 rounded px-1 py-1 text-center text-sm outline-none focus:ring-1 focus:ring-blue-500" min="0">`;
+                const savedVal = (dynamicInputDrafts[levelPrefix] && dynamicInputDrafts[levelPrefix][i] !== undefined)
+                    ? dynamicInputDrafts[levelPrefix][i]
+                    : '';
+                html += `<input type="number" id="${levelPrefix}_in_${i}" value="${escapeHtml(String(savedVal))}" oninput="onDynamicNumberInput('${levelPrefix}', ${i}, this.value)" placeholder="${escapeHtml(match[1])}" class="w-16 border border-gray-300 rounded px-1 py-1 text-center text-sm outline-none focus:ring-1 focus:ring-blue-500" min="0">`;
                 i++;
             }
             container.innerHTML = html;
@@ -1805,7 +2037,7 @@
                 isNoRetention,
                 hasPhoto: catRawText === 'SCS,FBS黑箱' ? blackBoxPhotoAttached : undefined
             });
-            renderCategories(cat);
+            renderCategories(cat, true);
 
             let extraNotice = '';
             if (catRawText === 'SCS,FBS黑箱' && !blackBoxPhotoAttached) {

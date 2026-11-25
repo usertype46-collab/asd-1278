@@ -70,15 +70,16 @@
                             <select id="gpsStoreGroup" required class="flex-1 min-w-0 border border-emerald-300 rounded px-2 py-1.5 text-sm bg-white focus:ring-2 focus:ring-emerald-500 outline-none">
                                 <option value="愛國群組">隸屬：愛國群組</option>
                                 <option value="中洲群組">隸屬：中洲群組</option>
+                                <option value="新園群組">隸屬：新園群組</option>
                             </select>
                             <button type="button" onclick="addNewRegion('gpsStoreGroup')" title="新增隸屬區域" class="bg-emerald-100 hover:bg-emerald-200 text-emerald-900 border border-emerald-300 px-2 py-1.5 rounded text-xs font-bold shrink-0 transition">➕區</button>
                             <button type="button" onclick="editSelectedRegion('gpsStoreGroup')" title="修改所選隸屬區域" class="bg-blue-100 hover:bg-blue-200 text-blue-800 border border-blue-300 px-2 py-1.5 rounded text-xs font-bold shrink-0 transition">✏️區</button>
                         </div>
-                        <input type="text" id="gpsStoreName" placeholder="門市地點名稱（如：潮州中洲）" required class="border border-emerald-300 rounded px-2 py-1.5 text-sm bg-white focus:ring-2 focus:ring-emerald-500 outline-none">
+                        <input type="text" id="gpsStoreName" placeholder="門市地點名稱（如：新園仙吉）" required class="border border-emerald-300 rounded px-2 py-1.5 text-sm bg-white focus:ring-2 focus:ring-emerald-500 outline-none">
                     </div>
                     <div class="grid grid-cols-2 gap-2">
-                        <input type="number" step="any" id="gpsStoreLat" placeholder="緯度 (Lat，例: 22.55...)" required class="border border-emerald-300 rounded px-2 py-1.5 text-sm bg-white focus:ring-2 focus:ring-emerald-500 outline-none">
-                        <input type="number" step="any" id="gpsStoreLng" placeholder="經度 (Lng，例: 120.54...)" required class="border border-emerald-300 rounded px-2 py-1.5 text-sm bg-white focus:ring-2 focus:ring-emerald-500 outline-none">
+                        <input type="number" step="any" id="gpsStoreLat" placeholder="緯度 (Lat，例: 22.52...)" required class="border border-emerald-300 rounded px-2 py-1.5 text-sm bg-white focus:ring-2 focus:ring-emerald-500 outline-none">
+                        <input type="number" step="any" id="gpsStoreLng" placeholder="經度 (Lng，例: 120.45...)" required class="border border-emerald-300 rounded px-2 py-1.5 text-sm bg-white focus:ring-2 focus:ring-emerald-500 outline-none">
                     </div>
 
                     <!-- 門市重點作業勾選 -->
@@ -131,6 +132,7 @@
                             <select id="shortcutGroup" required class="flex-1 min-w-0 border border-gray-300 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-green-500 outline-none">
                                 <option value="愛國群組">隸屬：愛國群組</option>
                                 <option value="中洲群組">隸屬：中洲群組</option>
+                                <option value="新園群組">隸屬：新園群組</option>
                             </select>
                             <button type="button" onclick="addNewRegion('shortcutGroup')" class="bg-green-100 hover:bg-green-200 text-green-800 border border-green-300 px-2 py-1 rounded text-xs font-bold shrink-0 transition">
                                 ➕ 新增區域
@@ -155,12 +157,15 @@
 
         <!-- 回報字串產生器區域 -->
         <section id="reportGeneratorSection" class="bg-white rounded-xl card p-5 border-t-4 border-blue-500">
-            <div class="flex justify-between items-center mb-3 gap-2">
+            <div class="flex justify-between items-center mb-3 gap-2 flex-wrap">
                 <h2 class="text-md font-bold text-gray-800">📝 狀態回報字串產生器</h2>
-                <div class="flex items-center gap-2 text-[11px] font-semibold">
+                <div class="flex items-center gap-1.5 text-[11px] font-semibold flex-wrap">
                     <span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300">已回報</span>
                     <span class="px-2 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-300">未回報</span>
                     <span class="px-2 py-0.5 rounded bg-red-100 text-red-800 border border-red-300">警告</span>
+                    <button type="button" onclick="manualResetReports()" title="手動重置今日目前班別的回報紀錄" class="px-2 py-0.5 rounded bg-rose-100 hover:bg-rose-200 text-rose-800 border border-rose-300 font-bold shadow-sm transition flex items-center gap-1">
+                        🔄 手動重置回報
+                    </button>
                 </div>
             </div>
 
@@ -196,6 +201,8 @@
                         <option value="潮州太平">潮州太平</option>
                         <option value="潮州新生">潮州新生</option>
                         <option value="新園仙吉">新園仙吉</option>
+                        <option value="新園南興">新園南興</option>
+                        <option value="新園塩龍">新園塩龍</option>
                     </select>
                 </div>
 
@@ -321,9 +328,14 @@
                     </div>
                 </div>
 
-                <button id="generateCopyBtn" type="button" onclick="generateAndCopyString()" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 rounded-lg shadow transition">
-                    產生並複製字串
-                </button>
+                <div class="flex gap-2">
+                    <button id="generateCopyBtn" type="button" onclick="generateAndCopyString()" class="flex-[3] bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 rounded-lg shadow transition">
+                        產生並複製字串
+                    </button>
+                    <button id="manualResetBtn" type="button" onclick="manualResetReports()" class="flex-1 bg-rose-500 hover:bg-rose-600 text-white font-bold py-3 px-2 rounded-lg shadow transition text-xs sm:text-sm">
+                        🔄 重置回報
+                    </button>
+                </div>
 
                 <div>
                     <div class="flex justify-between items-center mb-1">
@@ -419,16 +431,18 @@
         const LOCAL_REPORTED_KEY = 'shopee_reported_records_v1';
         const LOCAL_REALLOC_STORES_KEY = 'shopee_realloc_stores_v1';
         const LOCAL_APPSHEET_BLACKBOX_KEY = 'shopee_appsheet_blackbox_v1';
-        const DEFAULT_REGIONS = ['愛國群組', '中洲群組'];
+        const DEFAULT_REGIONS = ['愛國群組', '中洲群組', '新園群組'];
         const DEFAULT_BASE_STORES = [
             '潮州中洲', '潮州光華', '潮州大同', '潮州光春', '潮州愛國',
-            '潮州四維', '潮州文化', '潮州延平', '潮州太平', '潮州新生', '新園仙吉'
+            '潮州四維', '潮州文化', '潮州延平', '潮州太平', '潮州新生',
+            '新園仙吉', '新園南興', '新園塩龍'
         ];
+        const XINYUAN_DEFAULT_STORES = ['新園仙吉', '新園南興', '新園塩龍'];
         const KEY_TASKS_OPTIONS = ['有黑箱上架', '有NDD包裹上架', '有NDD打包', '有FBS打包'];
 
         let regions = loadRegions();
         let shortcuts = [];
-        let STORE_LOCATIONS = { '愛國群組': [], '中洲群組': [] };
+        let STORE_LOCATIONS = { '愛國群組': [], '中洲群組': [], '新園群組': [] };
         let currentVisibleGroup = null;
         let currentGpsMatchedStore = null; // 紀錄目前 GPS 實際偵測到所在 50m 內的門市名稱
         let currentGpsMatchedStoreObj = null; // 紀錄目前 GPS 實際偵測到所在 50m 內的門市完整物件
@@ -452,6 +466,7 @@
         const INPUT_HELP = '若需要手動輸入數值，請用「中括號」包住變數名稱。\n範例：「滯留[箱數]箱[裸數]裸」或「缺[數量]」';
 
         const SCENARIO_RULE_DESCRIPTIONS = {
+            '當日一般包裹進貨數量': '📦 情境規範（新園群組｜早、晚班時段）：請於當日一般包裹進貨後，拍照一般包裹並直接上傳群組（不建相簿），標記日期、門市、倉別與箱數/裸數。',
             'SCS,FBS黑箱': '📷 情境規範（早、晚班時段）：【到貨照片 & AppSheet 管制品回報】請確認並拍攝/檢附黑箱到貨照片，並點擊下方 AppSheet 管制品按鈕完成確認。',
             'NDD,FBS離店打包': '⏰ 情境規範（晚班時段）：【兩家門市 20:00 前完成】19:00–20:00 未回報將啟動警告，完成回報後關閉。',
             'NDD上架完成': '⏰ 情境規範（晚班時段）：【兩家門市 21:00 前完成】21:00 前未回報將啟動警告，完成回報後關閉。',
@@ -461,28 +476,40 @@
             '滯留箱數回報': '📦 情境規範（早、晚班時段）：當「PDA上架完成」回報為有滯留狀態時需填報；若為「無滯留」則自動隱藏此項目。'
         };
 
-        const SCENARIO_NOTES_AND_EXAMPLES = {
-            'PDA上架完成': {
-                title: '📌 拍照與操作註記（早、晚班時段）',
-                body: '請拍照 PDA 手動上架櫃位數與電腦智取櫃櫃位管理可使用數量。'
-            },
-            '滯留箱數回報': {
-                title: '📝 滯留箱標示範例（早、晚班時段）',
-                body: '範例：務必將滯留箱左上角 TO 單用麥克筆寫上當天日期班別（如：10 早 / 10 晚）。'
-            },
-            'NDD,FBS離店打包': {
-                title: '📸 離店打包拍照範例（晚班時段）',
-                body: '範例：記得各別拍照電腦\n• 【隔日到貨&逾期離店逐顆裝箱】畫面\n• 【無包裝隔日到(FBS)離店逐顆裝箱】畫面\n完成後一併回報。'
-            },
-            'NDD上架完成': {
-                title: '📸 NDD 上架拍照範例（晚班時段）',
-                body: '範例：拍 PDA 待驗收隔日到貨畫面與電腦左邊門市名稱，右下日期時間一起入鏡回報。'
+        function getScenarioNoteAndExample(categoryText) {
+            if (categoryText === '當日一般包裹進貨數量') {
+                const now = new Date();
+                const todayLabel = `${now.getMonth() + 1}/${now.getDate()}`;
+                return {
+                    title: '📸 拍照上傳與標記範例（新園群組｜早、晚班時段）',
+                    body: `範例：拍照一般包裹照片，直接上傳群組，沒有相簿，照片標記【11/22 新園仙吉/南興/塩龍 南倉 12箱+2裸】\n（今日日期參考：【${todayLabel} 新園仙吉/南興/塩龍 南倉 12箱+2裸】）`
+                };
             }
-        };
+            const staticMap = {
+                'PDA上架完成': {
+                    title: '📌 拍照與操作註記（早、晚班時段）',
+                    body: '請拍照 PDA 手動上架櫃位數與電腦智取櫃櫃位管理可使用數量。'
+                },
+                '滯留箱數回報': {
+                    title: '📝 滯留箱標示範例（早、晚班時段）',
+                    body: '範例：務必將滯留箱左上角 TO 單用麥克筆寫上當天日期班別（如：10 早 / 10 晚）。'
+                },
+                'NDD,FBS離店打包': {
+                    title: '📸 離店打包拍照範例（晚班時段）',
+                    body: '範例：記得各別拍照電腦\n• 【隔日到貨&逾期離店逐顆裝箱】畫面\n• 【無包裝隔日到(FBS)離店逐顆裝箱】畫面\n完成後一併回報。'
+                },
+                'NDD上架完成': {
+                    title: '📸 NDD 上架拍照範例（晚班時段）',
+                    body: '範例：拍 PDA 待驗收隔日到貨畫面與電腦左邊門市名稱，右下日期時間一起入鏡回報。'
+                }
+            };
+            return staticMap[categoryText] || null;
+        }
 
         const DEFAULT_CONFIG = {
             reallocStores: ['潮州中洲', '潮州愛國'],
             categories: [
+                { id: 'cat_14', text: '當日一般包裹進貨數量' },
                 { id: 'cat_1', text: 'SCS,FBS黑箱' },
                 { id: 'cat_2', text: 'NDD,FBS離店打包' },
                 { id: 'cat_3', text: 'NDD上架完成' },
@@ -498,6 +525,13 @@
                 { id: 'cat_12', text: '每週五系統更新' }
             ],
             l2: {
+                'cat_14': [
+                    { id: 'l2_14_1', text: '南倉 [箱數]箱+[裸數]裸' },
+                    { id: 'l2_14_2', text: '南倉 [箱數]箱' },
+                    { id: 'l2_14_3', text: '南倉 [裸數]裸' },
+                    { id: 'l2_14_4', text: '[倉別] [箱數]箱+[裸數]裸' },
+                    { id: 'l2_14_5', text: '無' }
+                ],
                 'cat_1': [ { id: 'l2_1_1', text: '束帶×[數量]' }, { id: 'l2_1_2', text: '無束帶×[數量]' } ],
                 'cat_2': [ { id: 'l2_2_1', text: '無' }, { id: 'l2_2_2', text: '缺[數量]' } ],
                 'cat_3': [ { id: 'l2_3_1', text: '無' }, { id: 'l2_3_2', text: '缺[數量]' }, { id: 'l2_3_3', text: '滯留[件數]件' }, { id: 'l2_3_4', text: '滯留[裸數]裸' }, { id: 'l2_3_5', text: '異退[件數]件' } ],
@@ -536,7 +570,7 @@
                     prefix === 'l2' ? 'line2Inputs' : prefix === 'l3' ? 'line3Inputs' : 'line4Inputs'
                 );
                 if (!container) return;
-                const inputs = container.querySelectorAll('input[type="number"]');
+                const inputs = container.querySelectorAll('input');
                 if (inputs.length > 0) {
                     const snapshot = {};
                     inputs.forEach((inp, idx) => {
@@ -567,6 +601,24 @@
 
         function normalizeStoreDisplayName(name) {
             return String(name || '').replace('智取店', '').trim();
+        }
+
+        function isXinyuanGroupContext(currentLocation) {
+            if (currentVisibleGroup === '新園群組') return true;
+            const cleanLoc = normalizeStoreDisplayName(currentLocation);
+            if (!cleanLoc) return false;
+
+            const xinyuanStores = (STORE_LOCATIONS['新園群組'] || []).map(s => normalizeStoreDisplayName(s.name));
+            if (xinyuanStores.includes(cleanLoc)) return true;
+            if (XINYUAN_DEFAULT_STORES.includes(cleanLoc)) return true;
+            if (cleanLoc.startsWith('新園')) return true;
+
+            const xinyuanShortcutMatch = shortcuts.some(
+                s => s.group_type === '新園群組' && normalizeStoreDisplayName(s.name).includes(cleanLoc)
+            );
+            if (xinyuanShortcutMatch) return true;
+
+            return false;
         }
 
         function getAllAvailableStores() {
@@ -637,6 +689,7 @@
         }
 
         function syncAllRegionsFromData() {
+            DEFAULT_REGIONS.forEach(r => ensureRegionExists(r));
             shortcuts.forEach(s => {
                 if (s && s.group_type) ensureRegionExists(s.group_type);
             });
@@ -822,6 +875,46 @@
             return `${dateKey}__${shiftKey}__${categoryText}`;
         }
 
+        function manualResetReports() {
+            const dateKey = getTodayDateKey();
+            const shiftLabel = document.getElementById('shiftIndicator').innerText || '目前班別';
+            if (!confirm(`確定要手動重置「今日 (${dateKey}) ${shiftLabel}」的所有回報狀態與輸入內容嗎？\n\n重置後所有情境將恢復為「⏳ 未回報」。`)) {
+                return;
+            }
+
+            const prefix = `${dateKey}__${currentShift}__`;
+            Object.keys(reportedRecords).forEach(k => {
+                if (k.startsWith(prefix)) {
+                    delete reportedRecords[k];
+                }
+            });
+            saveReportedRecords();
+
+            Object.keys(appsheetBlackBoxRecords).forEach(k => {
+                if (k.startsWith(prefix)) {
+                    delete appsheetBlackBoxRecords[k];
+                }
+            });
+            saveAppsheetBlackBoxRecords();
+
+            clearBlackBoxPhoto();
+            clearDraftInputsForLevels(['l2', 'l3', 'l4']);
+            lastCategoriesSignature = '';
+            lastL2Signature = '';
+            lastL3Signature = '';
+            lastL4Signature = '';
+
+            const catSelect = document.getElementById('categorySelect');
+            if (catSelect) catSelect.value = '';
+            document.getElementById('resultOutput').value = '';
+
+            renderCategories('', true);
+            updateAppsheetBlackBoxButtonUI();
+            updateLiveResultPreview();
+
+            alert(`✅ 已完成手動重置！今日（${dateKey}）${shiftLabel}所有情境已恢復為「未回報」狀態。`);
+        }
+
         function isAppsheetBlackBoxReported() {
             const key = getReportStatusKey('SCS,FBS黑箱_APPSHEET');
             return Boolean(appsheetBlackBoxRecords[key]);
@@ -908,6 +1001,8 @@
                     shortcuts = data;
                     syncAllRegionsFromData();
                     renderShortcuts();
+                    lastCategoriesSignature = '';
+                    renderCategories();
                 }
             }
         }
@@ -1020,9 +1115,14 @@
                     }
                 }
                 let changed = false;
-                DEFAULT_CONFIG.categories.forEach(defaultCat => {
+                DEFAULT_CONFIG.categories.forEach((defaultCat, idx) => {
                     if (!incoming.categories.find(c => c.text === defaultCat.text)) {
-                        incoming.categories.push({ id: defaultCat.id, text: defaultCat.text });
+                        const insertObj = { id: defaultCat.id, text: defaultCat.text };
+                        if (defaultCat.text === '當日一般包裹進貨數量') {
+                            incoming.categories.unshift(insertObj);
+                        } else {
+                            incoming.categories.push(insertObj);
+                        }
                         if (!incoming.l2[defaultCat.id]) {
                             incoming.l2[defaultCat.id] = JSON.parse(JSON.stringify(DEFAULT_CONFIG.l2[defaultCat.id] || []));
                         }
@@ -1442,21 +1542,25 @@
                     const nextGpsSig = 'error';
                     if (lastGpsStateSignature !== nextGpsSig) {
                         lastGpsStateSignature = nextGpsSig;
+                        currentVisibleGroup = null;
                         currentGpsMatchedStore = null;
                         currentGpsMatchedStoreObj = null;
                         updateGpsStoreKeyTasksBanner();
                         const gpsSpan = document.getElementById('gpsStatus');
                         gpsSpan.innerText = '📍 定位拒絕或失敗';
                         gpsSpan.className = 'text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700';
+                        lastCategoriesSignature = '';
                         renderCategories();
                         updateLiveResultPreview();
                     }
                 }, { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 });
             } else {
+                currentVisibleGroup = null;
                 currentGpsMatchedStore = null;
                 currentGpsMatchedStoreObj = null;
                 updateGpsStoreKeyTasksBanner();
                 document.getElementById('gpsStatus').innerText = '📍 裝置不支援GPS';
+                lastCategoriesSignature = '';
                 renderCategories();
                 updateLiveResultPreview();
             }
@@ -1509,6 +1613,7 @@
                 gpsSpan.innerText = `📍 未進入任何門市 50m 內`;
                 syncLocationSelectOptions();
             }
+            lastCategoriesSignature = '';
             renderCategories();
             renderShortcuts();
             updateLiveResultPreview();
@@ -1782,7 +1887,7 @@
             badge.innerText = st.label;
 
             const hasRule = Boolean(SCENARIO_RULE_DESCRIPTIONS[rawText]);
-            const noteItem = SCENARIO_NOTES_AND_EXAMPLES[rawText];
+            const noteItem = getScenarioNoteAndExample(rawText);
             const isBlackBox = rawText === 'SCS,FBS黑箱';
 
             if (hasRule || noteItem || isBlackBox) {
@@ -1841,11 +1946,15 @@
             const dayOfWeek = new Date().getDay();
             const reallocStores = Array.isArray(config.reallocStores) ? config.reallocStores : ['潮州中洲', '潮州愛國'];
             const hideRetentionReport = isPdaNoRetentionReported();
+            const isXinyuan = isXinyuanGroupContext(currentLocation);
 
             updateReallocGpsNotice(currentLocation, reallocStores);
             
             return config.categories.filter(c => {
                 const t = c.text;
+                if (t === '當日一般包裹進貨數量') {
+                    return isXinyuan && (currentShift === 'morning' || currentShift === 'evening');
+                }
                 if (t === '包裹重新分配') {
                     const isStoreAllowed = reallocStores.includes(currentLocation);
                     const isGpsInStore = Boolean(currentGpsMatchedStore && currentGpsMatchedStore === currentLocation && reallocStores.includes(currentGpsMatchedStore));
@@ -2079,10 +2188,16 @@
             const regex = /\[(.*?)\]/g;
             let match, html = '', i = 0;
             while ((match = regex.exec(rawText)) !== null) {
+                const label = match[1];
                 const savedVal = (dynamicInputDrafts[levelPrefix] && dynamicInputDrafts[levelPrefix][i] !== undefined)
                     ? dynamicInputDrafts[levelPrefix][i]
                     : '';
-                html += `<input type="number" id="${levelPrefix}_in_${i}" value="${escapeHtml(String(savedVal))}" oninput="onDynamicNumberInput('${levelPrefix}', ${i}, this.value)" placeholder="${escapeHtml(match[1])}" class="w-16 border border-gray-300 rounded px-1 py-1 text-center text-sm outline-none focus:ring-1 focus:ring-blue-500" min="0">`;
+                const isTextParam = label.includes('倉') || label.includes('別') || label.includes('名') || label.includes('註');
+                if (isTextParam) {
+                    html += `<input type="text" id="${levelPrefix}_in_${i}" value="${escapeHtml(String(savedVal))}" oninput="onDynamicNumberInput('${levelPrefix}', ${i}, this.value)" placeholder="${escapeHtml(label)}" class="w-20 border border-gray-300 rounded px-1.5 py-1 text-center text-sm outline-none focus:ring-1 focus:ring-blue-500">`;
+                } else {
+                    html += `<input type="number" id="${levelPrefix}_in_${i}" value="${escapeHtml(String(savedVal))}" oninput="onDynamicNumberInput('${levelPrefix}', ${i}, this.value)" placeholder="${escapeHtml(label)}" class="w-16 border border-gray-300 rounded px-1 py-1 text-center text-sm outline-none focus:ring-1 focus:ring-blue-500" min="0">`;
+                }
                 i++;
             }
             container.innerHTML = html;
@@ -2178,7 +2293,13 @@
             const rawText = select.options[select.selectedIndex].getAttribute('data-raw');
             if (rawText === '無') return ''; 
             let result = rawText; let i = 0;
-            result = result.replace(/\[.*?\]/g, () => { const el = document.getElementById(`${levelPrefix}_in_${i}`); const val = el ? (el.value || '0') : '0'; i++; return val; });
+            result = result.replace(/\[(.*?)\]/g, (_, label) => {
+                const el = document.getElementById(`${levelPrefix}_in_${i}`);
+                const fallback = (label.includes('倉') || label.includes('別')) ? '南倉' : '0';
+                const val = el ? (el.value || fallback) : fallback;
+                i++;
+                return val;
+            });
             return result;
         }
 
@@ -2186,12 +2307,24 @@
             const catSelect = document.getElementById('categorySelect');
             const cat = catSelect ? catSelect.value : '';
             if (!cat) return '';
+            const catRawText = catSelect.options[catSelect.selectedIndex].getAttribute('data-raw') || '';
             const dateStr = document.getElementById('todayDate').innerText;
             const store = document.getElementById('locationSelect').value;
+            const l2Text = formatDynamicLine('line2Select', 'l2');
+            const l3Text = formatDynamicLine('line3Select', 'l3');
+            const l4Text = formatDynamicLine('line4Select', 'l4');
+
+            // 新園群組「當日一般包裹進貨數量」支援照片標記格式：【11/22 新園仙吉/南興/塩龍 南倉 12箱+2裸】
+            if (catRawText === '當日一般包裹進貨數量') {
+                const detailParts = [l2Text, l3Text, l4Text].filter(Boolean);
+                const detailStr = detailParts.length > 0 ? ` ${detailParts.join(' ')}` : '';
+                return `【${dateStr} ${store}${detailStr}】`;
+            }
+
             const lines = [`${dateStr} ${store}`];
-            const l2Text = formatDynamicLine('line2Select', 'l2'); if (l2Text && !document.getElementById('line2Container').classList.contains('hidden')) lines.push(l2Text);
-            const l3Text = formatDynamicLine('line3Select', 'l3'); if (l3Text && !document.getElementById('line3Container').classList.contains('hidden')) lines.push(l3Text);
-            const l4Text = formatDynamicLine('line4Select', 'l4'); if (l4Text && !document.getElementById('line4Container').classList.contains('hidden')) lines.push(l4Text);
+            if (l2Text && !document.getElementById('line2Container').classList.contains('hidden')) lines.push(l2Text);
+            if (l3Text && !document.getElementById('line3Container').classList.contains('hidden')) lines.push(l3Text);
+            if (l4Text && !document.getElementById('line4Container').classList.contains('hidden')) lines.push(l4Text);
             return lines.join('\n');
         }
 
@@ -2225,7 +2358,9 @@
             updateLiveResultPreview();
 
             let extraNotice = '';
-            if (catRawText === 'SCS,FBS黑箱') {
+            if (catRawText === '當日一般包裹進貨數量') {
+                extraNotice = '\n\n📸 上傳提醒：請拍照一般包裹照片，直接上傳群組（不建相簿），並貼上此標記文字！';
+            } else if (catRawText === 'SCS,FBS黑箱') {
                 const reminders = [];
                 if (!isAppsheetBlackBoxReported()) {
                     reminders.push('• 請開啟 AppSheet 回報管制品到貨數量（僅需回報管制品粉紅色 To 單有束帶之數量）並點擊確認按鈕');

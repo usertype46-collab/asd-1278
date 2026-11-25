@@ -225,9 +225,32 @@
 
                     <select id="categorySelect" onchange="onCategoryChange(true)" class="w-full border border-gray-300 rounded px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500 outline-none text-sm font-medium"></select>
 
-                    <!-- 情境規則說明與附件（例如：SCS,FBS黑箱 到貨照片） -->
-                    <div id="scenarioRuleHintBox" class="hidden mt-2.5 p-2.5 rounded-lg bg-white/90 border border-blue-200 text-xs text-gray-700 space-y-2">
-                        <div id="scenarioRuleHintText" class="font-semibold text-blue-900"></div>
+                    <!-- 情境規則說明、範例註記、AppSheet 連動按鈕與附件（例如：SCS,FBS黑箱 到貨照片） -->
+                    <div id="scenarioRuleHintBox" class="hidden mt-2.5 p-2.5 rounded-lg bg-white/95 border border-blue-200 text-xs text-gray-700 space-y-2">
+                        <div id="scenarioRuleHintText" class="font-semibold text-blue-900 leading-relaxed"></div>
+
+                        <!-- 註記 / 範例提示框 -->
+                        <div id="scenarioNoteExampleBox" class="hidden p-2.5 rounded-lg bg-amber-50 border border-amber-300 text-amber-950 space-y-1">
+                            <div id="scenarioNoteExampleTitle" class="font-bold text-xs text-amber-900"></div>
+                            <div id="scenarioNoteExampleBody" class="text-xs leading-relaxed whitespace-pre-line font-medium"></div>
+                        </div>
+
+                        <!-- SCS,FBS黑箱 專屬 AppSheet 管制品回報按鈕連動區塊 -->
+                        <div id="appsheetBlackBoxSection" class="hidden pt-2 border-t border-gray-200 space-y-2">
+                            <div class="p-2.5 rounded-lg bg-pink-50 border border-pink-300 text-pink-950 space-y-2">
+                                <div class="font-bold text-xs flex items-center gap-1.5">
+                                    <span>📱 AppSheet 管制品到貨回報（必要操作）</span>
+                                </div>
+                                <p class="text-xs leading-relaxed font-semibold text-pink-900">
+                                    ⚠️ 提示：必要開啟 AppSheet 回報管制品到貨數量，只需要回報「管制品粉紅色 To 單有束帶之數量」。
+                                </p>
+                                <button type="button" id="appsheetBlackBoxBtn" onclick="toggleAppsheetBlackBoxStatus()" class="w-full py-2 px-3 rounded-lg font-bold text-xs shadow-sm transition flex items-center justify-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white">
+                                    ⏳ 未回報（點擊確認已完成 AppSheet 管制品回報）
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- SCS,FBS黑箱 到貨照片紀錄 -->
                         <div id="blackBoxPhotoSection" class="hidden pt-2 border-t border-gray-200 space-y-2">
                             <div class="flex items-center justify-between gap-2">
                                 <span class="font-bold text-gray-700">📷 到貨照片紀錄：</span>
@@ -302,7 +325,13 @@
                     產生並複製字串
                 </button>
 
-                <textarea id="resultOutput" rows="4" readonly placeholder="產生的結果會顯示在這裡..." class="w-full border border-gray-300 rounded-lg p-3 bg-gray-50 text-gray-800 outline-none resize-none text-sm"></textarea>
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <label for="resultOutput" class="text-xs font-semibold text-gray-600">⚡ 產生結果（即時預覽顯示）：</label>
+                        <span class="text-[11px] text-blue-600 font-medium">選取或輸入數值時自動即時更新</span>
+                    </div>
+                    <textarea id="resultOutput" rows="4" readonly placeholder="選擇回報情境後，產生的結果會即時顯示在這裡..." class="w-full border border-gray-300 rounded-lg p-3 bg-gray-50 text-gray-800 outline-none resize-none text-sm"></textarea>
+                </div>
             </div>
         </section>
 
@@ -389,6 +418,7 @@
         const LOCAL_REGIONS_KEY = 'shopee_custom_regions_v1';
         const LOCAL_REPORTED_KEY = 'shopee_reported_records_v1';
         const LOCAL_REALLOC_STORES_KEY = 'shopee_realloc_stores_v1';
+        const LOCAL_APPSHEET_BLACKBOX_KEY = 'shopee_appsheet_blackbox_v1';
         const DEFAULT_REGIONS = ['愛國群組', '中洲群組'];
         const DEFAULT_BASE_STORES = [
             '潮州中洲', '潮州光華', '潮州大同', '潮州光春', '潮州愛國',
@@ -406,6 +436,7 @@
         let currentShift = 'other';
         let lastKnownCoords = null;
         let reportedRecords = loadReportedRecords();
+        let appsheetBlackBoxRecords = loadAppsheetBlackBoxRecords();
         let blackBoxPhotoAttached = false;
 
         // 防止閃爍與數量回溯的狀態快取
@@ -421,12 +452,32 @@
         const INPUT_HELP = '若需要手動輸入數值，請用「中括號」包住變數名稱。\n範例：「滯留[箱數]箱[裸數]裸」或「缺[數量]」';
 
         const SCENARIO_RULE_DESCRIPTIONS = {
-            'SCS,FBS黑箱': '📷 情境規範：【到貨照片】請確認並拍攝/檢附黑箱到貨照片後產生回報字串。',
-            'NDD,FBS離店打包': '⏰ 情境規範：【兩家門市 20:00 前完成】19:00–20:00 未回報將啟動警告，完成回報後關閉。',
-            'NDD上架完成': '⏰ 情境規範：【兩家門市 21:00 前完成】21:00 前未回報將啟動警告，完成回報後關閉。',
+            'SCS,FBS黑箱': '📷 情境規範（早、晚班時段）：【到貨照片 & AppSheet 管制品回報】請確認並拍攝/檢附黑箱到貨照片，並點擊下方 AppSheet 管制品按鈕完成確認。',
+            'NDD,FBS離店打包': '⏰ 情境規範（晚班時段）：【兩家門市 20:00 前完成】19:00–20:00 未回報將啟動警告，完成回報後關閉。',
+            'NDD上架完成': '⏰ 情境規範（晚班時段）：【兩家門市 21:00 前完成】21:00 前未回報將啟動警告，完成回報後關閉。',
+            '早班NDD': '☀️ 情境規範（早班時段）：早班 NDD 作業回報項目，請依現場實際包裹與上架狀況回報。',
             '包裹重新分配': '📦 情境規範：【當前門市必要操作】僅於 GPS 定位在勾選操作門市範圍內時顯示並執行。',
-            'PDA上架完成': '📋 情境規範：【上架一般包裹至無櫃位或無滯留】若回報「無滯留」，系統將自動隱藏「滯留箱數回報」。',
-            '滯留箱數回報': '📦 情境規範：當「PDA上架完成」回報為有滯留狀態時需填報；若為「無滯留」則自動隱藏此項目。'
+            'PDA上架完成': '📋 情境規範（早、晚班時段）：【上架一般包裹至無櫃位或無滯留】若回報「無滯留」，系統將自動隱藏「滯留箱數回報」。',
+            '滯留箱數回報': '📦 情境規範（早、晚班時段）：當「PDA上架完成」回報為有滯留狀態時需填報；若為「無滯留」則自動隱藏此項目。'
+        };
+
+        const SCENARIO_NOTES_AND_EXAMPLES = {
+            'PDA上架完成': {
+                title: '📌 拍照與操作註記（早、晚班時段）',
+                body: '請拍照 PDA 手動上架櫃位數與電腦智取櫃櫃位管理可使用數量。'
+            },
+            '滯留箱數回報': {
+                title: '📝 滯留箱標示範例（早、晚班時段）',
+                body: '範例：務必將滯留箱左上角 TO 單用麥克筆寫上當天日期班別（如：10 早 / 10 晚）。'
+            },
+            'NDD,FBS離店打包': {
+                title: '📸 離店打包拍照範例（晚班時段）',
+                body: '範例：記得各別拍照電腦\n• 【隔日到貨&逾期離店逐顆裝箱】畫面\n• 【無包裝隔日到(FBS)離店逐顆裝箱】畫面\n完成後一併回報。'
+            },
+            'NDD上架完成': {
+                title: '📸 NDD 上架拍照範例（晚班時段）',
+                body: '範例：拍 PDA 待驗收隔日到貨畫面與電腦左邊門市名稱，右下日期時間一起入鏡回報。'
+            }
         };
 
         const DEFAULT_CONFIG = {
@@ -435,6 +486,7 @@
                 { id: 'cat_1', text: 'SCS,FBS黑箱' },
                 { id: 'cat_2', text: 'NDD,FBS離店打包' },
                 { id: 'cat_3', text: 'NDD上架完成' },
+                { id: 'cat_13', text: '早班NDD' },
                 { id: 'cat_4', text: '包裹重新分配' },
                 { id: 'cat_5', text: 'PDA上架完成' },
                 { id: 'cat_6', text: '滯留箱數回報' },
@@ -449,6 +501,7 @@
                 'cat_1': [ { id: 'l2_1_1', text: '束帶×[數量]' }, { id: 'l2_1_2', text: '無束帶×[數量]' } ],
                 'cat_2': [ { id: 'l2_2_1', text: '無' }, { id: 'l2_2_2', text: '缺[數量]' } ],
                 'cat_3': [ { id: 'l2_3_1', text: '無' }, { id: 'l2_3_2', text: '缺[數量]' }, { id: 'l2_3_3', text: '滯留[件數]件' }, { id: 'l2_3_4', text: '滯留[裸數]裸' }, { id: 'l2_3_5', text: '異退[件數]件' } ],
+                'cat_13': [ { id: 'l2_13_1', text: '無' }, { id: 'l2_13_2', text: '缺[數量]' }, { id: 'l2_13_3', text: '滯留[件數]件' }, { id: 'l2_13_4', text: '滯留[裸數]裸' }, { id: 'l2_13_5', text: '異退[件數]件' } ],
                 'cat_4': [],
                 'cat_5': [ { id: 'l2_5_1', text: '無滯留' }, { id: 'l2_5_2', text: '滯留[箱數]箱[裸數]裸' }, { id: 'l2_5_3', text: '滯留[箱數]箱' }, { id: 'l2_5_4', text: '滯留[裸數]裸' } ],
                 'cat_6': [ { id: 'l2_6_1', text: '無' }, { id: 'l2_6_2', text: '滯留[箱數]箱[裸數]裸' }, { id: 'l2_6_3', text: '滯留[箱數]箱' }, { id: 'l2_6_4', text: '滯留[裸數]裸' } ],
@@ -461,6 +514,10 @@
                 'l2_3_5': [ { id: 'l3_3_5_1', text: '濕損破損' }, { id: 'l3_3_5_2', text: '系統無法驗收' }, { id: 'l3_3_5_3', text: '無面單' }, { id: 'l3_3_5_4', text: '雙面單' } ],
                 'l2_3_3': [ { id: 'l3_3_3_1', text: '無合適櫃位' }, { id: 'l3_3_3_2', text: '無櫃位' } ],
                 'l2_3_4': [ { id: 'l3_3_4_1', text: '無合適櫃位' }, { id: 'l3_3_4_2', text: '無櫃位' } ],
+                'l2_13_2': [ { id: 'l3_13_2_1', text: '門市已無包裹' } ],
+                'l2_13_5': [ { id: 'l3_13_5_1', text: '濕損破損' }, { id: 'l3_13_5_2', text: '系統無法驗收' }, { id: 'l3_13_5_3', text: '無面單' }, { id: 'l3_13_5_4', text: '雙面單' } ],
+                'l2_13_3': [ { id: 'l3_13_3_1', text: '無合適櫃位' }, { id: 'l3_13_3_2', text: '無櫃位' } ],
+                'l2_13_4': [ { id: 'l3_13_4_1', text: '無合適櫃位' }, { id: 'l3_13_4_2', text: '無櫃位' } ],
                 'l2_5_2': [ { id: 'l3_5_2_1', text: '無合適櫃位' }, { id: 'l3_5_2_2', text: '無櫃位' } ],
                 'l2_5_3': [ { id: 'l3_5_3_1', text: '無合適櫃位' }, { id: 'l3_5_3_2', text: '無櫃位' } ],
                 'l2_5_4': [ { id: 'l3_5_4_1', text: '無合適櫃位' }, { id: 'l3_5_4_2', text: '無櫃位' } ],
@@ -499,11 +556,13 @@
         function onDynamicNumberInput(levelPrefix, index, value) {
             if (!dynamicInputDrafts[levelPrefix]) dynamicInputDrafts[levelPrefix] = {};
             dynamicInputDrafts[levelPrefix][index] = value;
+            updateLiveResultPreview();
         }
 
         function onLocationSelectChange() {
             lastCategoriesSignature = '';
             renderCategories();
+            updateLiveResultPreview();
         }
 
         function normalizeStoreDisplayName(name) {
@@ -734,6 +793,21 @@
             } catch (e) {}
         }
 
+        function loadAppsheetBlackBoxRecords() {
+            try {
+                const raw = localStorage.getItem(LOCAL_APPSHEET_BLACKBOX_KEY);
+                return raw ? JSON.parse(raw) : {};
+            } catch (e) {
+                return {};
+            }
+        }
+
+        function saveAppsheetBlackBoxRecords() {
+            try {
+                localStorage.setItem(LOCAL_APPSHEET_BLACKBOX_KEY, JSON.stringify(appsheetBlackBoxRecords));
+            } catch (e) {}
+        }
+
         function getTodayDateKey() {
             const now = new Date();
             const y = now.getFullYear();
@@ -748,11 +822,56 @@
             return `${dateKey}__${shiftKey}__${categoryText}`;
         }
 
+        function isAppsheetBlackBoxReported() {
+            const key = getReportStatusKey('SCS,FBS黑箱_APPSHEET');
+            return Boolean(appsheetBlackBoxRecords[key]);
+        }
+
+        function toggleAppsheetBlackBoxStatus() {
+            const key = getReportStatusKey('SCS,FBS黑箱_APPSHEET');
+            const nextState = !Boolean(appsheetBlackBoxRecords[key]);
+            if (nextState) {
+                appsheetBlackBoxRecords[key] = {
+                    confirmedAt: new Date().toISOString(),
+                    shift: currentShift,
+                    date: getTodayDateKey()
+                };
+                markCategoryReported('SCS,FBS黑箱', {
+                    appsheetConfirmed: true,
+                    generatedText: document.getElementById('resultOutput').value || ''
+                });
+            } else {
+                delete appsheetBlackBoxRecords[key];
+                delete reportedRecords[getReportStatusKey('SCS,FBS黑箱')];
+                saveReportedRecords();
+            }
+            saveAppsheetBlackBoxRecords();
+            updateAppsheetBlackBoxButtonUI();
+            const currentCatId = document.getElementById('categorySelect').value;
+            renderCategories(currentCatId, true);
+        }
+
+        function updateAppsheetBlackBoxButtonUI() {
+            const btn = document.getElementById('appsheetBlackBoxBtn');
+            if (!btn) return;
+            const reported = isAppsheetBlackBoxReported();
+            if (reported) {
+                btn.className = 'w-full py-2 px-3 rounded-lg font-bold text-xs shadow-sm transition flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white';
+                btn.innerHTML = '✅ 已回報（已完成 AppSheet 管制品粉紅色 To 單束帶數量回報）';
+            } else {
+                btn.className = 'w-full py-2 px-3 rounded-lg font-bold text-xs shadow-sm transition flex items-center justify-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white';
+                btn.innerHTML = '⏳ 未回報（點擊確認已完成 AppSheet 管制品回報）';
+            }
+        }
+
         function getCategoryReportRecord(categoryText) {
             return reportedRecords[getReportStatusKey(categoryText)] || null;
         }
 
         function isCategoryReported(categoryText) {
+            if (categoryText === 'SCS,FBS黑箱') {
+                return Boolean(getCategoryReportRecord(categoryText)) || isAppsheetBlackBoxReported();
+            }
             return Boolean(getCategoryReportRecord(categoryText));
         }
 
@@ -904,7 +1023,14 @@
                 DEFAULT_CONFIG.categories.forEach(defaultCat => {
                     if (!incoming.categories.find(c => c.text === defaultCat.text)) {
                         incoming.categories.push({ id: defaultCat.id, text: defaultCat.text });
-                        if (!incoming.l2[defaultCat.id]) incoming.l2[defaultCat.id] = [];
+                        if (!incoming.l2[defaultCat.id]) {
+                            incoming.l2[defaultCat.id] = JSON.parse(JSON.stringify(DEFAULT_CONFIG.l2[defaultCat.id] || []));
+                        }
+                        (DEFAULT_CONFIG.l2[defaultCat.id] || []).forEach(l2Item => {
+                            if (DEFAULT_CONFIG.l3[l2Item.id] && !incoming.l3[l2Item.id]) {
+                                incoming.l3[l2Item.id] = JSON.parse(JSON.stringify(DEFAULT_CONFIG.l3[l2Item.id]));
+                            }
+                        });
                         changed = true;
                     }
                 });
@@ -960,7 +1086,7 @@
                             text: itemName,
                             reason: itemName === 'NDD,FBS離店打包'
                                 ? '兩家門市 20:00 前完成（19:00–20:00 尚未回報）'
-                                : '19:00–20:00 時段尚未回報（請檢附到貨照片）'
+                                : '19:00–20:00 時段尚未回報（請檢附到貨照片並完成 AppSheet 回報）'
                         });
                     }
                 });
@@ -1033,6 +1159,7 @@
             } else {
                 refreshCategoryStatusesOnly();
             }
+            updateLiveResultPreview();
         }
 
         /* ================= 4. GPS 距離、定位、重點作業與新增/編輯門市地點 ================= */
@@ -1157,6 +1284,7 @@
             renderGpsStoreList();
             lastCategoriesSignature = '';
             renderCategories();
+            updateLiveResultPreview();
 
             let cloudError = null;
             if (isEditing) {
@@ -1214,6 +1342,7 @@
             renderGpsStoreList();
             lastCategoriesSignature = '';
             renderCategories();
+            updateLiveResultPreview();
 
             if (id) {
                 await supabaseClient.from('store_locations').delete().eq('id', id);
@@ -1320,6 +1449,7 @@
                         gpsSpan.innerText = '📍 定位拒絕或失敗';
                         gpsSpan.className = 'text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700';
                         renderCategories();
+                        updateLiveResultPreview();
                     }
                 }, { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 });
             } else {
@@ -1328,6 +1458,7 @@
                 updateGpsStoreKeyTasksBanner();
                 document.getElementById('gpsStatus').innerText = '📍 裝置不支援GPS';
                 renderCategories();
+                updateLiveResultPreview();
             }
         }
 
@@ -1380,6 +1511,7 @@
             }
             renderCategories();
             renderShortcuts();
+            updateLiveResultPreview();
         }
 
         /* ================= 5. 捷徑管理與渲染 ================= */
@@ -1625,6 +1757,10 @@
             const badge = document.getElementById('selectedCategoryStatusBadge');
             const hintBox = document.getElementById('scenarioRuleHintBox');
             const hintText = document.getElementById('scenarioRuleHintText');
+            const noteBox = document.getElementById('scenarioNoteExampleBox');
+            const noteTitle = document.getElementById('scenarioNoteExampleTitle');
+            const noteBody = document.getElementById('scenarioNoteExampleBody');
+            const appsheetSec = document.getElementById('appsheetBlackBoxSection');
             const photoSec = document.getElementById('blackBoxPhotoSection');
 
             if (!select.value) {
@@ -1632,6 +1768,8 @@
                 badge.className = 'text-[10px] px-2 py-0.5 rounded-full font-bold bg-gray-200 text-gray-700';
                 badge.innerText = '尚未選擇';
                 hintBox.classList.add('hidden');
+                noteBox.classList.add('hidden');
+                appsheetSec.classList.add('hidden');
                 photoSec.classList.add('hidden');
                 return;
             }
@@ -1643,17 +1781,39 @@
             badge.className = `text-[10px] px-2 py-0.5 rounded-full font-bold ${st.badgeClass}`;
             badge.innerText = st.label;
 
-            if (SCENARIO_RULE_DESCRIPTIONS[rawText]) {
+            const hasRule = Boolean(SCENARIO_RULE_DESCRIPTIONS[rawText]);
+            const noteItem = SCENARIO_NOTES_AND_EXAMPLES[rawText];
+            const isBlackBox = rawText === 'SCS,FBS黑箱';
+
+            if (hasRule || noteItem || isBlackBox) {
                 hintBox.classList.remove('hidden');
-                hintText.innerText = SCENARIO_RULE_DESCRIPTIONS[rawText];
+                hintText.innerText = SCENARIO_RULE_DESCRIPTIONS[rawText] || '';
+                if (hasRule) {
+                    hintText.classList.remove('hidden');
+                } else {
+                    hintText.classList.add('hidden');
+                }
             } else {
                 hintBox.classList.add('hidden');
                 hintText.innerText = '';
             }
 
-            if (rawText === 'SCS,FBS黑箱') {
-                photoSec.classList.remove('hidden');
+            if (noteItem) {
+                noteBox.classList.remove('hidden');
+                noteTitle.innerText = noteItem.title;
+                noteBody.innerText = noteItem.body;
             } else {
+                noteBox.classList.add('hidden');
+                noteTitle.innerText = '';
+                noteBody.innerText = '';
+            }
+
+            if (isBlackBox) {
+                appsheetSec.classList.remove('hidden');
+                photoSec.classList.remove('hidden');
+                updateAppsheetBlackBoxButtonUI();
+            } else {
+                appsheetSec.classList.add('hidden');
                 photoSec.classList.add('hidden');
             }
         }
@@ -1694,7 +1854,7 @@
                 if (t === '滯留箱數回報' && hideRetentionReport) {
                     return false;
                 }
-                const morningOnly = ['自助機檢查', '逾期包裹-打包前', '逾期包裹相簿', '逾期包裹-PDA打包後'];
+                const morningOnly = ['早班NDD', '自助機檢查', '逾期包裹-打包前', '逾期包裹相簿', '逾期包裹-PDA打包後'];
                 if (morningOnly.includes(t)) return currentShift === 'morning';
                 if (t === '每週五系統更新') return currentShift === 'morning' && dayOfWeek === 5;
                 const eveningOnly = ['NDD,FBS離店打包', 'NDD上架完成'];
@@ -1731,7 +1891,7 @@
                 }))
             );
 
-            // 若情境清單與狀態完全未變，不重寫 <select> 與子層級，徹底避免閃爍與數量被清空
+            // 若情境清單與狀態完全未變，不重繪 <select> 與子層級，徹底避免閃爍與數量被清空
             if (!forceRebuild && nextCatSig === lastCategoriesSignature) {
                 if (currentSelected && filteredCategories.some(c => c.id === currentSelected) && select.value !== currentSelected) {
                     select.value = currentSelected;
@@ -1739,6 +1899,7 @@
                 } else {
                     updateSelectedCategoryBoxStyle();
                     updateWarningBanner();
+                    updateLiveResultPreview();
                 }
                 return;
             }
@@ -1788,12 +1949,14 @@
                 l2Container.classList.add('hidden');
                 l3Container.classList.add('hidden');
                 l4Container.classList.add('hidden');
+                updateLiveResultPreview();
                 return;
             }
             l2Container.classList.remove('hidden'); 
             l3Container.classList.remove('hidden');
             l4Container.classList.remove('hidden');
             renderL2(catId);
+            updateLiveResultPreview();
         }
 
         function renderL2(catId, selectId = null) {
@@ -1828,6 +1991,7 @@
             parseInputs('line2Select', 'line2Inputs', 'l2');
             const l2Id = document.getElementById('line2Select').value;
             renderL3(l2Id);
+            updateLiveResultPreview();
         }
 
         function renderL3(l2Id, selectId = null) {
@@ -1861,6 +2025,7 @@
             parseInputs('line3Select', 'line3Inputs', 'l3'); 
             const l3Id = document.getElementById('line3Select').value;
             renderL4(l3Id);
+            updateLiveResultPreview();
         }
 
         function renderL4(l3Id, selectId = null) {
@@ -1890,7 +2055,8 @@
             if (userTriggered) {
                 clearDraftInputsForLevels(['l4']);
             }
-            parseInputs('line4Select', 'line4Inputs', 'l4'); 
+            parseInputs('line4Select', 'line4Inputs', 'l4');
+            updateLiveResultPreview();
         }
 
         function parseInputs(selectId, containerId, levelPrefix) {
@@ -2016,18 +2182,35 @@
             return result;
         }
 
-        function generateAndCopyString() {
+        function buildCurrentReportString() {
             const catSelect = document.getElementById('categorySelect');
-            const cat = catSelect.value;
-            if (!cat) return alert('⚠️ 請先選擇回報情境！');
-            const catRawText = catSelect.options[catSelect.selectedIndex].getAttribute('data-raw') || '';
+            const cat = catSelect ? catSelect.value : '';
+            if (!cat) return '';
             const dateStr = document.getElementById('todayDate').innerText;
             const store = document.getElementById('locationSelect').value;
             const lines = [`${dateStr} ${store}`];
             const l2Text = formatDynamicLine('line2Select', 'l2'); if (l2Text && !document.getElementById('line2Container').classList.contains('hidden')) lines.push(l2Text);
             const l3Text = formatDynamicLine('line3Select', 'l3'); if (l3Text && !document.getElementById('line3Container').classList.contains('hidden')) lines.push(l3Text);
             const l4Text = formatDynamicLine('line4Select', 'l4'); if (l4Text && !document.getElementById('line4Container').classList.contains('hidden')) lines.push(l4Text);
-            const finalString = lines.join('\n');
+            return lines.join('\n');
+        }
+
+        function updateLiveResultPreview() {
+            const outputEl = document.getElementById('resultOutput');
+            if (!outputEl) return;
+            const liveString = buildCurrentReportString();
+            if (outputEl.value !== liveString) {
+                outputEl.value = liveString;
+            }
+        }
+
+        function generateAndCopyString() {
+            const catSelect = document.getElementById('categorySelect');
+            const cat = catSelect.value;
+            if (!cat) return alert('⚠️ 請先選擇回報情境！');
+            const catRawText = catSelect.options[catSelect.selectedIndex].getAttribute('data-raw') || '';
+            const l2Text = formatDynamicLine('line2Select', 'l2');
+            const finalString = buildCurrentReportString();
             document.getElementById('resultOutput').value = finalString;
 
             const isNoRetention = catRawText === 'PDA上架完成' && l2Text === '無滯留';
@@ -2035,13 +2218,24 @@
             markCategoryReported(catRawText, {
                 generatedText: finalString,
                 isNoRetention,
+                appsheetConfirmed: catRawText === 'SCS,FBS黑箱' ? isAppsheetBlackBoxReported() : undefined,
                 hasPhoto: catRawText === 'SCS,FBS黑箱' ? blackBoxPhotoAttached : undefined
             });
             renderCategories(cat, true);
+            updateLiveResultPreview();
 
             let extraNotice = '';
-            if (catRawText === 'SCS,FBS黑箱' && !blackBoxPhotoAttached) {
-                extraNotice = '\n⚠️ 提醒：別忘了於群組一併上傳「黑箱到貨照片」！';
+            if (catRawText === 'SCS,FBS黑箱') {
+                const reminders = [];
+                if (!isAppsheetBlackBoxReported()) {
+                    reminders.push('• 請開啟 AppSheet 回報管制品到貨數量（僅需回報管制品粉紅色 To 單有束帶之數量）並點擊確認按鈕');
+                }
+                if (!blackBoxPhotoAttached) {
+                    reminders.push('• 別忘了於群組一併上傳「黑箱到貨照片」');
+                }
+                if (reminders.length > 0) {
+                    extraNotice = '\n\n⚠️ 提醒：\n' + reminders.join('\n');
+                }
             } else if (isNoRetention) {
                 extraNotice = '\nℹ️ 已偵測為「無滯留」，已自動隱藏「滯留箱數回報」項目。';
             }

@@ -158,21 +158,30 @@
         <!-- 回報字串產生器區域 -->
         <section id="reportGeneratorSection" class="bg-white rounded-xl card p-5 border-t-4 border-blue-500">
             <div class="flex justify-between items-center mb-3 gap-2 flex-wrap">
-                <h2 class="text-md font-bold text-gray-800">📝 狀態回報字串產生器</h2>
+                <h2 class="text-md font-bold text-gray-800 flex items-center gap-1.5 flex-wrap">
+                    <span>📝 狀態回報字串產生器</span>
+                    <span id="storeMemoryBadge" class="text-[10px] px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 font-bold">🧠 獨立門市記憶中</span>
+                </h2>
                 <div class="flex items-center gap-1.5 text-[11px] font-semibold flex-wrap">
                     <span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300">已回報</span>
                     <span class="px-2 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-300">未回報</span>
                     <span class="px-2 py-0.5 rounded bg-red-100 text-red-800 border border-red-300">警告</span>
-                    <button type="button" onclick="manualResetReports()" title="手動重置今日目前班別的回報紀錄" class="px-2 py-0.5 rounded bg-rose-100 hover:bg-rose-200 text-rose-800 border border-rose-300 font-bold shadow-sm transition flex items-center gap-1">
-                        🔄 手動重置回報
+                    <button type="button" onclick="manualResetReports()" title="手動重置今日目前門市與班別的回報紀錄" class="px-2 py-0.5 rounded bg-rose-100 hover:bg-rose-200 text-rose-800 border border-rose-300 font-bold shadow-sm transition flex items-center gap-1">
+                        🔄 重置當前門市
                     </button>
                 </div>
+            </div>
+
+            <!-- GPS 門市記憶讀取 / 暫存狀態提示橫幅 -->
+            <div id="storeGpsMemoryBanner" class="mb-3 p-2.5 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-900 text-xs flex items-center justify-between gap-2">
+                <span id="storeGpsMemoryText" class="font-semibold leading-relaxed">📍 正在同步當前門市獨立回報狀態與暫存進度...</span>
+                <span id="storeSavedCountBadge" class="text-[10px] px-2 py-0.5 rounded-full bg-indigo-600 text-white font-bold shrink-0">0 門市已暫存</span>
             </div>
 
             <!-- 指定時段未回報警告橫幅 -->
             <div id="unreportedWarningBanner" class="hidden mb-4 p-3 rounded-lg bg-red-100 border-2 border-red-500 text-red-900 shadow-sm">
                 <div class="font-bold text-sm flex items-center gap-1.5 mb-1">
-                    <span>🚨 未回報警告（已回報則自動關閉）</span>
+                    <span>🚨 未回報警告（當前門市已回報則自動關閉）</span>
                 </div>
                 <ul id="unreportedWarningList" class="list-disc list-inside text-xs space-y-1 font-semibold"></ul>
             </div>
@@ -333,14 +342,14 @@
                         產生並複製字串
                     </button>
                     <button id="manualResetBtn" type="button" onclick="manualResetReports()" class="flex-1 bg-rose-500 hover:bg-rose-600 text-white font-bold py-3 px-2 rounded-lg shadow transition text-xs sm:text-sm">
-                        🔄 重置回報
+                        🔄 重置當前門市
                     </button>
                 </div>
 
                 <div>
                     <div class="flex justify-between items-center mb-1">
                         <label for="resultOutput" class="text-xs font-semibold text-gray-600">⚡ 產生結果（即時預覽顯示）：</label>
-                        <span class="text-[11px] text-blue-600 font-medium">選取或輸入數值時自動即時更新</span>
+                        <span class="text-[11px] text-blue-600 font-medium">選取或輸入數值時自動即時更新與暫存</span>
                     </div>
                     <textarea id="resultOutput" rows="4" readonly placeholder="選擇回報情境後，產生的結果會即時顯示在這裡..." class="w-full border border-gray-300 rounded-lg p-3 bg-gray-50 text-gray-800 outline-none resize-none text-sm"></textarea>
                 </div>
@@ -428,9 +437,10 @@
 
         const LOCAL_LOCATIONS_KEY = 'shopee_store_locations_v1';
         const LOCAL_REGIONS_KEY = 'shopee_custom_regions_v1';
-        const LOCAL_REPORTED_KEY = 'shopee_reported_records_v1';
+        const LOCAL_REPORTED_KEY = 'shopee_reported_records_v2'; // 支援每間門市獨立回報紀錄
+        const LOCAL_STORE_DRAFTS_KEY = 'shopee_store_session_drafts_v1'; // 支援每間門市離開暫存 / 回來恢復進度
         const LOCAL_REALLOC_STORES_KEY = 'shopee_realloc_stores_v1';
-        const LOCAL_APPSHEET_BLACKBOX_KEY = 'shopee_appsheet_blackbox_v1';
+        const LOCAL_APPSHEET_BLACKBOX_KEY = 'shopee_appsheet_blackbox_v2'; // 支援每間門市獨立 AppSheet 回報紀錄
         const DEFAULT_REGIONS = ['愛國群組', '中洲群組', '新園群組'];
         const DEFAULT_BASE_STORES = [
             '潮州中洲', '潮州光華', '潮州大同', '潮州光春', '潮州愛國',
@@ -446,12 +456,17 @@
         let currentVisibleGroup = null;
         let currentGpsMatchedStore = null; // 紀錄目前 GPS 實際偵測到所在 50m 內的門市名稱
         let currentGpsMatchedStoreObj = null; // 紀錄目前 GPS 實際偵測到所在 50m 內的門市完整物件
+        let lastActiveStoreName = null; // 追蹤上一次操作/定位的門市名稱，供離開時自動暫存
         let editShortcutId = null;
         let currentShift = 'other';
         let lastKnownCoords = null;
         let reportedRecords = loadReportedRecords();
+        let storeSessionDrafts = loadStoreSessionDrafts();
         let appsheetBlackBoxRecords = loadAppsheetBlackBoxRecords();
         let blackBoxPhotoAttached = false;
+        let blackBoxPhotoDataUrl = '';
+        let blackBoxPhotoFileName = '';
+        let isRestoringStoreSession = false;
 
         // 防止閃爍與數量回溯的狀態快取
         let lastLocationOptionsSignature = '';
@@ -564,6 +579,209 @@
 
         let config = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
 
+        /* ================= 2. 獨立門市 GPS 定位記憶與暫存進度管理 ================= */
+        function getCurrentActiveStoreName() {
+            const locSelect = document.getElementById('locationSelect');
+            const selected = locSelect ? locSelect.value : '';
+            return normalizeStoreDisplayName(selected || currentGpsMatchedStore || DEFAULT_BASE_STORES[0]);
+        }
+
+        function getStoreSessionStorageKey(storeName = null, shiftOverride = null, dateOverride = null) {
+            const dateKey = dateOverride || getTodayDateKey();
+            const shiftKey = shiftOverride || currentShift;
+            const cleanStore = normalizeStoreDisplayName(storeName || getCurrentActiveStoreName());
+            return `${dateKey}__${shiftKey}__${cleanStore}`;
+        }
+
+        function loadStoreSessionDrafts() {
+            try {
+                const raw = localStorage.getItem(LOCAL_STORE_DRAFTS_KEY);
+                return raw ? JSON.parse(raw) : {};
+            } catch (e) {
+                return {};
+            }
+        }
+
+        function persistStoreSessionDrafts() {
+            try {
+                localStorage.setItem(LOCAL_STORE_DRAFTS_KEY, JSON.stringify(storeSessionDrafts));
+            } catch (e) {
+                // 若照片 DataURL 過大導致超出容量，保留表單進度並排除大圖再存一次
+                try {
+                    const slimDrafts = {};
+                    Object.keys(storeSessionDrafts).forEach(k => {
+                        slimDrafts[k] = {
+                            ...storeSessionDrafts[k],
+                            blackBoxPhotoDataUrl: ''
+                        };
+                    });
+                    localStorage.setItem(LOCAL_STORE_DRAFTS_KEY, JSON.stringify(slimDrafts));
+                } catch (err) {}
+            }
+            updateStoreMemoryStatusUI();
+        }
+
+        function saveCurrentStoreSessionState(storeOverride = null) {
+            if (isRestoringStoreSession) return;
+            const targetStore = normalizeStoreDisplayName(storeOverride || lastActiveStoreName || getCurrentActiveStoreName());
+            if (!targetStore) return;
+
+            saveDraftInputsFromDom();
+            const sessionKey = getStoreSessionStorageKey(targetStore);
+            const catSel = document.getElementById('categorySelect');
+            const l2Sel = document.getElementById('line2Select');
+            const l3Sel = document.getElementById('line3Select');
+            const l4Sel = document.getElementById('line4Select');
+            const resOut = document.getElementById('resultOutput');
+
+            const hasMeaningfulState = Boolean(
+                (catSel && catSel.value) ||
+                blackBoxPhotoAttached ||
+                Object.keys(dynamicInputDrafts.l2 || {}).length > 0 ||
+                Object.keys(dynamicInputDrafts.l3 || {}).length > 0 ||
+                Object.keys(dynamicInputDrafts.l4 || {}).length > 0
+            );
+
+            if (!hasMeaningfulState && !storeSessionDrafts[sessionKey]) {
+                updateStoreMemoryStatusUI();
+                return;
+            }
+
+            storeSessionDrafts[sessionKey] = {
+                storeName: targetStore,
+                shift: currentShift,
+                date: getTodayDateKey(),
+                categoryId: catSel ? catSel.value : '',
+                l2Id: l2Sel ? l2Sel.value : '',
+                l3Id: l3Sel ? l3Sel.value : '',
+                l4Id: l4Sel ? l4Sel.value : '',
+                dynamicInputDrafts: JSON.parse(JSON.stringify(dynamicInputDrafts)),
+                blackBoxPhotoAttached: Boolean(blackBoxPhotoAttached),
+                blackBoxPhotoDataUrl: blackBoxPhotoDataUrl || '',
+                blackBoxPhotoFileName: blackBoxPhotoFileName || '',
+                resultOutput: resOut ? resOut.value : '',
+                updatedAt: new Date().toISOString()
+            };
+            persistStoreSessionDrafts();
+        }
+
+        function restoreStoreSessionState(targetStore, triggerReason = 'switch') {
+            const cleanStore = normalizeStoreDisplayName(targetStore || getCurrentActiveStoreName());
+            if (!cleanStore) return;
+
+            isRestoringStoreSession = true;
+            try {
+                const sessionKey = getStoreSessionStorageKey(cleanStore);
+                const saved = storeSessionDrafts[sessionKey];
+
+                // 重置快取簽章以強制渲染當前門市獨立清單與進度
+                lastCategoriesSignature = '';
+                lastL2Signature = '';
+                lastL3Signature = '';
+                lastL4Signature = '';
+
+                if (saved) {
+                    dynamicInputDrafts = saved.dynamicInputDrafts
+                        ? JSON.parse(JSON.stringify(saved.dynamicInputDrafts))
+                        : { l2: {}, l3: {}, l4: {} };
+
+                    if (saved.blackBoxPhotoAttached && saved.blackBoxPhotoDataUrl) {
+                        blackBoxPhotoAttached = true;
+                        blackBoxPhotoDataUrl = saved.blackBoxPhotoDataUrl;
+                        blackBoxPhotoFileName = saved.blackBoxPhotoFileName || '已暫存照片';
+                        const imgEl = document.getElementById('blackBoxPhotoPreview');
+                        const wrapEl = document.getElementById('blackBoxPhotoPreviewWrap');
+                        const statusEl = document.getElementById('blackBoxPhotoStatus');
+                        if (imgEl) imgEl.src = blackBoxPhotoDataUrl;
+                        if (wrapEl) wrapEl.classList.remove('hidden');
+                        if (statusEl) statusEl.innerText = `✅ 已還原暫存照片（${blackBoxPhotoFileName}）`;
+                    } else {
+                        clearBlackBoxPhoto(true);
+                    }
+
+                    renderCategories(saved.categoryId || '', true);
+
+                    if (saved.categoryId) {
+                        const l2Sel = document.getElementById('line2Select');
+                        if (l2Sel && saved.l2Id && Array.from(l2Sel.options).some(o => o.value === saved.l2Id)) {
+                            l2Sel.value = saved.l2Id;
+                            lastL2Signature = '';
+                            onL2Change(false);
+                        }
+                        const l3Sel = document.getElementById('line3Select');
+                        if (l3Sel && saved.l3Id && Array.from(l3Sel.options).some(o => o.value === saved.l3Id)) {
+                            l3Sel.value = saved.l3Id;
+                            lastL3Signature = '';
+                            onL3Change(false);
+                        }
+                        const l4Sel = document.getElementById('line4Select');
+                        if (l4Sel && saved.l4Id && Array.from(l4Sel.options).some(o => o.value === saved.l4Id)) {
+                            l4Sel.value = saved.l4Id;
+                            lastL4Signature = '';
+                            onL4Change(false);
+                        }
+                    }
+                } else {
+                    dynamicInputDrafts = { l2: {}, l3: {}, l4: {} };
+                    clearBlackBoxPhoto(true);
+                    renderCategories('', true);
+                    const resOut = document.getElementById('resultOutput');
+                    if (resOut) resOut.value = '';
+                }
+
+                lastActiveStoreName = cleanStore;
+                updateAppsheetBlackBoxButtonUI();
+                updateLiveResultPreview(true);
+                updateStoreMemoryStatusUI(triggerReason, Boolean(saved));
+            } finally {
+                isRestoringStoreSession = false;
+            }
+        }
+
+        function updateStoreMemoryStatusUI(triggerReason = '', hasRestoredDraft = false) {
+            const banner = document.getElementById('storeGpsMemoryBanner');
+            const textEl = document.getElementById('storeGpsMemoryText');
+            const badgeEl = document.getElementById('storeSavedCountBadge');
+            const headerBadge = document.getElementById('storeMemoryBadge');
+            if (!banner || !textEl || !badgeEl) return;
+
+            const activeStore = getCurrentActiveStoreName();
+            const prefix = `${getTodayDateKey()}__${currentShift}__`;
+
+            // 統計今日目前班別中有暫存或已回報紀錄的獨立門市數
+            const activeStoreSet = new Set();
+            Object.keys(storeSessionDrafts).forEach(k => {
+                if (k.startsWith(prefix) && storeSessionDrafts[k]?.storeName) {
+                    activeStoreSet.add(storeSessionDrafts[k].storeName);
+                }
+            });
+            Object.keys(reportedRecords).forEach(k => {
+                if (k.startsWith(prefix)) {
+                    const parts = k.split('__');
+                    if (parts[2]) activeStoreSet.add(parts[2]);
+                }
+            });
+
+            badgeEl.innerText = `${activeStoreSet.size} 門市獨立記憶`;
+            if (headerBadge) {
+                headerBadge.innerText = `🧠 ${activeStore} 獨立記憶中`;
+            }
+
+            if (currentGpsMatchedStore) {
+                banner.className = 'mb-3 p-2.5 rounded-lg bg-emerald-50 border border-emerald-300 text-emerald-950 text-xs flex items-center justify-between gap-2';
+                if (triggerReason === 'gps_enter' && hasRestoredDraft) {
+                    textEl.innerText = `📍 已回到「${currentGpsMatchedStore}」定位範圍，自動讀取先前暫存進度，請繼續完成回報！`;
+                } else if (hasRestoredDraft) {
+                    textEl.innerText = `📍 目前定位於「${currentGpsMatchedStore}」｜已讀取本店獨立回報狀態與暫存進度。`;
+                } else {
+                    textEl.innerText = `📍 目前定位於「${currentGpsMatchedStore}」｜已切換為本店獨立回報狀態（離開時自動暫存）。`;
+                }
+            } else {
+                banner.className = 'mb-3 p-2.5 rounded-lg bg-amber-50 border border-amber-300 text-amber-950 text-xs flex items-center justify-between gap-2';
+                textEl.innerText = `⏸️ 已離開門市 GPS 定位範圍｜各門市回報進度已暫時儲存，目前檢視「${activeStore}」獨立狀態。`;
+            }
+        }
+
         function saveDraftInputsFromDom() {
             ['l2', 'l3', 'l4'].forEach(prefix => {
                 const container = document.getElementById(
@@ -591,12 +809,15 @@
             if (!dynamicInputDrafts[levelPrefix]) dynamicInputDrafts[levelPrefix] = {};
             dynamicInputDrafts[levelPrefix][index] = value;
             updateLiveResultPreview();
+            saveCurrentStoreSessionState();
         }
 
         function onLocationSelectChange() {
-            lastCategoriesSignature = '';
-            renderCategories();
-            updateLiveResultPreview();
+            const nextStore = getCurrentActiveStoreName();
+            if (lastActiveStoreName && lastActiveStoreName !== nextStore) {
+                saveCurrentStoreSessionState(lastActiveStoreName);
+            }
+            restoreStoreSessionState(nextStore, 'manual_select');
         }
 
         function normalizeStoreDisplayName(name) {
@@ -844,6 +1065,7 @@
             try {
                 localStorage.setItem(LOCAL_REPORTED_KEY, JSON.stringify(reportedRecords));
             } catch (e) {}
+            updateStoreMemoryStatusUI();
         }
 
         function loadAppsheetBlackBoxRecords() {
@@ -859,6 +1081,7 @@
             try {
                 localStorage.setItem(LOCAL_APPSHEET_BLACKBOX_KEY, JSON.stringify(appsheetBlackBoxRecords));
             } catch (e) {}
+            updateStoreMemoryStatusUI();
         }
 
         function getTodayDateKey() {
@@ -869,35 +1092,42 @@
             return `${y}-${m}-${d}`;
         }
 
-        function getReportStatusKey(categoryText, shiftOverride = null, dateOverride = null) {
+        // 每間門市獨立的回報狀態鍵值：日期__班別__門市名稱__情境名稱
+        function getReportStatusKey(categoryText, shiftOverride = null, dateOverride = null, storeOverride = null) {
             const dateKey = dateOverride || getTodayDateKey();
             const shiftKey = shiftOverride || currentShift;
-            return `${dateKey}__${shiftKey}__${categoryText}`;
+            const storeKey = normalizeStoreDisplayName(storeOverride || getCurrentActiveStoreName());
+            return `${dateKey}__${shiftKey}__${storeKey}__${categoryText}`;
         }
 
         function manualResetReports() {
             const dateKey = getTodayDateKey();
             const shiftLabel = document.getElementById('shiftIndicator').innerText || '目前班別';
-            if (!confirm(`確定要手動重置「今日 (${dateKey}) ${shiftLabel}」的所有回報狀態與輸入內容嗎？\n\n重置後所有情境將恢復為「⏳ 未回報」。`)) {
+            const activeStore = getCurrentActiveStoreName();
+            if (!confirm(`確定要手動重置「${activeStore}」今日 (${dateKey}) ${shiftLabel}的回報狀態與暫存進度嗎？\n\n（其他門市的已回報紀錄與暫存進度將完整保留不受影響）`)) {
                 return;
             }
 
-            const prefix = `${dateKey}__${currentShift}__`;
+            const storePrefix = `${dateKey}__${currentShift}__${activeStore}__`;
             Object.keys(reportedRecords).forEach(k => {
-                if (k.startsWith(prefix)) {
+                if (k.startsWith(storePrefix)) {
                     delete reportedRecords[k];
                 }
             });
             saveReportedRecords();
 
             Object.keys(appsheetBlackBoxRecords).forEach(k => {
-                if (k.startsWith(prefix)) {
+                if (k.startsWith(storePrefix)) {
                     delete appsheetBlackBoxRecords[k];
                 }
             });
             saveAppsheetBlackBoxRecords();
 
-            clearBlackBoxPhoto();
+            const sessionKey = getStoreSessionStorageKey(activeStore, currentShift, dateKey);
+            delete storeSessionDrafts[sessionKey];
+            persistStoreSessionDrafts();
+
+            clearBlackBoxPhoto(true);
             clearDraftInputsForLevels(['l2', 'l3', 'l4']);
             lastCategoriesSignature = '';
             lastL2Signature = '';
@@ -910,38 +1140,42 @@
 
             renderCategories('', true);
             updateAppsheetBlackBoxButtonUI();
-            updateLiveResultPreview();
+            updateLiveResultPreview(true);
+            updateStoreMemoryStatusUI();
 
-            alert(`✅ 已完成手動重置！今日（${dateKey}）${shiftLabel}所有情境已恢復為「未回報」狀態。`);
+            alert(`✅ 已完成重置！「${activeStore}」今日（${dateKey}）${shiftLabel}已恢復為「未回報」狀態，其他門市進度均完整保留。`);
         }
 
-        function isAppsheetBlackBoxReported() {
-            const key = getReportStatusKey('SCS,FBS黑箱_APPSHEET');
+        function isAppsheetBlackBoxReported(storeOverride = null) {
+            const key = getReportStatusKey('SCS,FBS黑箱_APPSHEET', null, null, storeOverride);
             return Boolean(appsheetBlackBoxRecords[key]);
         }
 
         function toggleAppsheetBlackBoxStatus() {
-            const key = getReportStatusKey('SCS,FBS黑箱_APPSHEET');
+            const activeStore = getCurrentActiveStoreName();
+            const key = getReportStatusKey('SCS,FBS黑箱_APPSHEET', null, null, activeStore);
             const nextState = !Boolean(appsheetBlackBoxRecords[key]);
             if (nextState) {
                 appsheetBlackBoxRecords[key] = {
                     confirmedAt: new Date().toISOString(),
+                    storeName: activeStore,
                     shift: currentShift,
                     date: getTodayDateKey()
                 };
                 markCategoryReported('SCS,FBS黑箱', {
                     appsheetConfirmed: true,
                     generatedText: document.getElementById('resultOutput').value || ''
-                });
+                }, activeStore);
             } else {
                 delete appsheetBlackBoxRecords[key];
-                delete reportedRecords[getReportStatusKey('SCS,FBS黑箱')];
+                delete reportedRecords[getReportStatusKey('SCS,FBS黑箱', null, null, activeStore)];
                 saveReportedRecords();
             }
             saveAppsheetBlackBoxRecords();
             updateAppsheetBlackBoxButtonUI();
             const currentCatId = document.getElementById('categorySelect').value;
             renderCategories(currentCatId, true);
+            saveCurrentStoreSessionState(activeStore);
         }
 
         function updateAppsheetBlackBoxButtonUI() {
@@ -957,21 +1191,23 @@
             }
         }
 
-        function getCategoryReportRecord(categoryText) {
-            return reportedRecords[getReportStatusKey(categoryText)] || null;
+        function getCategoryReportRecord(categoryText, storeOverride = null) {
+            return reportedRecords[getReportStatusKey(categoryText, null, null, storeOverride)] || null;
         }
 
-        function isCategoryReported(categoryText) {
+        function isCategoryReported(categoryText, storeOverride = null) {
             if (categoryText === 'SCS,FBS黑箱') {
-                return Boolean(getCategoryReportRecord(categoryText)) || isAppsheetBlackBoxReported();
+                return Boolean(getCategoryReportRecord(categoryText, storeOverride)) || isAppsheetBlackBoxReported(storeOverride);
             }
-            return Boolean(getCategoryReportRecord(categoryText));
+            return Boolean(getCategoryReportRecord(categoryText, storeOverride));
         }
 
-        function markCategoryReported(categoryText, extraData = {}) {
+        function markCategoryReported(categoryText, extraData = {}, storeOverride = null) {
             if (!categoryText) return;
-            reportedRecords[getReportStatusKey(categoryText)] = {
+            const activeStore = normalizeStoreDisplayName(storeOverride || getCurrentActiveStoreName());
+            reportedRecords[getReportStatusKey(categoryText, null, null, activeStore)] = {
                 reportedAt: new Date().toISOString(),
+                storeName: activeStore,
                 shift: currentShift,
                 date: getTodayDateKey(),
                 ...extraData
@@ -979,15 +1215,15 @@
             saveReportedRecords();
         }
 
-        function isPdaNoRetentionReported() {
-            const rec = getCategoryReportRecord('PDA上架完成');
+        function isPdaNoRetentionReported(storeOverride = null) {
+            const rec = getCategoryReportRecord('PDA上架完成', storeOverride);
             if (!rec) return false;
             if (rec.isNoRetention === true) return true;
             if (typeof rec.generatedText === 'string' && rec.generatedText.includes('無滯留')) return true;
             return false;
         }
 
-        /* ================= 2. 核心同步邏輯 ================= */
+        /* ================= 3. 核心同步邏輯 ================= */
         supabaseClient.channel('public:shortcuts').on('postgres_changes', { event: '*', schema: 'public', table: 'shortcuts' }, payload => { fetchShortcuts(); }).subscribe();
         supabaseClient.channel('public:store_locations').on('postgres_changes', { event: '*', schema: 'public', table: 'store_locations' }, payload => { fetchLocations(); }).subscribe();
         supabaseClient.channel('public:report_settings').on('postgres_changes', { event: '*', schema: 'public', table: 'report_settings' }, payload => { fetchConfig(); }).subscribe();
@@ -1172,31 +1408,32 @@
             await supabaseClient.from('report_settings').upsert([{ id: 1, config_data: config }]);
         }
 
-        /* ================= 3. 時間、班別偵測與未回報警告規則 ================= */
+        /* ================= 4. 時間、班別偵測與未回報警告規則 ================= */
         function getActiveWarningItems() {
             const now = new Date();
             const hour = now.getHours();
             const warnings = [];
+            const activeStore = getCurrentActiveStoreName();
 
             const is19To20Window = hour === 19;
             if (is19To20Window) {
                 ['SCS,FBS黑箱', 'NDD,FBS離店打包'].forEach(itemName => {
-                    if (!isCategoryReported(itemName)) {
+                    if (!isCategoryReported(itemName, activeStore)) {
                         warnings.push({
                             text: itemName,
                             reason: itemName === 'NDD,FBS離店打包'
-                                ? '兩家門市 20:00 前完成（19:00–20:00 尚未回報）'
-                                : '19:00–20:00 時段尚未回報（請檢附到貨照片並完成 AppSheet 回報）'
+                                ? `【${activeStore}】20:00 前完成（19:00–20:00 尚未回報）`
+                                : `【${activeStore}】19:00–20:00 時段尚未回報（請檢附到貨照片並完成 AppSheet 回報）`
                         });
                     }
                 });
             }
 
             const isBefore21Evening = hour >= 17 && hour < 21;
-            if (isBefore21Evening && !isCategoryReported('NDD上架完成')) {
+            if (isBefore21Evening && !isCategoryReported('NDD上架完成', activeStore)) {
                 warnings.push({
                     text: 'NDD上架完成',
-                    reason: '兩家門市 21:00 前完成（尚未回報）'
+                    reason: `【${activeStore}】21:00 前完成（尚未回報）`
                 });
             }
 
@@ -1254,15 +1491,17 @@
             
             syncLocationSelectOptions();
             updateWarningBanner();
-            if (prevShift !== currentShift || lastCategoriesSignature === '') {
+            if (prevShift !== currentShift) {
+                restoreStoreSessionState(getCurrentActiveStoreName(), 'shift_change');
+            } else if (lastCategoriesSignature === '') {
                 renderCategories();
             } else {
                 refreshCategoryStatusesOnly();
             }
-            updateLiveResultPreview();
+            updateLiveResultPreview(true);
         }
 
-        /* ================= 4. GPS 距離、定位、重點作業與新增/編輯門市地點 ================= */
+        /* ================= 5. GPS 距離、定位、重點作業與新增/編輯門市地點 ================= */
         function toggleGpsLocationManager() {
             document.getElementById('gpsLocationSection').classList.toggle('hidden');
             syncAllRegionsFromData();
@@ -1379,12 +1618,13 @@
             saveLocalLocations();
 
             const cleanStoreName = normalizeStoreDisplayName(rawName);
+            if (lastActiveStoreName && lastActiveStoreName !== cleanStoreName) {
+                saveCurrentStoreSessionState(lastActiveStoreName);
+            }
             syncLocationSelectOptions(cleanStoreName || null);
             renderReallocStoreCheckboxes();
             renderGpsStoreList();
-            lastCategoriesSignature = '';
-            renderCategories();
-            updateLiveResultPreview();
+            restoreStoreSessionState(cleanStoreName, 'manual_select');
 
             let cloudError = null;
             if (isEditing) {
@@ -1442,7 +1682,7 @@
             renderGpsStoreList();
             lastCategoriesSignature = '';
             renderCategories();
-            updateLiveResultPreview();
+            updateLiveResultPreview(true);
 
             if (id) {
                 await supabaseClient.from('store_locations').delete().eq('id', id);
@@ -1542,6 +1782,9 @@
                     const nextGpsSig = 'error';
                     if (lastGpsStateSignature !== nextGpsSig) {
                         lastGpsStateSignature = nextGpsSig;
+                        if (currentGpsMatchedStore) {
+                            saveCurrentStoreSessionState(currentGpsMatchedStore);
+                        }
                         currentVisibleGroup = null;
                         currentGpsMatchedStore = null;
                         currentGpsMatchedStoreObj = null;
@@ -1551,7 +1794,8 @@
                         gpsSpan.className = 'text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700';
                         lastCategoriesSignature = '';
                         renderCategories();
-                        updateLiveResultPreview();
+                        updateLiveResultPreview(true);
+                        updateStoreMemoryStatusUI('gps_leave');
                     }
                 }, { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 });
             } else {
@@ -1562,7 +1806,8 @@
                 document.getElementById('gpsStatus').innerText = '📍 裝置不支援GPS';
                 lastCategoriesSignature = '';
                 renderCategories();
-                updateLiveResultPreview();
+                updateLiveResultPreview(true);
+                updateStoreMemoryStatusUI('gps_leave');
             }
         }
 
@@ -1570,18 +1815,19 @@
             let newGroup = null;
             let closestStore = null;
             let matchedObj = null;
+            let minDistance = Infinity;
 
             const groupOrder = Array.from(new Set([...regions, ...Object.keys(STORE_LOCATIONS || {})]));
             for (const grp of groupOrder) {
                 for (const store of (STORE_LOCATIONS[grp] || [])) {
-                    if (calculateDistance(userLat, userLng, store.lat, store.lng) <= 50) {
+                    const dist = calculateDistance(userLat, userLng, store.lat, store.lng);
+                    if (dist <= 50 && dist < minDistance) {
+                        minDistance = dist;
                         newGroup = grp;
                         matchedObj = store;
                         closestStore = normalizeStoreDisplayName(store.name);
-                        break;
                     }
                 }
-                if (newGroup) break;
             }
 
             const tasksSig = matchedObj ? normalizeKeyTasks(matchedObj.keyTasks).join(',') : '';
@@ -1593,7 +1839,17 @@
             }
             lastGpsStateSignature = nextGpsSig;
 
-            const storeChanged = closestStore !== currentGpsMatchedStore;
+            const prevGpsStore = currentGpsMatchedStore;
+            const storeChanged = closestStore !== prevGpsStore;
+
+            // 離開原門市或切換到另一間門市前，先將目前操作中門市的回報進度暫時儲存
+            if (storeChanged) {
+                const storeToSave = prevGpsStore || lastActiveStoreName || getCurrentActiveStoreName();
+                if (storeToSave) {
+                    saveCurrentStoreSessionState(storeToSave);
+                }
+            }
+
             currentVisibleGroup = newGroup;
             currentGpsMatchedStore = closestStore;
             currentGpsMatchedStoreObj = matchedObj;
@@ -1601,25 +1857,26 @@
 
             const gpsSpan = document.getElementById('gpsStatus');
             
-            if (newGroup) {
+            if (newGroup && closestStore) {
                 gpsSpan.className = 'text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700';
-                gpsSpan.innerText = `📍 在 ${newGroup} 範圍內`;
+                gpsSpan.innerText = `📍 在 ${newGroup}（${closestStore}）範圍內`;
                 
-                if (closestStore && storeChanged) {
-                    syncLocationSelectOptions(closestStore);
-                }
+                syncLocationSelectOptions(closestStore);
+                // 再次回到門市定位時，自動讀取該門市獨立回報狀態與暫存進度繼續回報
+                restoreStoreSessionState(closestStore, 'gps_enter');
             } else {
                 gpsSpan.className = 'text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500';
-                gpsSpan.innerText = `📍 未進入任何門市 50m 內`;
+                gpsSpan.innerText = `📍 未進入任何門市 50m 內（進度已暫存）`;
                 syncLocationSelectOptions();
+                lastCategoriesSignature = '';
+                renderCategories();
+                updateLiveResultPreview(true);
+                updateStoreMemoryStatusUI('gps_leave');
             }
-            lastCategoriesSignature = '';
-            renderCategories();
             renderShortcuts();
-            updateLiveResultPreview();
         }
 
-        /* ================= 5. 捷徑管理與渲染 ================= */
+        /* ================= 6. 捷徑管理與渲染 ================= */
         function renderShortcuts(forceRender = false) {
             const btnContainer = document.getElementById('shortcutButtons');
             const visibleShortcuts = currentVisibleGroup
@@ -1726,25 +1983,34 @@
 
         function escapeHtml(str) { return str ? str.replace(/[&<>'"]/g, tag => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[tag] || tag)) : ''; }
 
-        /* ================= 6. 回報情境、重新分配門市與多層級狀態管理 ================= */
+        /* ================= 7. 回報情境、重新分配門市與多層級狀態管理 ================= */
         function handleBlackBoxPhoto(event) {
             const file = event.target.files && event.target.files[0];
             if (!file) return;
             const reader = new FileReader();
             reader.onload = (e) => {
                 blackBoxPhotoAttached = true;
-                document.getElementById('blackBoxPhotoPreview').src = e.target.result;
+                blackBoxPhotoDataUrl = e.target.result || '';
+                blackBoxPhotoFileName = file.name || '已附加照片';
+                document.getElementById('blackBoxPhotoPreview').src = blackBoxPhotoDataUrl;
                 document.getElementById('blackBoxPhotoPreviewWrap').classList.remove('hidden');
-                document.getElementById('blackBoxPhotoStatus').innerText = `✅ 已附加到貨照片（${file.name}）`;
+                document.getElementById('blackBoxPhotoStatus').innerText = `✅ 已附加到貨照片（${blackBoxPhotoFileName}）`;
+                saveCurrentStoreSessionState();
             };
             reader.readAsDataURL(file);
         }
 
-        function clearBlackBoxPhoto() {
+        function clearBlackBoxPhoto(skipSave = false) {
             blackBoxPhotoAttached = false;
+            blackBoxPhotoDataUrl = '';
+            blackBoxPhotoFileName = '';
             const input = document.getElementById('blackBoxPhotoInput');
             if (input) input.value = '';
-            document.getElementById('blackBoxPhotoPreviewWrap').classList.add('hidden');
+            const wrap = document.getElementById('blackBoxPhotoPreviewWrap');
+            if (wrap) wrap.classList.add('hidden');
+            if (!skipSave) {
+                saveCurrentStoreSessionState();
+            }
         }
 
         function toggleReallocStoresPanel() {
@@ -1790,8 +2056,8 @@
             return false;
         }
 
-        function getCategoryVisualState(categoryText) {
-            const reported = isCategoryReported(categoryText);
+        function getCategoryVisualState(categoryText, storeOverride = null) {
+            const reported = isCategoryReported(categoryText, storeOverride);
             const inWarning = !reported && isItemInWarningWindow(categoryText);
 
             if (reported) {
@@ -1833,16 +2099,17 @@
             const grid = document.getElementById('scenarioStatusGrid');
             const summaryEl = document.getElementById('scenarioStatusSummary');
             const currentCatId = document.getElementById('categorySelect').value;
+            const activeStore = getCurrentActiveStoreName();
 
             const shiftLabel = document.getElementById('shiftIndicator').innerText;
-            const reportedCount = filteredCategories.filter(c => isCategoryReported(c.text)).length;
-            const nextSummary = `${shiftLabel}情境回報進度：${reportedCount} / ${filteredCategories.length} 已回報`;
+            const reportedCount = filteredCategories.filter(c => isCategoryReported(c.text, activeStore)).length;
+            const nextSummary = `【${activeStore}】${shiftLabel}回報進度：${reportedCount} / ${filteredCategories.length} 已回報`;
             if (summaryEl.innerText !== nextSummary) {
                 summaryEl.innerText = nextSummary;
             }
 
             grid.innerHTML = filteredCategories.map(cat => {
-                const st = getCategoryVisualState(cat.text);
+                const st = getCategoryVisualState(cat.text, activeStore);
                 const isSelected = cat.id === currentCatId;
                 const ringClass = isSelected ? 'ring-2 ring-blue-600' : '';
                 return `
@@ -1867,6 +2134,7 @@
             const noteBody = document.getElementById('scenarioNoteExampleBody');
             const appsheetSec = document.getElementById('appsheetBlackBoxSection');
             const photoSec = document.getElementById('blackBoxPhotoSection');
+            const activeStore = getCurrentActiveStoreName();
 
             if (!select.value) {
                 wrapper.className = 'bg-blue-50 p-3 rounded-lg border border-blue-200 transition-colors';
@@ -1881,7 +2149,7 @@
 
             const selectedOpt = select.options[select.selectedIndex];
             const rawText = selectedOpt ? (selectedOpt.getAttribute('data-raw') || '') : '';
-            const st = getCategoryVisualState(rawText);
+            const st = getCategoryVisualState(rawText, activeStore);
             wrapper.className = `${st.boxClass} p-3 rounded-lg border-2 transition-colors`;
             badge.className = `text-[10px] px-2 py-0.5 rounded-full font-bold ${st.badgeClass}`;
             badge.innerText = st.label;
@@ -1945,7 +2213,7 @@
             const currentLocation = document.getElementById('locationSelect').value;
             const dayOfWeek = new Date().getDay();
             const reallocStores = Array.isArray(config.reallocStores) ? config.reallocStores : ['潮州中洲', '潮州愛國'];
-            const hideRetentionReport = isPdaNoRetentionReported();
+            const hideRetentionReport = isPdaNoRetentionReported(currentLocation);
             const isXinyuan = isXinyuanGroupContext(currentLocation);
 
             updateReallocGpsNotice(currentLocation, reallocStores);
@@ -1975,10 +2243,11 @@
         function refreshCategoryStatusesOnly() {
             const select = document.getElementById('categorySelect');
             const filteredCategories = getFilteredCategoriesList();
+            const activeStore = getCurrentActiveStoreName();
             Array.from(select.options).forEach(opt => {
                 if (!opt.value) return;
                 const rawText = opt.getAttribute('data-raw') || '';
-                const st = getCategoryVisualState(rawText);
+                const st = getCategoryVisualState(rawText, activeStore);
                 const nextLabel = `${rawText} [${st.label}]`;
                 if (opt.text !== nextLabel) opt.text = nextLabel;
             });
@@ -1991,12 +2260,13 @@
             const select = document.getElementById('categorySelect');
             const filteredCategories = getFilteredCategoriesList();
             const currentSelected = selectId !== null ? selectId : select.value;
+            const activeStore = getCurrentActiveStoreName();
 
-            const nextCatSig = JSON.stringify(
+            const nextCatSig = `${activeStore}__` + JSON.stringify(
                 filteredCategories.map(c => ({
                     id: c.id,
                     text: c.text,
-                    state: getCategoryVisualState(c.text).status
+                    state: getCategoryVisualState(c.text, activeStore).status
                 }))
             );
 
@@ -2008,7 +2278,7 @@
                 } else {
                     updateSelectedCategoryBoxStyle();
                     updateWarningBanner();
-                    updateLiveResultPreview();
+                    updateLiveResultPreview(true);
                 }
                 return;
             }
@@ -2019,7 +2289,7 @@
             const prevSelected = select.value;
             select.innerHTML = '<option value="" disabled selected>請選擇回報情境...</option>' + 
                 filteredCategories.map(c => {
-                    const st = getCategoryVisualState(c.text);
+                    const st = getCategoryVisualState(c.text, activeStore);
                     return `<option value="${c.id}" data-raw="${escapeHtml(c.text)}">${escapeHtml(c.text)} [${st.label}]</option>`;
                 }).join('');
             
@@ -2031,7 +2301,7 @@
             const isSameCategory = prevSelected && prevSelected === targetSelected;
             renderScenarioStatusCards(filteredCategories);
             updateWarningBanner();
-            onCategoryChange(!isSameCategory);
+            onCategoryChange(!isSameCategory && !isRestoringStoreSession);
         }
 
         function onCategoryChange(resetDrafts = false) {
@@ -2059,6 +2329,7 @@
                 l3Container.classList.add('hidden');
                 l4Container.classList.add('hidden');
                 updateLiveResultPreview();
+                saveCurrentStoreSessionState();
                 return;
             }
             l2Container.classList.remove('hidden'); 
@@ -2066,6 +2337,7 @@
             l4Container.classList.remove('hidden');
             renderL2(catId);
             updateLiveResultPreview();
+            saveCurrentStoreSessionState();
         }
 
         function renderL2(catId, selectId = null) {
@@ -2101,6 +2373,7 @@
             const l2Id = document.getElementById('line2Select').value;
             renderL3(l2Id);
             updateLiveResultPreview();
+            if (userTriggered) saveCurrentStoreSessionState();
         }
 
         function renderL3(l2Id, selectId = null) {
@@ -2135,6 +2408,7 @@
             const l3Id = document.getElementById('line3Select').value;
             renderL4(l3Id);
             updateLiveResultPreview();
+            if (userTriggered) saveCurrentStoreSessionState();
         }
 
         function renderL4(l3Id, selectId = null) {
@@ -2166,6 +2440,7 @@
             }
             parseInputs('line4Select', 'line4Inputs', 'l4');
             updateLiveResultPreview();
+            if (userTriggered) saveCurrentStoreSessionState();
         }
 
         function parseInputs(selectId, containerId, levelPrefix) {
@@ -2180,7 +2455,7 @@
             const inputSig = `${select.value}__${rawText}`;
 
             // 若目前該層級選項與輸入欄位結構相同，保留既有 DOM 與使用者輸入值，不重新覆蓋
-            if (container.dataset.inputSig === inputSig) {
+            if (container.dataset.inputSig === inputSig && !isRestoringStoreSession) {
                 return;
             }
             container.dataset.inputSig = inputSig;
@@ -2328,12 +2603,15 @@
             return lines.join('\n');
         }
 
-        function updateLiveResultPreview() {
+        function updateLiveResultPreview(skipSave = false) {
             const outputEl = document.getElementById('resultOutput');
             if (!outputEl) return;
             const liveString = buildCurrentReportString();
             if (outputEl.value !== liveString) {
                 outputEl.value = liveString;
+            }
+            if (!skipSave) {
+                saveCurrentStoreSessionState();
             }
         }
 
@@ -2341,6 +2619,7 @@
             const catSelect = document.getElementById('categorySelect');
             const cat = catSelect.value;
             if (!cat) return alert('⚠️ 請先選擇回報情境！');
+            const activeStore = getCurrentActiveStoreName();
             const catRawText = catSelect.options[catSelect.selectedIndex].getAttribute('data-raw') || '';
             const l2Text = formatDynamicLine('line2Select', 'l2');
             const finalString = buildCurrentReportString();
@@ -2351,18 +2630,19 @@
             markCategoryReported(catRawText, {
                 generatedText: finalString,
                 isNoRetention,
-                appsheetConfirmed: catRawText === 'SCS,FBS黑箱' ? isAppsheetBlackBoxReported() : undefined,
+                appsheetConfirmed: catRawText === 'SCS,FBS黑箱' ? isAppsheetBlackBoxReported(activeStore) : undefined,
                 hasPhoto: catRawText === 'SCS,FBS黑箱' ? blackBoxPhotoAttached : undefined
-            });
+            }, activeStore);
             renderCategories(cat, true);
-            updateLiveResultPreview();
+            updateLiveResultPreview(true);
+            saveCurrentStoreSessionState(activeStore);
 
             let extraNotice = '';
             if (catRawText === '當日一般包裹進貨數量') {
                 extraNotice = '\n\n📸 上傳提醒：請拍照一般包裹照片，直接上傳群組（不建相簿），並貼上此標記文字！';
             } else if (catRawText === 'SCS,FBS黑箱') {
                 const reminders = [];
-                if (!isAppsheetBlackBoxReported()) {
+                if (!isAppsheetBlackBoxReported(activeStore)) {
                     reminders.push('• 請開啟 AppSheet 回報管制品到貨數量（僅需回報管制品粉紅色 To 單有束帶之數量）並點擊確認按鈕');
                 }
                 if (!blackBoxPhotoAttached) {
@@ -2376,11 +2656,11 @@
             }
 
             navigator.clipboard.writeText(finalString)
-                .then(() => { alert('✅ 字串已成功複製並標示為已回報！\n\n' + finalString + extraNotice); })
-                .catch(() => { alert('✅ 已標示為已回報！\n❌ 複製失敗，請手動選取文字框複製。' + extraNotice); });
+                .then(() => { alert(`✅ 【${activeStore}】字串已成功複製並標示為已回報！\n\n` + finalString + extraNotice); })
+                .catch(() => { alert(`✅ 【${activeStore}】已標示為已回報！\n❌ 複製失敗，請手動選取文字框複製。` + extraNotice); });
         }
 
-        /* ================= 7. 條碼 & QR Code 與相機掃描/OCR文字辨識 ================= */
+        /* ================= 8. 條碼 & QR Code 與相機掃描/OCR文字辨識 ================= */
         let html5QrCode = null;
 
         function openScannerModal() {
@@ -2571,6 +2851,16 @@
             document.body.appendChild(a); a.click(); document.body.removeChild(a);
         }
 
+        // 離開或切換分頁時自動暫存目前門市進度
+        window.addEventListener('beforeunload', () => {
+            saveCurrentStoreSessionState();
+        });
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden') {
+                saveCurrentStoreSessionState();
+            }
+        });
+
         // 初始化
         document.addEventListener('DOMContentLoaded', async () => {
             renderRegionSelects();
@@ -2580,7 +2870,8 @@
             
             await fetchLocations(); 
             fetchShortcuts();       
-            fetchConfig();          
+            await fetchConfig();
+            restoreStoreSessionState(getCurrentActiveStoreName(), 'init');
             startGPS();             
         });
     </script>
